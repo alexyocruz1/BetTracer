@@ -34,10 +34,18 @@ export default function BetDetailPage() {
 
     setUpdating(true);
     try {
-      await apiClient.patch(`/api/bets/${bet.id}/state`, { state });
-      fetchBet(bet.id);
+      const { data } = await apiClient.patch<{ data: MainBet }>(`/api/bets/${bet.id}/state`, { state });
+      // Update the bet state immediately with the response
+      if (data.data) {
+        setBet(data.data);
+      } else {
+        // Fallback: refetch if response doesn't include updated bet
+        await fetchBet(bet.id);
+      }
     } catch (error: any) {
       alert(error.response?.data?.error?.message || 'Failed to update bet state');
+      // Refetch on error to ensure UI is in sync
+      await fetchBet(bet.id);
     } finally {
       setUpdating(false);
     }
@@ -86,14 +94,20 @@ export default function BetDetailPage() {
               </span>
             </div>
           </div>
-          {bet.profit_loss !== null && (
-            <div>
-              <label className="text-sm font-medium text-gray-500">Profit/Loss</label>
-              <div className={`text-lg font-semibold ${bet.profit_loss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ${bet.profit_loss.toFixed(2)}
-              </div>
+          <div>
+            <label className="text-sm font-medium text-gray-500">Profit/Loss</label>
+            <div className={`text-lg font-semibold ${
+              bet.profit_loss === null || bet.profit_loss === undefined
+                ? 'text-gray-500'
+                : bet.profit_loss >= 0
+                ? 'text-green-600'
+                : 'text-red-600'
+            }`}>
+              {bet.profit_loss !== null && bet.profit_loss !== undefined
+                ? `$${bet.profit_loss.toFixed(2)}`
+                : 'Pending'}
             </div>
-          )}
+          </div>
           <div>
             <label className="text-sm font-medium text-gray-500">Date</label>
             <div className="text-lg">{new Date(bet.date).toLocaleString()}</div>

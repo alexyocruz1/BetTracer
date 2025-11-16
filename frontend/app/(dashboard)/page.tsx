@@ -36,7 +36,9 @@ export default function DashboardPage() {
     <div className="px-4 py-6 sm:px-0">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-sm text-gray-600">Overview of your betting performance</p>
+        <p className="mt-2 text-sm text-gray-600">
+          Quick overview of your betting performance. For detailed analytics and breakdowns, visit the Analytics page.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

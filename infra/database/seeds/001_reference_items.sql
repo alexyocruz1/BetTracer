@@ -61,7 +61,7 @@ ON CONFLICT (kind, name) DO NOTHING;
 INSERT INTO reference_items (kind, name, metadata) VALUES
   ('responsible', 'Primary Account', '{"type": "account", "description": "Main betting account"}'),
   ('responsible', 'Secondary Account', '{"type": "account", "description": "Secondary betting account"}'),
-  ('responsible', 'Friend Account', '{"type": "account", "description": "Friend\'s account"}'),
+  ('responsible', 'Friend Account', '{"type": "account", "description": "Friend''s account"}'),
   ('responsible', 'Self', '{"type": "person", "description": "Personal bets"}'),
   ('responsible', 'Tipster', '{"type": "source", "description": "Following tipster advice"}'),
   ('responsible', 'Algorithm', '{"type": "source", "description": "Algorithm-based betting"}'),

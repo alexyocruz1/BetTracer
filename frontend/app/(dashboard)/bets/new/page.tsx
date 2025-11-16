@@ -4,18 +4,34 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
 import { ReferenceItem, CreateBetRequest } from '@/types';
+import {
+  decimalToAmerican,
+  americanToDecimal,
+  formatAmericanOdds,
+  isValidDecimal,
+  isValidAmerican,
+} from '@/lib/utils/odds';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export default function NewBetPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [teams, setTeams] = useState<ReferenceItem[]>([]);
   const [leagues, setLeagues] = useState<ReferenceItem[]>([]);
   const [betTypes, setBetTypes] = useState<ReferenceItem[]>([]);
+  const [categories, setCategories] = useState<ReferenceItem[]>([]);
+  const [responsibles, setResponsibles] = useState<ReferenceItem[]>([]);
   const [formData, setFormData] = useState<CreateBetRequest>({
     date: new Date().toISOString(),
     stake: 0,
+    odds: undefined,
     state: 'pending',
     legs: [{ odd: 1, result_state: 'pending' }],
   });
+  
+  // Local state for odds display (decimal/American)
+  const [mainBetDecimalOdds, setMainBetDecimalOdds] = useState<string>('');
+  const [mainBetAmericanOdds, setMainBetAmericanOdds] = useState<string>('');
 
   useEffect(() => {
     fetchReferenceItems();
@@ -23,12 +39,18 @@ export default function NewBetPage() {
 
   const fetchReferenceItems = async () => {
     try {
-      const [leaguesRes, betTypesRes] = await Promise.all([
+      const [teamsRes, leaguesRes, betTypesRes, categoriesRes, responsiblesRes] = await Promise.all([
+        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=team'),
         apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=league'),
         apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=bet_type'),
+        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=category'),
+        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=responsible'),
       ]);
+      setTeams(teamsRes.data.data);
       setLeagues(leaguesRes.data.data);
       setBetTypes(betTypesRes.data.data);
+      setCategories(categoriesRes.data.data);
+      setResponsibles(responsiblesRes.data.data);
     } catch (error) {
       console.error('Failed to fetch reference items:', error);
     }
@@ -46,6 +68,69 @@ export default function NewBetPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Calculate main bet odds from legs (only if not manually set)
+  useEffect(() => {
+    if (formData.legs.length > 0) {
+      const combinedOdds = formData.legs.reduce((acc, leg) => acc * leg.odd, 1);
+      // Only auto-calculate if odds haven't been manually set
+      if (!formData.odds || Math.abs(formData.odds - combinedOdds) < 0.01) {
+        setFormData((prev) => ({ ...prev, odds: combinedOdds }));
+        setMainBetDecimalOdds(combinedOdds.toFixed(2));
+        const american = decimalToAmerican(combinedOdds);
+        setMainBetAmericanOdds(american ? formatAmericanOdds(american) : '');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.legs.map((leg) => leg.odd).join(',')]);
+
+  const updateMainBetDecimalOdds = (value: string) => {
+    setMainBetDecimalOdds(value);
+    const decimal = parseFloat(value);
+    if (!isNaN(decimal) && isValidDecimal(decimal)) {
+      setFormData({ ...formData, odds: decimal });
+      const american = decimalToAmerican(decimal);
+      setMainBetAmericanOdds(american ? formatAmericanOdds(american) : '');
+    }
+  };
+
+  const updateMainBetAmericanOdds = (value: string) => {
+    setMainBetAmericanOdds(value);
+    // Remove + sign if present
+    const cleanValue = value.replace('+', '');
+    const american = parseFloat(cleanValue);
+    if (!isNaN(american) && isValidAmerican(american)) {
+      const decimal = americanToDecimal(american);
+      if (decimal) {
+        setFormData({ ...formData, odds: decimal });
+        setMainBetDecimalOdds(decimal.toFixed(2));
+      }
+    }
+  };
+
+  const updateLegOdds = (index: number, value: string, format: 'decimal' | 'american') => {
+    const newLegs = [...formData.legs];
+    let decimal: number;
+
+    if (format === 'decimal') {
+      decimal = parseFloat(value);
+      if (!isNaN(decimal) && isValidDecimal(decimal)) {
+        newLegs[index].odd = decimal;
+      }
+    } else {
+      const cleanValue = value.replace('+', '');
+      const american = parseFloat(cleanValue);
+      if (!isNaN(american) && isValidAmerican(american)) {
+        const converted = americanToDecimal(american);
+        if (converted) {
+          decimal = converted;
+          newLegs[index].odd = decimal;
+        }
+      }
+    }
+
+    setFormData({ ...formData, legs: newLegs });
   };
 
   const addLeg = () => {
@@ -77,14 +162,55 @@ export default function NewBetPage() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Stake</label>
+          <label className="block text-sm font-medium text-gray-700">Stake *</label>
           <input
             type="number"
             step="0.01"
+            min="0.01"
             value={formData.stake}
-            onChange={(e) => setFormData({ ...formData, stake: parseFloat(e.target.value) })}
+            onChange={(e) => setFormData({ ...formData, stake: parseFloat(e.target.value) || 0 })}
             className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
             required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Main Bet Odds (optional - auto-calculated from legs)</label>
+          <div className="grid grid-cols-2 gap-4 mt-1">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Decimal</label>
+              <input
+                type="number"
+                step="0.01"
+                min="1"
+                value={mainBetDecimalOdds}
+                onChange={(e) => updateMainBetDecimalOdds(e.target.value)}
+                placeholder="2.50"
+                className="block w-full border border-gray-300 rounded-md px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">American</label>
+              <input
+                type="text"
+                value={mainBetAmericanOdds}
+                onChange={(e) => updateMainBetAmericanOdds(e.target.value)}
+                placeholder="+150 or -200"
+                className="block w-full border border-gray-300 rounded-md px-3 py-2"
+              />
+            </div>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            If not specified, will be calculated from leg odds
+          </p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Notes (optional)</label>
+          <textarea
+            value={formData.notes || ''}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value || undefined })}
+            rows={3}
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+            placeholder="Add any notes about this bet..."
           />
         </div>
         <div>
@@ -103,58 +229,134 @@ export default function NewBetPage() {
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">League</label>
-                  <select
-                    value={leg.league_id || ''}
-                    onChange={(e) => {
-                      const newLegs = [...formData.legs];
-                      newLegs[index].league_id = e.target.value;
-                      setFormData({ ...formData, legs: newLegs });
-                    }}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="">Select league</option>
-                    {leagues.map((league) => (
-                      <option key={league.id} value={league.id}>
-                        {league.name}
-                      </option>
-                    ))}
-                  </select>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <SearchableSelect
+                      options={teams}
+                      value={leg.home_team_id || ''}
+                      onChange={(value) => {
+                        const newLegs = [...formData.legs];
+                        newLegs[index].home_team_id = value || undefined;
+                        setFormData({ ...formData, legs: newLegs });
+                      }}
+                      placeholder="Search home team..."
+                      label="Home Team"
+                    />
+                  </div>
+                  <div>
+                    <SearchableSelect
+                      options={teams}
+                      value={leg.away_team_id || ''}
+                      onChange={(value) => {
+                        const newLegs = [...formData.legs];
+                        newLegs[index].away_team_id = value || undefined;
+                        setFormData({ ...formData, legs: newLegs });
+                      }}
+                      placeholder="Search away team..."
+                      label="Away Team"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <SearchableSelect
+                      options={leagues}
+                      value={leg.league_id || ''}
+                      onChange={(value) => {
+                        const newLegs = [...formData.legs];
+                        newLegs[index].league_id = value || undefined;
+                        setFormData({ ...formData, legs: newLegs });
+                      }}
+                      placeholder="Search league..."
+                      label="League"
+                    />
+                  </div>
+                  <div>
+                    <SearchableSelect
+                      options={betTypes}
+                      value={leg.bet_type_id || ''}
+                      onChange={(value) => {
+                        const newLegs = [...formData.legs];
+                        newLegs[index].bet_type_id = value || undefined;
+                        setFormData({ ...formData, legs: newLegs });
+                      }}
+                      placeholder="Search bet type..."
+                      label="Bet Type"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <SearchableSelect
+                      options={categories}
+                      value={leg.category_id || ''}
+                      onChange={(value) => {
+                        const newLegs = [...formData.legs];
+                        newLegs[index].category_id = value || undefined;
+                        setFormData({ ...formData, legs: newLegs });
+                      }}
+                      placeholder="Search category..."
+                      label="Category"
+                    />
+                  </div>
+                  <div>
+                    <SearchableSelect
+                      options={responsibles}
+                      value={leg.responsible_id || ''}
+                      onChange={(value) => {
+                        const newLegs = [...formData.legs];
+                        newLegs[index].responsible_id = value || undefined;
+                        setFormData({ ...formData, legs: newLegs });
+                      }}
+                      placeholder="Search responsible..."
+                      label="Responsible"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Bet Type</label>
-                  <select
-                    value={leg.bet_type_id || ''}
-                    onChange={(e) => {
-                      const newLegs = [...formData.legs];
-                      newLegs[index].bet_type_id = e.target.value;
-                      setFormData({ ...formData, legs: newLegs });
-                    }}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="">Select bet type</option>
-                    {betTypes.map((betType) => (
-                      <option key={betType.id} value={betType.id}>
-                        {betType.name}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Odds *</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Decimal</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="1"
+                        value={leg.odd.toFixed(2)}
+                        onChange={(e) => updateLegOdds(index, e.target.value, 'decimal')}
+                        placeholder="2.50"
+                        className="block w-full border border-gray-300 rounded-md px-3 py-2"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">American</label>
+                      <input
+                        type="text"
+                        value={decimalToAmerican(leg.odd) ? formatAmericanOdds(decimalToAmerican(leg.odd)!) : ''}
+                        onChange={(e) => updateLegOdds(index, e.target.value, 'american')}
+                        placeholder="+150 or -200"
+                        className="block w-full border border-gray-300 rounded-md px-3 py-2"
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Enter either decimal or American odds - the other will calculate automatically
+                  </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Odds</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={leg.odd}
+                  <label className="block text-sm font-medium text-gray-700">Leg Notes (optional)</label>
+                  <textarea
+                    value={leg.notes || ''}
                     onChange={(e) => {
                       const newLegs = [...formData.legs];
-                      newLegs[index].odd = parseFloat(e.target.value);
+                      newLegs[index].notes = e.target.value || undefined;
                       setFormData({ ...formData, legs: newLegs });
                     }}
+                    rows={2}
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                    required
+                    placeholder="Add notes about this leg..."
                   />
                 </div>
               </div>

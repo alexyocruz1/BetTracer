@@ -82,7 +82,8 @@ The BetTracer project structure is complete with all phases implemented. However
    npm run dev
    ```
    - Test health endpoint: `curl http://localhost:8080/health`
-   - Test with authentication token
+   - Test with authentication token (see `backend/TESTING.md` for detailed instructions)
+   - Quick token helper: `node backend/get-token.js <email> <password>`
 
 **Priority**: 🔴 HIGH - Required for frontend to work
 

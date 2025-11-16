@@ -1,13 +1,28 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, isAdmin } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Helper function to determine if a nav link is active
+  const isActive = (path: string, exact: boolean = false) => {
+    if (!pathname) return false;
+    
+    if (exact) {
+      return pathname === path;
+    }
+    if (path === '/bets') {
+      // Special handling for /bets - should match /bets and /bets/[id] but not /bets/new
+      return pathname.startsWith('/bets') && pathname !== '/bets/new';
+    }
+    return pathname.startsWith(path);
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -40,28 +55,56 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 <Link
                   href="/"
-                  className="border-primary-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
+                    isActive('/', true)
+                      ? 'border-b-2 border-primary-500 text-gray-900'
+                      : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  }`}
                 >
                   Dashboard
                 </Link>
                 <Link
                   href="/bets"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
+                    isActive('/bets')
+                      ? 'border-b-2 border-primary-500 text-gray-900'
+                      : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  }`}
                 >
                   Bets
                 </Link>
                 <Link
                   href="/bets/new"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
+                    isActive('/bets/new', true)
+                      ? 'border-b-2 border-primary-500 text-gray-900'
+                      : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  }`}
                 >
                   New Bet
                 </Link>
                 <Link
                   href="/analytics"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
+                    isActive('/analytics', true)
+                      ? 'border-b-2 border-primary-500 text-gray-900'
+                      : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  }`}
                 >
                   Analytics
                 </Link>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
+                      isActive('/admin', true)
+                        ? 'border-b-2 border-primary-500 text-gray-900'
+                        : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    }`}
+                  >
+                    Admin
+                  </Link>
+                )}
               </div>
             </div>
             <div className="flex items-center">

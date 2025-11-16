@@ -1,15 +1,15 @@
+// Load environment variables FIRST, before any other imports
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import betsRoutes from './routes/bets';
 import legsRoutes from './routes/legs';
 import referenceItemsRoutes from './routes/reference-items';
 import analyticsRoutes from './routes/analytics';
 import mlRoutes from './routes/ml';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;

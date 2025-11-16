@@ -7,26 +7,50 @@ export const errorHandler = (
   req: Request,
   res: Response,
   next: NextFunction
-): Response => {
-  console.error('Error:', err);
+): void => {
+  // Don't send response if headers already sent
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  console.error('Error handler called:', {
+    message: err.message,
+    code: err instanceof AppError ? err.code : 'UNKNOWN',
+    statusCode: err instanceof AppError ? err.statusCode : 500,
+    stack: err.stack,
+  });
 
   if (err instanceof AppError) {
-    return sendError(res, err.code, err.message, err.statusCode, err.details);
+    try {
+      sendError(res, err.code, err.message, err.statusCode, err.details);
+    } catch (sendErr) {
+      console.error('Failed to send error response:', sendErr);
+      if (!res.headersSent) {
+        res.status(err.statusCode || 500).json({
+          error: {
+            code: err.code,
+            message: err.message,
+          },
+        });
+      }
+    }
+    return;
   }
 
   // Handle Zod validation errors
   if (err.name === 'ZodError') {
-    return sendError(
+    sendError(
       res,
       'VALIDATION_ERROR',
       'Validation failed',
       400,
       { errors: (err as any).errors }
     );
+    return;
   }
 
   // Default error
-  return sendError(
+  sendError(
     res,
     'INTERNAL_SERVER_ERROR',
     'An unexpected error occurred',

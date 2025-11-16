@@ -7,6 +7,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     email?: string;
+    isAdmin?: boolean;
   };
   supabaseClient?: ReturnType<typeof createUserClient>;
 }
@@ -40,10 +41,18 @@ export const authenticate = async (
       return;
     }
 
+    // Get user profile to check admin status
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
     // Attach user and supabase client to request
     req.user = {
       id: user.id,
       email: user.email,
+      isAdmin: profile?.is_admin || false,
     };
     req.supabaseClient = supabaseClient;
 
@@ -52,5 +61,18 @@ export const authenticate = async (
     console.error('Authentication error:', error);
     sendError(res, errorCodes.INTERNAL_SERVER_ERROR, 'Authentication failed', 500);
   }
+};
+
+// Middleware to check if user is admin
+export const requireAdmin = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  if (!req.user?.isAdmin) {
+    sendError(res, errorCodes.FORBIDDEN, 'Admin access required', 403);
+    return;
+  }
+  next();
 };
 

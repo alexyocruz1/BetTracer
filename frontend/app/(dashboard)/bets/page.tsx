@@ -67,11 +67,16 @@ export default function BetsPage() {
                       {new Date(bet.date).toLocaleDateString()}
                     </div>
                   </div>
-                  {bet.profit_loss !== null && (
-                    <div className="mt-2 text-sm text-gray-500">
-                      Profit/Loss: ${bet.profit_loss.toFixed(2)}
-                    </div>
-                  )}
+                  <div className="mt-2 text-sm text-gray-500">
+                    Profit/Loss:{' '}
+                    {bet.profit_loss !== null && bet.profit_loss !== undefined ? (
+                      <span className={bet.profit_loss >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        ${bet.profit_loss.toFixed(2)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Pending</span>
+                    )}
+                  </div>
                 </div>
               </Link>
             </li>

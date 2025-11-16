@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, requireAdmin } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   getReferenceItemsSchema,
@@ -8,6 +8,7 @@ import {
 import { ReferenceItemsService } from '../services/reference-items.service';
 import { ReferenceItemsController } from '../controllers/reference-items.controller';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
@@ -24,8 +25,11 @@ router.use((req: AuthRequest, res, next) => {
   next();
 });
 
-router.get('/', validate(getReferenceItemsSchema), referenceItemsController.getReferenceItems);
-router.post('/', validate(createReferenceItemSchema), referenceItemsController.createReferenceItem);
+// GET is available to all authenticated users
+router.get('/', validate(getReferenceItemsSchema), asyncHandler(referenceItemsController.getReferenceItems));
+
+// POST requires admin access
+router.post('/', requireAdmin, validate(createReferenceItemSchema), asyncHandler(referenceItemsController.createReferenceItem));
 
 export default router;
 
