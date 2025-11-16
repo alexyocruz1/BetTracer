@@ -1,0 +1,86 @@
+import { Request, Response } from 'express';
+import { AuthRequest } from '../middleware/auth.middleware';
+import { BetsService } from '../services/bets.service';
+import { sendSuccess } from '../utils/responses';
+
+export class BetsController {
+  constructor(private betsService: BetsService) {}
+
+  createBet = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const betData = req.body;
+
+    const bet = await this.betsService.createBet(userId, betData);
+    return sendSuccess(res, bet, 201);
+  };
+
+  getBets = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const {
+      start_date,
+      end_date,
+      state,
+      league_id,
+      responsible_id,
+      limit = 20,
+      offset = 0,
+    } = req.query;
+
+    const { bets, total } = await this.betsService.getBets(userId, {
+      start_date: start_date as string,
+      end_date: end_date as string,
+      state: state as string,
+      league_id: league_id as string,
+      responsible_id: responsible_id as string,
+      limit: Number(limit),
+      offset: Number(offset),
+    });
+
+    const page = Math.floor(Number(offset) / Number(limit)) + 1;
+    const totalPages = Math.ceil(total / Number(limit));
+
+    return sendSuccess(res, bets, 200, {
+      pagination: {
+        page,
+        limit: Number(limit),
+        total,
+        totalPages,
+      },
+    });
+  };
+
+  getBet = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { id } = req.params;
+
+    const bet = await this.betsService.getBetById(userId, id);
+    return sendSuccess(res, bet);
+  };
+
+  updateBet = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const bet = await this.betsService.updateBet(userId, id, updateData);
+    return sendSuccess(res, bet);
+  };
+
+  updateBetState = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { id } = req.params;
+    const stateData = req.body;
+
+    const bet = await this.betsService.updateBetState(userId, id, stateData);
+    return sendSuccess(res, bet);
+  };
+
+  deleteBet = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { id } = req.params;
+
+    await this.betsService.deleteBet(userId, id);
+    return res.status(204).send();
+  };
+}
+

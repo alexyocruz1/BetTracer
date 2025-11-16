@@ -1,0 +1,41 @@
+# CODEOWNERS file
+# This file defines code owners for different parts of the codebase
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for the entire repository
+* @your-username
+
+# Frontend
+/frontend/ @frontend-team
+
+# Backend
+/backend/ @backend-team
+
+# ML Service
+/ml_service/ @ml-team
+
+# Infrastructure
+/infra/ @devops-team
+
+# Documentation
+*.md @docs-team
+BetTracerGuide.md @docs-team
+
+# Configuration files
+/.github/ @devops-team
+/.gitignore @devops-team
+/package.json @devops-team
+
+# Database migrations and schema
+/backend/src/migrations/ @backend-team @data-engineer
+/infra/scripts/ @data-engineer
+
+# Tests
+/**/tests/ @backend-team @frontend-team
+/**/__tests__/ @backend-team @frontend-team
+/**/*.test.ts @backend-team @frontend-team
+/**/*.test.tsx @frontend-team
+/**/*.spec.ts @backend-team @frontend-team
+/**/*.spec.tsx @frontend-team
+/**/test_*.py @ml-team
+

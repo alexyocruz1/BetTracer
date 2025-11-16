@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - ML_API_URL=http://ml-service:8000
+      - CORS_ORIGIN=http://localhost:3000
+    volumes:
+      - ../backend:/app
+      - /app/node_modules
+    depends_on:
+      - ml-service
+    networks:
+      - bettracer-network
+
+  # ML Service
+  ml-service:
+    build:
+      context: ../ml_service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+      - MODEL_PATH=./models/model.pkl
+    volumes:
+      - ../ml_service:/app
+      - /app/models
+    networks:
+      - bettracer-network
+
+  # Frontend (optional - can run locally with npm)
+  # frontend:
+  #   build:
+  #     context: ../frontend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+  #     - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+  #     - NEXT_PUBLIC_BACKEND_URL=http://backend:8080
+  #   volumes:
+  #     - ../frontend:/app
+  #     - /app/node_modules
+  #     - /app/.next
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - bettracer-network
+
+networks:
+  bettracer-network:
+    driver: bridge
+
