@@ -18,36 +18,11 @@ class ApiClient {
     // Add auth token to requests
     this.client.interceptors.request.use(
       async (config) => {
-        // Try to get session with timeout, fallback to localStorage if needed
-        let sessionTimedOut = false;
-        let session: { access_token?: string } | null = null;
+        // Fast path: Try localStorage first (synchronous, no async overhead)
+        let accessToken: string | null = null;
         
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise<{ data: { session: null }; error: null }>((resolve) => {
-          setTimeout(() => {
-            sessionTimedOut = true;
-            resolve({ data: { session: null }, error: null });
-          }, 2000); // 2 second timeout for session check
-        });
-
-        try {
-          const result = await Promise.race([sessionPromise, timeoutPromise]);
-          const { data: sessionData, error } = result;
-
-          if (error && !sessionTimedOut) {
-            console.warn('[API Client] Error getting session:', error);
-          } else if (sessionData?.access_token) {
-            session = sessionData;
-          }
-        } catch (error) {
-          console.error('[API Client] Failed to get session:', error);
-        }
-
-        // If getSession timed out or failed, try localStorage fallback
-        if (!session?.access_token && sessionTimedOut && typeof window !== 'undefined') {
+        if (typeof window !== 'undefined') {
           try {
-            // Supabase stores session in localStorage with key pattern: sb-<project-ref>-auth-token
-            // Try to find it by searching for keys that match the pattern
             const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
             const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || '';
             
@@ -58,10 +33,14 @@ class ApiClient {
               if (stored) {
                 try {
                   const parsed = JSON.parse(stored);
-                  // Supabase stores it as { access_token, expires_at, etc. }
-                  if (parsed?.access_token) {
-                    session = { access_token: parsed.access_token };
-                    // Don't log - this is expected fallback behavior
+                  // Check if token is expired
+                  const expiresAt = parsed?.expires_at;
+                  if (expiresAt && Date.now() / 1000 < expiresAt) {
+                    accessToken = parsed?.access_token || null;
+                  } else if (parsed?.access_token) {
+                    // Token exists but might be expired, still try it
+                    // Backend will reject if truly expired
+                    accessToken = parsed.access_token;
                   }
                 } catch (e) {
                   // Invalid JSON, ignore
@@ -73,16 +52,31 @@ class ApiClient {
           }
         }
 
-        // Set authorization header if we have a token
-        if (session?.access_token) {
-          config.headers.Authorization = `Bearer ${session.access_token}`;
-        } else if (sessionTimedOut) {
-          // Only log if we timed out and couldn't get token from localStorage either
-          // This is expected in Edge sometimes, so use debug level
-          console.debug('[API Client] getSession timeout, proceeding without token');
-        } else {
-          // No session and didn't timeout - user might not be logged in
-          console.debug('[API Client] No auth token found');
+        // If we got a token from localStorage, use it immediately
+        if (accessToken) {
+          config.headers.Authorization = `Bearer ${accessToken}`;
+          return config;
+        }
+
+        // Fallback: Try getSession() with very short timeout (only if localStorage failed)
+        // This is mainly to refresh expired tokens
+        try {
+          const sessionPromise = supabase.auth.getSession();
+          const timeoutPromise = new Promise<{ data: { session: null }; error: null }>((resolve) => {
+            setTimeout(() => {
+              resolve({ data: { session: null }, error: null });
+            }, 1000); // Very short timeout since we already tried localStorage
+          });
+
+          const result = await Promise.race([sessionPromise, timeoutPromise]);
+          const { data: sessionData } = result;
+
+          if (sessionData?.access_token) {
+            config.headers.Authorization = `Bearer ${sessionData.access_token}`;
+          }
+        } catch (error) {
+          // Silently fail - we already tried localStorage
+          // If both fail, request will proceed without token (backend will handle auth)
         }
 
         return config;
