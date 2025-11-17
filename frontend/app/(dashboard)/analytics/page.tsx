@@ -150,6 +150,8 @@ export default function AnalyticsPage() {
           setStreakAnalysis((streakRes.data?.data as StreakAnalysis) || null);
           setTimeSeries((timeSeriesRes.data?.data as TimeSeriesData[]) || []);
         }
+        
+        setLoading(false);
       } catch (error) {
         console.error('Failed to fetch analytics:', error);
         if (requestCompleted || cancelled) return;
@@ -168,8 +170,10 @@ export default function AnalyticsPage() {
         setBestWorstPerformers(null);
         setStreakAnalysis(null);
         setTimeSeries([]);
+        setLoading(false);
       } finally {
-        if (!requestCompleted && !cancelled) {
+        // Ensure loading is always set to false, even if timeout already fired
+        if (!cancelled && !requestCompleted) {
           clearTimeout(timeoutId);
           setLoading(false);
         }

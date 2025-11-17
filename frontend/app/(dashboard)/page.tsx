@@ -31,6 +31,7 @@ export default function DashboardPage() {
         requestCompleted = true;
         clearTimeout(timeoutId);
         setSummary(data.data);
+        setLoading(false);
       } catch (error) {
         if (requestCompleted || cancelled) return;
         
@@ -38,8 +39,10 @@ export default function DashboardPage() {
         clearTimeout(timeoutId);
         console.error('Failed to fetch summary:', error);
         setSummary(null);
+        setLoading(false);
       } finally {
-        if (!requestCompleted && !cancelled) {
+        // Ensure loading is always set to false, even if timeout already fired
+        if (!cancelled && !requestCompleted) {
           clearTimeout(timeoutId);
           setLoading(false);
         }
