@@ -730,23 +730,38 @@ export class AnalyticsService {
       });
     });
 
-    // Calculate win rates and get team names
+    // Calculate win rates
     const results = Array.from(teamMap.values());
-    for (const result of results) {
+    results.forEach(result => {
       result.as_home.win_rate = result.as_home.total_legs > 0 ? result.as_home.won_legs / result.as_home.total_legs : 0;
       result.as_away.win_rate = result.as_away.total_legs > 0 ? result.as_away.won_legs / result.as_away.total_legs : 0;
       result.total.win_rate = result.total.total_legs > 0 ? result.total.won_legs / result.total.total_legs : 0;
+    });
 
-      const { data: team } = await this.supabase
-        .from('reference_items')
-        .select('name')
-        .eq('id', result.team_id)
-        .single();
-
-      if (team) {
-        result.team_name = team.name;
+    // Batch fetch all team names
+    const teamIds = results.map(r => r.team_id);
+    const teamNamesMap = new Map<string, string>();
+    if (teamIds.length > 0) {
+      const batchSize = 100;
+      for (let i = 0; i < teamIds.length; i += batchSize) {
+        const batch = teamIds.slice(i, i + batchSize);
+        const { data: teams } = await this.supabase
+          .from('reference_items')
+          .select('id, name')
+          .in('id', batch);
+        
+        if (teams) {
+          teams.forEach(team => {
+            teamNamesMap.set(team.id, team.name);
+          });
+        }
       }
     }
+
+    // Set team names
+    results.forEach(result => {
+      result.team_name = teamNamesMap.get(result.team_id) || '';
+    });
 
     return results.filter((r) => r.total.total_legs > 0);
   }
@@ -1052,17 +1067,49 @@ export class AnalyticsService {
       });
     });
 
+    // Collect all unique reference item IDs to fetch in batch
+    const allReferenceIds = new Set<string>();
+    for (const [responsibleId, data] of responsibleMap.entries()) {
+      allReferenceIds.add(responsibleId);
+      for (const leagueData of data.leagueMap.values()) {
+        allReferenceIds.add(leagueData.league_id);
+      }
+      for (const teamData of data.teamMap.values()) {
+        allReferenceIds.add(teamData.team_id);
+      }
+      for (const betTypeData of data.betTypeMap.values()) {
+        allReferenceIds.add(betTypeData.bet_type_id);
+      }
+      for (const categoryData of data.categoryMap.values()) {
+        allReferenceIds.add(categoryData.category_id);
+      }
+    }
+
+    // Fetch all reference items in one query
+    const referenceItemsMap = new Map<string, string>();
+    if (allReferenceIds.size > 0) {
+      const referenceIdsArray = Array.from(allReferenceIds);
+      // Supabase has a limit on IN queries, so batch if needed
+      const batchSize = 100;
+      for (let i = 0; i < referenceIdsArray.length; i += batchSize) {
+        const batch = referenceIdsArray.slice(i, i + batchSize);
+        const { data: referenceItems } = await this.supabase
+          .from('reference_items')
+          .select('id, name')
+          .in('id', batch);
+        
+        if (referenceItems) {
+          referenceItems.forEach(item => {
+            referenceItemsMap.set(item.id, item.name);
+          });
+        }
+      }
+    }
+
     // Fetch reference item names and build results
     const results: ResponsibleDetailedAnalytics[] = [];
     for (const [responsibleId, data] of responsibleMap.entries()) {
-      // Get responsible name
-      const { data: responsible } = await this.supabase
-        .from('reference_items')
-        .select('name')
-        .eq('id', responsibleId)
-        .single();
-
-      const responsibleName = responsible?.name || 'Unknown';
+      const responsibleName = referenceItemsMap.get(responsibleId) || 'Unknown';
 
       // Calculate summary
       const totalStake = data.bets.reduce((sum, b) => sum + Number(b.stake || 0), 0);
@@ -1073,16 +1120,9 @@ export class AnalyticsService {
 
       // Get league names and find most profitable
       const leagueDataArray = Array.from(data.leagueMap.values());
-      for (const leagueData of leagueDataArray) {
-        const { data: league } = await this.supabase
-          .from('reference_items')
-          .select('name')
-          .eq('id', leagueData.league_id)
-          .single();
-        if (league) {
-          leagueData.league_name = league.name;
-        }
-      }
+      leagueDataArray.forEach(leagueData => {
+        leagueData.league_name = referenceItemsMap.get(leagueData.league_id) || '';
+      });
 
       // Find most profitable league
       const mostProfitableLeague = leagueDataArray.length > 0
@@ -1100,16 +1140,9 @@ export class AnalyticsService {
 
       // Get team names and find favorite team
       const teamDataArray = Array.from(data.teamMap.values());
-      for (const teamData of teamDataArray) {
-        const { data: team } = await this.supabase
-          .from('reference_items')
-          .select('name')
-          .eq('id', teamData.team_id)
-          .single();
-        if (team) {
-          teamData.team_name = team.name;
-        }
-      }
+      teamDataArray.forEach(teamData => {
+        teamData.team_name = referenceItemsMap.get(teamData.team_id) || '';
+      });
 
       const favoriteTeam = teamDataArray.length > 0
         ? teamDataArray.reduce((best, current) => 
@@ -1119,29 +1152,15 @@ export class AnalyticsService {
 
       // Get bet type names
       const betTypeDataArray = Array.from(data.betTypeMap.values());
-      for (const betTypeData of betTypeDataArray) {
-        const { data: betType } = await this.supabase
-          .from('reference_items')
-          .select('name')
-          .eq('id', betTypeData.bet_type_id)
-          .single();
-        if (betType) {
-          betTypeData.bet_type_name = betType.name;
-        }
-      }
+      betTypeDataArray.forEach(betTypeData => {
+        betTypeData.bet_type_name = referenceItemsMap.get(betTypeData.bet_type_id) || '';
+      });
 
       // Get category names
       const categoryDataArray = Array.from(data.categoryMap.values());
-      for (const categoryData of categoryDataArray) {
-        const { data: category } = await this.supabase
-          .from('reference_items')
-          .select('name')
-          .eq('id', categoryData.category_id)
-          .single();
-        if (category) {
-          categoryData.category_name = category.name;
-        }
-      }
+      categoryDataArray.forEach(categoryData => {
+        categoryData.category_name = referenceItemsMap.get(categoryData.category_id) || '';
+      });
 
       // Build performance arrays
       const performanceByLeague = leagueDataArray.map(league => ({
