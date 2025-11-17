@@ -35,22 +35,45 @@ export default function NewBetPage() {
 
   useEffect(() => {
     fetchReferenceItems();
+    
+    // Refetch when page becomes visible (in case items were added in another tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchReferenceItems();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const fetchReferenceItems = async () => {
     try {
+      // Fetch all items with a high limit to ensure we get everything
+      // The API supports up to 10000 items per request
       const [teamsRes, leaguesRes, betTypesRes, categoriesRes, responsiblesRes] = await Promise.all([
-        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=team'),
-        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=league'),
-        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=bet_type'),
-        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=category'),
-        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=responsible'),
+        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=team&limit=1000'),
+        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=league&limit=1000'),
+        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=bet_type&limit=1000'),
+        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=category&limit=1000'),
+        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=responsible&limit=1000'),
       ]);
-      setTeams(teamsRes.data.data);
-      setLeagues(leaguesRes.data.data);
-      setBetTypes(betTypesRes.data.data);
-      setCategories(categoriesRes.data.data);
-      setResponsibles(responsiblesRes.data.data);
+      setTeams(teamsRes.data.data || []);
+      setLeagues(leaguesRes.data.data || []);
+      setBetTypes(betTypesRes.data.data || []);
+      setCategories(categoriesRes.data.data || []);
+      setResponsibles(responsiblesRes.data.data || []);
+      
+      console.log('Reference items loaded:', {
+        teams: teamsRes.data.data?.length || 0,
+        leagues: leaguesRes.data.data?.length || 0,
+        betTypes: betTypesRes.data.data?.length || 0,
+        categories: categoriesRes.data.data?.length || 0,
+        responsibles: responsiblesRes.data.data?.length || 0,
+      });
     } catch (error) {
       console.error('Failed to fetch reference items:', error);
     }
