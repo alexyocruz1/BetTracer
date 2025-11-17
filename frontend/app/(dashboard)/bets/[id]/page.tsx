@@ -187,16 +187,19 @@ export default function BetDetailPage() {
       setGeneratingBetslip(true);
       const canvas = await html2canvas(betslipRef.current, {
         backgroundColor: null,
-        scale: 2,
+        scale: 2, // 2x scale for high quality (2160px wide, perfect for TikTok)
         logging: false,
         useCORS: true,
         width: 1080,
         height: betslipRef.current.scrollHeight,
+        windowWidth: 1080,
+        windowHeight: betslipRef.current.scrollHeight,
       });
 
       const link = document.createElement('a');
       link.download = `betslip-${bet.id}-${new Date().toISOString().split('T')[0]}.png`;
-      link.href = canvas.toDataURL('image/png');
+      // Export as PNG with high quality (TikTok supports PNG)
+      link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
 
       setShowBetslipPreview(false);
@@ -222,7 +225,7 @@ export default function BetDetailPage() {
       {/* Betslip Preview Modal */}
       {showBetslipPreview && (
         <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-hidden">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-lg w-full max-w-[1200px] max-h-[90vh] flex flex-col">
             <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10 flex-shrink-0">
               <h2 className="text-xl font-bold text-gray-900">Betslip Preview</h2>
               <div className="flex gap-2">
@@ -244,7 +247,7 @@ export default function BetDetailPage() {
                 </button>
               </div>
             </div>
-            <div className="p-4 overflow-auto flex-1">
+            <div className="p-4 overflow-auto flex-1" style={{ overflowX: 'hidden' }}>
               <div ref={betslipRef} className="flex justify-center">
                 <BetslipImage bet={bet} onReady={handleBetslipReady} />
               </div>
