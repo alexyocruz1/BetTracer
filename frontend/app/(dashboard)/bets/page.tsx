@@ -11,20 +11,36 @@ export default function BetsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    let requestCompleted = false;
+
+    // Safety timeout to prevent infinite hanging
+    const timeoutId = setTimeout(() => {
+      if (!requestCompleted && !cancelled) {
+        requestCompleted = true;
+        console.error('[Bets] Request timeout - forcing completion');
+        setBets([]);
+        setLoading(false);
+      }
+    }, 20000); // 20 second safety timeout
     
     const fetchBets = async () => {
       try {
         const { data } = await apiClient.get<{ data: MainBet[] }>('/api/bets');
-        if (!cancelled) {
-          setBets(data.data);
-        }
+        if (requestCompleted || cancelled) return;
+        
+        requestCompleted = true;
+        clearTimeout(timeoutId);
+        setBets(data.data);
       } catch (error) {
+        if (requestCompleted || cancelled) return;
+        
+        requestCompleted = true;
+        clearTimeout(timeoutId);
         console.error('Failed to fetch bets:', error);
-        if (!cancelled) {
-          setBets([]);
-        }
+        setBets([]);
       } finally {
-        if (!cancelled) {
+        if (!requestCompleted && !cancelled) {
+          clearTimeout(timeoutId);
           setLoading(false);
         }
       }
@@ -34,6 +50,7 @@ export default function BetsPage() {
     
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, []);
 

@@ -11,22 +11,38 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false;
+    let requestCompleted = false;
 
-  const fetchSummary = async () => {
-    try {
-      const { data } = await apiClient.get<{ data: AnalyticsSummary }>('/api/analytics/summary');
-        if (!cancelled) {
-      setSummary(data.data);
+    // Safety timeout to prevent infinite hanging
+    const timeoutId = setTimeout(() => {
+      if (!requestCompleted && !cancelled) {
+        requestCompleted = true;
+        console.error('[Dashboard] Request timeout - forcing completion');
+        setSummary(null);
+        setLoading(false);
+      }
+    }, 20000); // 20 second safety timeout
+
+    const fetchSummary = async () => {
+      try {
+        const { data } = await apiClient.get<{ data: AnalyticsSummary }>('/api/analytics/summary');
+        if (requestCompleted || cancelled) return;
+        
+        requestCompleted = true;
+        clearTimeout(timeoutId);
+        setSummary(data.data);
+      } catch (error) {
+        if (requestCompleted || cancelled) return;
+        
+        requestCompleted = true;
+        clearTimeout(timeoutId);
+        console.error('Failed to fetch summary:', error);
+        setSummary(null);
+      } finally {
+        if (!requestCompleted && !cancelled) {
+          clearTimeout(timeoutId);
+          setLoading(false);
         }
-    } catch (error) {
-      console.error('Failed to fetch summary:', error);
-        if (!cancelled) {
-          setSummary(null);
-        }
-    } finally {
-        if (!cancelled) {
-      setLoading(false);
-    }
       }
     };
     
@@ -34,6 +50,7 @@ export default function DashboardPage() {
     
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, []);
 

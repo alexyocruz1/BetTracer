@@ -41,33 +41,82 @@ export default function AdminPage() {
     console.log('fetchItems called for:', activeTab);
     setLoading(true);
     setError(null);
+    
+    // Create a timeout promise to prevent infinite hanging
+    let requestCompleted = false;
+    const timeoutId = setTimeout(() => {
+      if (!requestCompleted) {
+        requestCompleted = true;
+        console.error('[Admin] Request timeout - forcing completion');
+        setError('Request timed out. Please check your connection and try again.');
+        setItems([]);
+        setLoading(false);
+      }
+    }, 20000); // 20 second safety timeout
+    
     try {
       console.log('Fetching items for kind:', activeTab);
+      console.log('[Admin] API URL:', process.env.NEXT_PUBLIC_BACKEND_URL);
+      
       const response = await apiClient.get<{ data: ReferenceItem[] }>(
         `/api/reference-items?kind=${activeTab}&limit=100`
       );
+      
+      if (requestCompleted) {
+        // Timeout already fired, ignore response
+        return;
+      }
+      
+      requestCompleted = true;
+      clearTimeout(timeoutId);
+      
       console.log('Fetch items response:', response);
       console.log('Response data:', response.data);
+      
       // API returns { data: items[] }
       const items = response.data?.data || [];
       console.log('Items received:', items.length, items);
       setItems(Array.isArray(items) ? items : []);
     } catch (error: any) {
+      if (requestCompleted) {
+        // Timeout already handled it
+        return;
+      }
+      
+      requestCompleted = true;
+      clearTimeout(timeoutId);
+      
       console.error('Failed to fetch items:', error);
       console.error('Error details:', {
         message: error.message,
         response: error.response,
         status: error.response?.status,
+        code: error.code,
+        config: error.config ? {
+          url: error.config.url,
+          method: error.config.method,
+          baseURL: error.config.baseURL,
+        } : null,
       });
-      const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to load items';
-      console.error('Error message:', errorMessage);
-      setError(errorMessage);
+      
+      // Check for timeout errors
+      if (error.message?.includes('timeout') || error.code === 'ECONNABORTED') {
+        setError('Request timed out. Please check your connection and try again.');
+      } else if (error.response?.status === 401) {
+        setError('Authentication failed. Please sign in again.');
+      } else {
+        const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to load items';
+        setError(errorMessage);
+      }
+      
       // Set empty array on error
       setItems([]);
     } finally {
-      // Always set loading to false, even if there's an error
-      console.log('Setting loading to false');
-      setLoading(false);
+      if (!requestCompleted) {
+        // Only set loading to false if timeout hasn't already done it
+        console.log('Setting loading to false');
+        setLoading(false);
+      }
     }
   };
 

@@ -36,6 +36,28 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    let requestCompleted = false;
+
+    // Safety timeout to prevent infinite hanging
+    const timeoutId = setTimeout(() => {
+      if (!requestCompleted && !cancelled) {
+        requestCompleted = true;
+        console.error('[Analytics] Request timeout - forcing completion');
+        setSummary(null);
+        setByLeague([]);
+        setByResponsible([]);
+        setResponsibleDetailed([]);
+        setByBetType([]);
+        setByCategory([]);
+        setLegAnalytics(null);
+        setOddsAnalysis([]);
+        setTeamPerformance([]);
+        setBestWorstPerformers(null);
+        setStreakAnalysis(null);
+        setTimeSeries([]);
+        setLoading(false);
+      }
+    }, 30000); // 30 second timeout (analytics has many requests)
     
     const fetchAnalytics = async () => {
       try {
@@ -60,6 +82,11 @@ export default function AnalyticsPage() {
         ];
 
         const results = await Promise.allSettled(requests.map(r => r.promise));
+        
+        if (requestCompleted || cancelled) return;
+        
+        requestCompleted = true;
+        clearTimeout(timeoutId);
         
         const summaryRes = results[0].status === 'fulfilled' ? results[0].value : { data: { data: null } };
         const byLeagueRes = results[1].status === 'fulfilled' ? results[1].value : { data: { data: [] } };
@@ -125,22 +152,25 @@ export default function AnalyticsPage() {
         }
       } catch (error) {
         console.error('Failed to fetch analytics:', error);
-        if (!cancelled) {
-          setSummary(null);
-          setByLeague([]);
-          setByResponsible([]);
-          setResponsibleDetailed([]);
-          setByBetType([]);
-          setByCategory([]);
-          setLegAnalytics(null);
-          setOddsAnalysis([]);
-          setTeamPerformance([]);
-          setBestWorstPerformers(null);
-          setStreakAnalysis(null);
-          setTimeSeries([]);
-        }
+        if (requestCompleted || cancelled) return;
+        
+        requestCompleted = true;
+        clearTimeout(timeoutId);
+        setSummary(null);
+        setByLeague([]);
+        setByResponsible([]);
+        setResponsibleDetailed([]);
+        setByBetType([]);
+        setByCategory([]);
+        setLegAnalytics(null);
+        setOddsAnalysis([]);
+        setTeamPerformance([]);
+        setBestWorstPerformers(null);
+        setStreakAnalysis(null);
+        setTimeSeries([]);
       } finally {
-        if (!cancelled) {
+        if (!requestCompleted && !cancelled) {
+          clearTimeout(timeoutId);
           setLoading(false);
         }
       }
@@ -150,6 +180,7 @@ export default function AnalyticsPage() {
     
     return () => {
       cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, [startDate, endDate, granularity]);
 
