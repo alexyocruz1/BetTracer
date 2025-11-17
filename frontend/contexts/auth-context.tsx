@@ -44,18 +44,83 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     let timeoutId: NodeJS.Timeout;
 
-    // Set a timeout to ensure loading is always set to false
-    // Reduced to 5 seconds - if Supabase takes longer, there's likely a network issue
+    // Helper to get session from localStorage (fast, synchronous)
+    const getSessionFromStorage = (): { access_token: string; user: any } | null => {
+      if (typeof window === 'undefined') return null;
+      
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || '';
+        
+        if (projectRef) {
+          const storageKey = `sb-${projectRef}-auth-token`;
+          const stored = localStorage.getItem(storageKey);
+          
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed?.access_token && parsed?.user) {
+              return {
+                access_token: parsed.access_token,
+                user: parsed.user,
+              };
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+      return null;
+    };
+
+    // Try localStorage first (fast path)
+    const storedSession = getSessionFromStorage();
+    if (storedSession && mounted) {
+      // We have a token, create a minimal session object
+      // The full session will be fetched in the background
+      const session = {
+        access_token: storedSession.access_token,
+        refresh_token: '', // Will be updated when real session loads
+        expires_in: 3600,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        token_type: 'bearer',
+        user: storedSession.user,
+      } as Session;
+      
+      setSession(session);
+      setUser(storedSession.user);
+      
+      // Fetch admin status
+      fetchAdminStatus(storedSession.user.id).catch(() => {
+        setIsAdmin(false);
+      });
+      
+      setLoading(false);
+      
+      // Still try to get the real session in the background (for refresh tokens, etc.)
+      supabase.auth.getSession().then(({ data: { session: realSession } }) => {
+        if (mounted && realSession) {
+          setSession(realSession);
+          setUser(realSession.user);
+        }
+      }).catch(() => {
+        // Ignore - we already have a session from localStorage
+      });
+      
+      return () => {
+        mounted = false;
+      };
+    }
+
+    // No token in localStorage, try getSession() with timeout
     timeoutId = setTimeout(() => {
       if (mounted) {
-        console.warn('[Auth] Session check timeout after 5s - assuming no session (check network/Supabase connection)');
-        // Explicitly set user and session to null on timeout
+        console.warn('[Auth] Session check timeout after 3s - no session found');
         setSession(null);
         setUser(null);
         setIsAdmin(false);
         setLoading(false);
       }
-    }, 5000); // 5 second timeout
+    }, 3000); // 3 second timeout
 
     // Get initial session with error handling
     supabase.auth
