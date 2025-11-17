@@ -340,12 +340,12 @@ export default function NewBetPage() {
                       label="Away Team"
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                     <SearchableSelect
                       options={leagues}
-                      value={leg.league_id || ''}
+                    value={leg.league_id || ''}
                       onChange={(value) => {
                         const newLegs = formData.legs.map((l, i) => 
                           i === index ? { ...l, league_id: value || undefined } : { ...l }
@@ -364,8 +364,8 @@ export default function NewBetPage() {
                         const newLegs = formData.legs.map((l, i) => 
                           i === index ? { ...l, bet_type_id: value || undefined } : { ...l }
                         );
-                        setFormData({ ...formData, legs: newLegs });
-                      }}
+                      setFormData({ ...formData, legs: newLegs });
+                    }}
                       placeholder="Search bet type..."
                       label="Bet Type"
                     />
@@ -385,8 +385,8 @@ export default function NewBetPage() {
                       placeholder="Search category..."
                       label="Category"
                     />
-                  </div>
-                  <div>
+                </div>
+                <div>
                     <SearchableSelect
                       options={responsibles}
                       value={leg.responsible_id || ''}
@@ -394,8 +394,8 @@ export default function NewBetPage() {
                         const newLegs = formData.legs.map((l, i) => 
                           i === index ? { ...l, responsible_id: value || undefined } : { ...l }
                         );
-                        setFormData({ ...formData, legs: newLegs });
-                      }}
+                      setFormData({ ...formData, legs: newLegs });
+                    }}
                       placeholder="Search responsible..."
                       label="Responsible"
                     />
@@ -406,9 +406,9 @@ export default function NewBetPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Decimal</label>
-                      <input
-                        type="number"
-                        step="0.01"
+                  <input
+                    type="number"
+                    step="0.01"
                         min="1"
                         value={leg.odd.toFixed(2)}
                         onChange={(e) => updateLegOdds(index, e.target.value, 'decimal')}
@@ -436,12 +436,12 @@ export default function NewBetPage() {
                   <label className="block text-sm font-medium text-gray-700">Leg Notes (optional)</label>
                     <textarea
                       value={leg.notes || ''}
-                      onChange={(e) => {
+                    onChange={(e) => {
                         const newLegs = formData.legs.map((l, i) => 
                           i === index ? { ...l, notes: e.target.value || undefined } : { ...l }
                         );
-                        setFormData({ ...formData, legs: newLegs });
-                      }}
+                      setFormData({ ...formData, legs: newLegs });
+                    }}
                     rows={2}
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                     placeholder="Add notes about this leg..."

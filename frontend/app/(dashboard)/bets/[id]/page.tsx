@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
-import { MainBet } from '@/types';
+import { MainBet, ReferenceItem } from '@/types';
+import html2canvas from 'html2canvas';
+import BetslipImage from '@/components/BetslipImage';
 
 export default function BetDetailPage() {
   const params = useParams();
@@ -12,6 +14,11 @@ export default function BetDetailPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [updatingLegs, setUpdatingLegs] = useState<Set<string>>(new Set());
+  const [generatingBetslip, setGeneratingBetslip] = useState(false);
+  const [showBetslipPreview, setShowBetslipPreview] = useState(false);
+  const [betslipReady, setBetslipReady] = useState(false);
+  const betslipRef = useRef<HTMLDivElement>(null);
+  const [referenceItems, setReferenceItems] = useState<Map<string, ReferenceItem>>(new Map());
 
   const fetchBet = async (id: string) => {
     setLoading(true);
@@ -29,13 +36,43 @@ export default function BetDetailPage() {
   useEffect(() => {
     let cancelled = false;
     
+    const fetchReferenceItems = async () => {
+      try {
+        // Fetch all reference items (no limit)
+        const { data } = await apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?limit=1000');
+        const itemsMap = new Map<string, ReferenceItem>();
+        data.data.forEach(item => {
+          itemsMap.set(item.id, item);
+        });
+        if (!cancelled) {
+          setReferenceItems(itemsMap);
+          console.log('Reference items loaded:', itemsMap.size);
+        }
+      } catch (error) {
+        console.error('Failed to fetch reference items:', error);
+      }
+    };
+
     if (params.id) {
       const loadBet = async (id: string) => {
         setLoading(true);
         try {
-          const { data } = await apiClient.get<{ data: MainBet }>(`/api/bets/${id}`);
+          const [betRes] = await Promise.all([
+            apiClient.get<{ data: MainBet }>(`/api/bets/${id}`),
+            fetchReferenceItems(),
+          ]);
           if (!cancelled) {
-            setBet(data.data);
+            setBet(betRes.data.data);
+            // Debug: log leg data
+            if (betRes.data.data.legs) {
+              console.log('Bet legs:', betRes.data.data.legs.map(leg => ({
+                id: leg.id,
+                home_team_id: leg.home_team_id,
+                away_team_id: leg.away_team_id,
+                bet_type_id: leg.bet_type_id,
+                league_id: leg.league_id,
+              })));
+            }
           }
         } catch (error) {
           console.error('Failed to fetch bet:', error);
@@ -56,6 +93,16 @@ export default function BetDetailPage() {
       cancelled = true;
     };
   }, [params.id]);
+
+  const getReferenceName = (id?: string): string => {
+    if (!id) return '';
+    const item = referenceItems.get(id);
+    if (!item) {
+      console.warn('Reference item not found for ID:', id, 'Map size:', referenceItems.size, 'Available IDs:', Array.from(referenceItems.keys()).slice(0, 5));
+      return '';
+    }
+    return item.name;
+  };
 
   const updateState = async (state: 'won' | 'lost' | 'void') => {
     if (!bet || updating) return; // Prevent double-clicks and concurrent updates
@@ -115,6 +162,53 @@ export default function BetDetailPage() {
     }
   };
 
+  const generateBetslipImage = async () => {
+    if (!bet || generatingBetslip) return;
+
+    setGeneratingBetslip(true);
+    setBetslipReady(false);
+    setShowBetslipPreview(true);
+  };
+
+  const handleBetslipReady = () => {
+    setBetslipReady(true);
+    setGeneratingBetslip(false);
+  };
+
+  const downloadBetslip = async () => {
+    if (!betslipRef.current || !bet || !betslipReady) {
+      if (!betslipReady) {
+        alert('Please wait for the betslip to finish loading.');
+      }
+      return;
+    }
+
+    try {
+      setGeneratingBetslip(true);
+      const canvas = await html2canvas(betslipRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        width: 1080,
+        height: betslipRef.current.scrollHeight,
+      });
+
+      const link = document.createElement('a');
+      link.download = `betslip-${bet.id}-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      setShowBetslipPreview(false);
+      setBetslipReady(false);
+    } catch (error) {
+      console.error('Failed to generate betslip image:', error);
+      alert('Failed to generate betslip image. Please try again.');
+    } finally {
+      setGeneratingBetslip(false);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;
   }
@@ -125,6 +219,50 @@ export default function BetDetailPage() {
 
   return (
     <div className="px-4 py-6 sm:px-0">
+      {/* Betslip Preview Modal */}
+      {showBetslipPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10 flex-shrink-0">
+              <h2 className="text-xl font-bold text-gray-900">Betslip Preview</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={downloadBetslip}
+                  disabled={generatingBetslip || !betslipReady}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {generatingBetslip ? 'Generating...' : !betslipReady ? 'Loading...' : 'Download Image'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBetslipPreview(false);
+                    setGeneratingBetslip(false);
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="p-4 overflow-auto flex-1">
+              <div ref={betslipRef} className="flex justify-center">
+                <BetslipImage bet={bet} onReady={handleBetslipReady} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generate Betslip Button */}
+      <div className="mb-6">
+        <button
+          onClick={generateBetslipImage}
+          disabled={generatingBetslip}
+          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
+        >
+          {generatingBetslip ? 'Generating...' : '📸 Generate Betslip for TikTok'}
+        </button>
+      </div>
       <div className="mb-6">
         <button
           onClick={() => router.back()}
@@ -218,8 +356,73 @@ export default function BetDetailPage() {
             <div key={leg.id} className="border border-gray-200 rounded-md p-4">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
-                  <h3 className="font-medium">Leg {index + 1}</h3>
-                  <div className="text-sm text-gray-500 mt-1">Odds: {leg.odd.toFixed(2)}x</div>
+                  <h3 className="font-medium text-lg">Leg {index + 1}</h3>
+                  
+                  {/* Teams */}
+                  {(leg.home_team_id || leg.away_team_id) && (
+                    <div className="text-base font-semibold text-gray-900 mt-2">
+                      {(() => {
+                        const homeName = leg.home_team_id ? getReferenceName(leg.home_team_id) : '';
+                        const awayName = leg.away_team_id ? getReferenceName(leg.away_team_id) : '';
+                        
+                        if (homeName || awayName) {
+                          return (
+                            <>
+                              {homeName && <span>{homeName}</span>}
+                              {homeName && awayName && <span className="mx-2 text-gray-500">vs</span>}
+                              {awayName && <span>{awayName}</span>}
+                            </>
+                          );
+                        }
+                        // Show IDs for debugging if names not found
+                        return (
+                          <span className="text-gray-400 italic">
+                            {leg.home_team_id && `Home: ${leg.home_team_id.substring(0, 8)}...`}
+                            {leg.home_team_id && leg.away_team_id && ' / '}
+                            {leg.away_team_id && `Away: ${leg.away_team_id.substring(0, 8)}...`}
+                            {!leg.home_team_id && !leg.away_team_id && 'No team IDs'}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* League */}
+                  {leg.league_id && getReferenceName(leg.league_id) && (
+                    <div className="text-sm text-gray-600 mt-1">
+                      {getReferenceName(leg.league_id)}
+                    </div>
+                  )}
+
+                  {/* Bet Type and Category */}
+                  {(leg.bet_type_id || leg.category_id) && (
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      {leg.bet_type_id && (
+                        getReferenceName(leg.bet_type_id) ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {getReferenceName(leg.bet_type_id)}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                            Bet Type: {leg.bet_type_id.substring(0, 8)}...
+                          </span>
+                        )
+                      )}
+                      {leg.category_id && (
+                        getReferenceName(leg.category_id) ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {getReferenceName(leg.category_id)}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                            Category: {leg.category_id.substring(0, 8)}...
+                          </span>
+                        )
+                      )}
+                    </div>
+                  )}
+
+                  <div className="text-sm text-gray-500 mt-2">Odds: {leg.odd.toFixed(2)}x</div>
                   {leg.notes && (
                     <div className="text-sm text-gray-600 mt-2">{leg.notes}</div>
                   )}

@@ -11,22 +11,22 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false;
-    
-    const fetchSummary = async () => {
-      try {
-        const { data } = await apiClient.get<{ data: AnalyticsSummary }>('/api/analytics/summary');
+
+  const fetchSummary = async () => {
+    try {
+      const { data } = await apiClient.get<{ data: AnalyticsSummary }>('/api/analytics/summary');
         if (!cancelled) {
-          setSummary(data.data);
+      setSummary(data.data);
         }
-      } catch (error) {
-        console.error('Failed to fetch summary:', error);
+    } catch (error) {
+      console.error('Failed to fetch summary:', error);
         if (!cancelled) {
           setSummary(null);
         }
-      } finally {
+    } finally {
         if (!cancelled) {
-          setLoading(false);
-        }
+      setLoading(false);
+    }
       }
     };
     
@@ -68,7 +68,7 @@ export default function DashboardPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="mt-2 text-sm text-gray-600">
               Quick overview of your betting performance. For detailed analytics and breakdowns, visit the Analytics page.
             </p>

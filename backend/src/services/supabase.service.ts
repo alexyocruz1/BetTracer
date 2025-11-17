@@ -21,7 +21,7 @@ const getSupabaseAnonKey = (): string => {
   const key = process.env.SUPABASE_ANON_KEY;
   if (!key) {
     throw new Error('Missing SUPABASE_ANON_KEY environment variable');
-  }
+}
   return key;
 };
 
@@ -32,11 +32,11 @@ let _supabaseAdmin: SupabaseClient | null = null;
 export const supabaseAdmin = (): SupabaseClient => {
   if (!_supabaseAdmin) {
     _supabaseAdmin = createClient(getSupabaseUrl(), getSupabaseServiceKey(), {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
   }
   return _supabaseAdmin;
 };

@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const getReferenceItemsSchema = z.object({
   query: z.object({
     kind: z.enum(['team', 'league', 'bet_type', 'category', 'responsible']).optional(),
-    limit: z.string().transform(Number).pipe(z.number().int().positive().max(100)).optional().default('100'),
+    limit: z.string().transform(Number).pipe(z.number().int().positive().max(10000)).optional().default('100'),
     offset: z.string().transform(Number).pipe(z.number().int().nonnegative()).optional().default('0'),
   }),
 });
