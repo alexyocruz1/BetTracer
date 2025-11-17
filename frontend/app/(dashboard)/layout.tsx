@@ -27,8 +27,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     // Only redirect if we're sure there's no user (after loading completes)
     if (!loading && !user) {
+      console.log('[Dashboard Layout] No user found, redirecting to login');
       // Use replace to avoid adding to history stack (prevents back button issues in Edge)
-      router.replace('/login');
+      // Add a small delay to ensure state is fully updated
+      const timer = setTimeout(() => {
+        // Try router.replace first, fallback to window.location for Edge compatibility
+        try {
+          router.replace('/login');
+          // Fallback: if router doesn't work, use window.location
+          setTimeout(() => {
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+              console.warn('[Dashboard Layout] Router replace failed, using window.location');
+              window.location.href = '/login';
+            }
+          }, 500);
+        } catch (error) {
+          console.error('[Dashboard Layout] Redirect error:', error);
+          window.location.href = '/login';
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [user, loading, router]);
 

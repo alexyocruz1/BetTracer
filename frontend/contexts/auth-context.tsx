@@ -45,12 +45,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let timeoutId: NodeJS.Timeout;
 
     // Set a timeout to ensure loading is always set to false
+    // Reduced to 5 seconds - if Supabase takes longer, there's likely a network issue
     timeoutId = setTimeout(() => {
       if (mounted) {
-        console.warn('[Auth] Session check timeout - setting loading to false');
+        console.warn('[Auth] Session check timeout after 5s - assuming no session (check network/Supabase connection)');
+        // Explicitly set user and session to null on timeout
+        setSession(null);
+        setUser(null);
+        setIsAdmin(false);
         setLoading(false);
       }
-    }, 10000); // 10 second timeout
+    }, 5000); // 5 second timeout
 
     // Get initial session with error handling
     supabase.auth
