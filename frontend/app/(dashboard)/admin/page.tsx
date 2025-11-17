@@ -265,13 +265,13 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
+      <div className="border-b border-gray-200 mb-6 overflow-x-auto overflow-y-hidden">
         <nav className="-mb-px flex space-x-4 sm:space-x-8 min-w-max sm:min-w-0">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0 ${
                 activeTab === tab.id
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
