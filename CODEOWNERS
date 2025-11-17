@@ -3,7 +3,7 @@
 # See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # Default owners for the entire repository
-* @your-username
+* @alexyocruz1
 
 # Frontend
 /frontend/ @frontend-team
