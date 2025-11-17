@@ -131,44 +131,105 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    // Since network requests succeed but promise might hang, use a race with session check
+    // Since network requests succeed but promise might hang, use localStorage check as primary method
     const signInPromise = supabase.auth.signInWithPassword({ email, password });
     
-    // Also start checking for session after a short delay (workaround for Edge)
-    const sessionCheckPromise = new Promise<void>((resolve, reject) => {
-      let attempts = 0;
-      const maxAttempts = 20; // Check for 2 seconds (20 * 100ms)
+    // Check localStorage for token (fast, synchronous)
+    const checkLocalStorage = (): string | null => {
+      if (typeof window === 'undefined') return null;
       
-      const checkSession = async () => {
-        attempts++;
-        const { data: { session }, error } = await supabase.auth.getSession();
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || '';
         
-        if (session?.user) {
+        if (projectRef) {
+          const storageKey = `sb-${projectRef}-auth-token`;
+          const stored = localStorage.getItem(storageKey);
+          
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            return parsed?.access_token || null;
+          }
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+      return null;
+    };
+    
+    // Also start checking for session/token after a short delay
+    const tokenCheckPromise = new Promise<void>((resolve, reject) => {
+      let attempts = 0;
+      const maxAttempts = 30; // Check for 3 seconds (30 * 100ms)
+      
+      const checkToken = () => {
+        attempts++;
+        
+        // Check localStorage first (fast)
+        const token = checkLocalStorage();
+        if (token) {
           resolve();
-        } else if (error) {
-          reject(error);
-        } else if (attempts >= maxAttempts) {
-          reject(new Error('Sign in may have succeeded but session not found. Please refresh the page.'));
+          return;
+        }
+        
+        // Fallback: check getSession (slower)
+        if (attempts % 3 === 0) { // Only check getSession every 3rd attempt
+          supabase.auth.getSession().then(({ data: { session }, error }) => {
+            if (session?.user) {
+              resolve();
+            } else if (error && attempts >= maxAttempts) {
+              reject(error);
+            } else if (attempts < maxAttempts) {
+              setTimeout(checkToken, 100);
+            }
+          }).catch(() => {
+            if (attempts < maxAttempts) {
+              setTimeout(checkToken, 100);
+            }
+          });
         } else {
-          setTimeout(checkSession, 100);
+          if (attempts >= maxAttempts) {
+            // Check localStorage one more time before giving up
+            const finalToken = checkLocalStorage();
+            if (finalToken) {
+              resolve();
+            } else {
+              reject(new Error('Sign in may have succeeded but session not found. Please refresh the page.'));
+            }
+          } else {
+            setTimeout(checkToken, 100);
+          }
         }
       };
       
-      // Start checking after 500ms (give network request time to complete)
-      setTimeout(checkSession, 500);
+      // Start checking after 300ms (give network request time to complete)
+      setTimeout(checkToken, 300);
     });
 
     try {
-      // Race between the signIn promise and session check
-      // This handles cases where signIn promise hangs but session is created
+      // Race between the signIn promise and token check
+      // This handles cases where signIn promise hangs but token is saved to localStorage
       await Promise.race([
         signInPromise.then(({ data, error }) => {
           if (error) throw error;
-          if (!data?.session) throw new Error('Sign in succeeded but no session was created');
+          if (!data?.session) {
+            // Even if signIn promise resolves without session, check localStorage
+            const token = checkLocalStorage();
+            if (!token) {
+              throw new Error('Sign in succeeded but no session was created');
+            }
+          }
         }),
-        sessionCheckPromise,
+        tokenCheckPromise,
       ]);
     } catch (error: any) {
+      // Before throwing error, check localStorage one more time
+      const token = checkLocalStorage();
+      if (token) {
+        // Token exists, sign-in actually succeeded
+        return;
+      }
+      
       // Handle Supabase errors
       if (error.error) {
         throw error.error;
