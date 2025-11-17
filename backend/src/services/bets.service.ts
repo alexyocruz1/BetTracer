@@ -14,7 +14,7 @@ export class BetsService {
 
       // Calculate combined odds if not provided
       if (!mainBetData.odds && legs.length > 0) {
-        mainBetData.odds = legs.reduce((acc, leg) => acc * leg.odd, 1);
+        mainBetData.odds = legs.reduce((acc: number, leg: any) => acc * leg.odd, 1);
       }
 
       // Start transaction by creating main bet first
@@ -36,7 +36,7 @@ export class BetsService {
       console.log('[BetsService] Main bet created:', mainBet.id);
 
       // Create legs
-      const legsData = legs.map((leg) => ({
+      const legsData = legs.map((leg: any) => ({
         ...leg,
         main_bet_id: mainBet.id,
       }));
@@ -97,21 +97,35 @@ export class BetsService {
     }
 
     if (filters.league_id) {
-      query = query.in('id', (qb: any) =>
-        qb
-          .from('legs')
-          .select('main_bet_id')
-          .eq('league_id', filters.league_id)
-      );
+      // First, get all bet IDs that have legs with this league_id
+      const { data: legsWithLeague } = await this.supabase
+        .from('legs')
+        .select('main_bet_id')
+        .eq('league_id', filters.league_id);
+      
+      if (legsWithLeague && legsWithLeague.length > 0) {
+        const betIds = [...new Set(legsWithLeague.map((l: any) => l.main_bet_id))];
+        query = query.in('id', betIds);
+      } else {
+        // No legs match, return empty result
+        query = query.eq('id', 'no-matches');
+      }
     }
 
     if (filters.responsible_id) {
-      query = query.in('id', (qb: any) =>
-        qb
-          .from('legs')
-          .select('main_bet_id')
-          .eq('responsible_id', filters.responsible_id)
-      );
+      // First, get all bet IDs that have legs with this responsible_id
+      const { data: legsWithResponsible } = await this.supabase
+        .from('legs')
+        .select('main_bet_id')
+        .eq('responsible_id', filters.responsible_id);
+      
+      if (legsWithResponsible && legsWithResponsible.length > 0) {
+        const betIds = [...new Set(legsWithResponsible.map((l: any) => l.main_bet_id))];
+        query = query.in('id', betIds);
+      } else {
+        // No legs match, return empty result
+        query = query.eq('id', 'no-matches');
+      }
     }
 
     const { data, error, count } = await query

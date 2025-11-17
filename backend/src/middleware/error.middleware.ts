@@ -4,7 +4,7 @@ import { sendError } from '../utils/responses';
 
 export const errorHandler = (
   err: Error | AppError,
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): void => {
@@ -58,7 +58,7 @@ export const errorHandler = (
   );
 };
 
-export const notFoundHandler = (req: Request, res: Response): Response => {
+export const notFoundHandler = (_req: Request, res: Response): Response => {
   return sendError(res, 'NOT_FOUND', 'Route not found', 404);
 };
 

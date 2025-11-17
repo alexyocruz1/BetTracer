@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createUserClient } from '../services/supabase.service';
-import { createError, errorCodes } from '../utils/errors';
+import { errorCodes } from '../utils/errors';
 import { sendError } from '../utils/responses';
 
 export interface AuthRequest extends Request {

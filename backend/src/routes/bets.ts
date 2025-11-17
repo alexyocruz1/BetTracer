@@ -22,7 +22,7 @@ const betsController = new BetsController(betsService);
 
 // Middleware to inject supabase client
 router.use(authenticate);
-router.use((req: AuthRequest, res, next) => {
+router.use((req: AuthRequest, _res, next) => {
   if (req.supabaseClient) {
     betsService['supabase'] = req.supabaseClient;
   }
