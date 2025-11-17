@@ -21,6 +21,13 @@ export default function AdminPage() {
     name: '',
     metadata: '',
   });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 100,
+    total: 0,
+    totalPages: 1,
+  });
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -31,16 +38,21 @@ export default function AdminPage() {
       // Reset form when switching tabs
       setFormData({ name: '', metadata: '' });
       setSubmitError(null);
+      // Reset pagination when switching tabs
+      setPagination({ page: 1, limit: 100, total: 0, totalPages: 1 });
       // Fetch items for the current tab
-      fetchItems();
+      fetchItems(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, authLoading, activeTab]);
 
-  const fetchItems = async () => {
-    console.log('fetchItems called for:', activeTab);
+  const fetchItems = async (page: number = 1, limitOverride?: number) => {
+    console.log('fetchItems called for:', activeTab, 'page:', page);
     setLoading(true);
     setError(null);
+    
+    const limit = limitOverride || pagination.limit;
+    const offset = (page - 1) * limit;
     
     // Create a timeout promise to prevent infinite hanging
     let requestCompleted = false;
@@ -55,11 +67,11 @@ export default function AdminPage() {
     }, 20000); // 20 second safety timeout
     
     try {
-      console.log('Fetching items for kind:', activeTab);
+      console.log('Fetching items for kind:', activeTab, 'offset:', offset, 'limit:', limit);
       console.log('[Admin] API URL:', process.env.NEXT_PUBLIC_BACKEND_URL);
       
-      const response = await apiClient.get<{ data: ReferenceItem[] }>(
-        `/api/reference-items?kind=${activeTab}&limit=100`
+      const response = await apiClient.get<{ data: ReferenceItem[]; meta?: { pagination: { page: number; limit: number; total: number; totalPages: number } } }>(
+        `/api/reference-items?kind=${activeTab}&limit=${limit}&offset=${offset}`
       );
       
       if (requestCompleted) {
@@ -73,10 +85,24 @@ export default function AdminPage() {
       console.log('Fetch items response:', response);
       console.log('Response data:', response.data);
       
-      // API returns { data: items[] }
+      // API returns { data: items[], meta: { pagination: {...} } }
       const items = response.data?.data || [];
+      const paginationMeta = response.data?.meta?.pagination;
+      
       console.log('Items received:', items.length, items);
       setItems(Array.isArray(items) ? items : []);
+      
+      // Update pagination state
+      if (paginationMeta) {
+        setPagination({
+          page: paginationMeta.page,
+          limit: paginationMeta.limit,
+          total: paginationMeta.total,
+          totalPages: paginationMeta.totalPages,
+        });
+      }
+      
+      setLoading(false);
     } catch (error: any) {
       if (requestCompleted) {
         // Timeout already handled it
@@ -111,10 +137,11 @@ export default function AdminPage() {
       
       // Set empty array on error
       setItems([]);
+      setLoading(false);
     } finally {
+      // Ensure loading is always set to false, even if timeout already fired
       if (!requestCompleted) {
-        // Only set loading to false if timeout hasn't already done it
-        console.log('Setting loading to false');
+        console.log('Setting loading to false (fallback)');
         setLoading(false);
       }
     }
@@ -169,7 +196,7 @@ export default function AdminPage() {
       
       // Refresh list for the current tab (use captured tab value)
       // Don't await - let it happen in background
-      const refreshPromise = fetchItems();
+      const refreshPromise = fetchItems(pagination.page);
       refreshPromise.catch((err) => {
         console.error('Error refreshing list:', err);
         // Don't show error to user, just log it
@@ -300,7 +327,13 @@ export default function AdminPage() {
             </div>
             {submitError && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-600">{submitError}</p>
+                <p className="text-sm text-red-600 font-medium mb-1">Error:</p>
+                <p className="text-sm text-red-700 whitespace-pre-wrap break-words">{submitError}</p>
+                {submitError.includes('already exists') && (
+                  <p className="text-xs text-red-600 mt-2">
+                    💡 Tip: Use the search box on the right to find existing items before adding.
+                  </p>
+                )}
               </div>
             )}
             <button
@@ -315,9 +348,27 @@ export default function AdminPage() {
 
         {/* Existing Items List */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Existing {tabs.find((t) => t.id === activeTab)?.label} ({items.length})
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900">
+              Existing {tabs.find((t) => t.id === activeTab)?.label}
+              {pagination.total > 0 && (
+                <span className="text-sm font-normal text-gray-500 ml-2">
+                  ({pagination.total} total, showing {items.length} on page {pagination.page} of {pagination.totalPages})
+                </span>
+              )}
+            </h2>
+          </div>
+          
+          {/* Search/Filter */}
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder={`Search ${activeTab}s...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
           {loading ? (
             <div className="text-center py-8 text-gray-500">Loading...</div>
           ) : error ? (
@@ -327,7 +378,7 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => {
                   setError(null);
-                  fetchItems();
+                  fetchItems(pagination.page);
                 }}
                 className="px-4 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors"
               >
@@ -339,23 +390,97 @@ export default function AdminPage() {
               No {activeTab}s found. Add one using the form on the left.
             </div>
           ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between items-center p-3 border border-gray-200 rounded-md hover:bg-gray-50"
-                >
-                  <div>
-                    <div className="font-medium text-gray-900">{item.name}</div>
-                    {item.metadata && Object.keys(item.metadata).length > 0 && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {JSON.stringify(item.metadata)}
+            <>
+              <div className="space-y-2 max-h-96 overflow-y-auto mb-4">
+                {items
+                  .filter((item) => {
+                    if (!searchQuery.trim()) return true;
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      item.name.toLowerCase().includes(query) ||
+                      (item.metadata && JSON.stringify(item.metadata).toLowerCase().includes(query))
+                    );
+                  })
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex justify-between items-center p-3 border border-gray-200 rounded-md hover:bg-gray-50"
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900">{item.name}</div>
+                        {item.metadata && Object.keys(item.metadata).length > 0 && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {JSON.stringify(item.metadata)}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+                  ))}
+                {searchQuery.trim() && items.filter((item) => {
+                  const query = searchQuery.toLowerCase();
+                  return (
+                    item.name.toLowerCase().includes(query) ||
+                    (item.metadata && JSON.stringify(item.metadata).toLowerCase().includes(query))
+                  );
+                }).length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No items match "{searchQuery}"
                   </div>
+                )}
+              </div>
+              
+              {/* Pagination Controls */}
+              <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                <div className="flex items-center gap-2">
+                  {pagination.totalPages > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => fetchItems(pagination.page - 1)}
+                        disabled={pagination.page === 1 || loading}
+                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-700">
+                        Page {pagination.page} of {pagination.totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => fetchItems(pagination.page + 1)}
+                        disabled={pagination.page >= pagination.totalPages || loading}
+                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </>
+                  )}
+                  {pagination.totalPages === 1 && pagination.total > 0 && (
+                    <span className="text-sm text-gray-500">
+                      Showing all {pagination.total} items
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">Items per page:</span>
+                  <select
+                    value={pagination.limit}
+                    onChange={(e) => {
+                      const newLimit = Number(e.target.value);
+                      setPagination({ ...pagination, limit: newLimit, page: 1 });
+                      fetchItems(1, newLimit);
+                    }}
+                    className="text-sm border border-gray-300 rounded-md px-2 py-1"
+                    disabled={loading}
+                  >
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={200}>200</option>
+                    <option value={500}>500</option>
+                  </select>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>

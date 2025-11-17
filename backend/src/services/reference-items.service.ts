@@ -69,31 +69,60 @@ export class ReferenceItemsService {
     if (error) {
       console.error('Insert error:', error);
       if (error.code === '23505') {
-        // Unique constraint violation - could be case-sensitive or case-insensitive
-        // Try to find the existing item to show a better error message
+        // Unique constraint violation - find all similar items (case-insensitive match)
         try {
-          const { data: existing } = await this.supabase
+          const { data: existingItems } = await this.supabase
             .from('reference_items')
             .select('name')
             .eq('kind', itemData.kind)
-            .ilike('name', normalizedName)
-            .limit(1)
-            .single();
+            .ilike('name', normalizedName);
           
-          if (existing) {
+          if (existingItems && existingItems.length > 0) {
+            const existingNames = existingItems.map(item => `"${item.name}"`).join(', ');
+            const count = existingItems.length;
+            const message = count === 1
+              ? `A ${itemData.kind} with this name already exists (case-insensitive). Existing: ${existingNames}`
+              : `${count} ${itemData.kind}s with this name already exist (case-insensitive). Existing: ${existingNames}`;
+            
             throw createError(
               errorCodes.CONFLICT,
-              `A ${itemData.kind} with this name already exists (case-insensitive). Existing: "${existing.name}"`,
+              message,
               409
             );
           }
         } catch (lookupError: any) {
-          // If lookup fails, just use generic message
+          // If it's our custom error, re-throw it
+          if (lookupError.statusCode === 409) {
+            throw lookupError;
+          }
+          // If lookup fails, try to find any similar items
+          try {
+            const { data: similarItems } = await this.supabase
+              .from('reference_items')
+              .select('name')
+              .eq('kind', itemData.kind)
+              .ilike('name', `%${normalizedName}%`)
+              .limit(5);
+            
+            if (similarItems && similarItems.length > 0) {
+              const similarNames = similarItems.map(item => `"${item.name}"`).join(', ');
+              throw createError(
+                errorCodes.CONFLICT,
+                `A ${itemData.kind} with this name already exists. Similar items: ${similarNames}`,
+                409
+              );
+            }
+          } catch (similarError: any) {
+            // If it's our custom error, re-throw it
+            if (similarError.statusCode === 409) {
+              throw similarError;
+            }
+          }
         }
         
         throw createError(
           errorCodes.CONFLICT,
-          `A ${itemData.kind} with this name already exists`,
+          `A ${itemData.kind} with this name already exists (case-insensitive)`,
           409
         );
       }
