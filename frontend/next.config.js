@@ -11,6 +11,8 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Apply security headers to all routes
+        // Next.js/Vercel will automatically set correct MIME types for static assets
         source: '/:path*',
         headers: [
           {
@@ -24,19 +26,6 @@ const nextConfig = {
           {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
-          },
-          {
-            key: 'Content-Type',
-            value: 'text/html; charset=utf-8',
-          },
-        ],
-      },
-      {
-        source: '/api/:path*',
-        headers: [
-          {
-            key: 'Content-Type',
-            value: 'application/json; charset=utf-8',
           },
         ],
       },

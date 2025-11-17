@@ -5,6 +5,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'BetTracer - Bet Tracking & Analytics',
   description: 'Track your bets, analyze performance, and get ML-powered insights',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
