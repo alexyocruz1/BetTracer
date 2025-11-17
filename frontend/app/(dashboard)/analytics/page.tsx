@@ -83,16 +83,17 @@ export default function AnalyticsPage() {
         
         if (!cancelled) {
           // Check if we have any data at all
+          const summaryData = summaryRes.data?.data as AnalyticsSummary | undefined;
           const hasAnyData = 
-            (summaryRes.data?.data && summaryRes.data.data.total_bets > 0) ||
-            (byLeagueRes.data?.data && byLeagueRes.data.data.length > 0) ||
-            (byResponsibleRes.data?.data && byResponsibleRes.data.data.length > 0) ||
-            (byBetTypeRes.data?.data && byBetTypeRes.data.data.length > 0) ||
-            (byCategoryRes.data?.data && byCategoryRes.data.data.length > 0) ||
-            (timeSeriesRes.data?.data && timeSeriesRes.data.data.length > 0);
+            (summaryData && summaryData.total_bets > 0) ||
+            (byLeagueRes.data?.data && Array.isArray(byLeagueRes.data.data) && byLeagueRes.data.data.length > 0) ||
+            (byResponsibleRes.data?.data && Array.isArray(byResponsibleRes.data.data) && byResponsibleRes.data.data.length > 0) ||
+            (byBetTypeRes.data?.data && Array.isArray(byBetTypeRes.data.data) && byBetTypeRes.data.data.length > 0) ||
+            (byCategoryRes.data?.data && Array.isArray(byCategoryRes.data.data) && byCategoryRes.data.data.length > 0) ||
+            (timeSeriesRes.data?.data && Array.isArray(timeSeriesRes.data.data) && timeSeriesRes.data.data.length > 0);
 
           // If summary request failed but we have other data, create a default summary
-          if (!summaryRes.data?.data && hasAnyData) {
+          if (!summaryData && hasAnyData) {
             setSummary({
               total_stake: 0,
               total_profit: 0,
@@ -105,22 +106,22 @@ export default function AnalyticsPage() {
               cumulative_profit: 0,
             });
           } else {
-            setSummary(summaryRes.data?.data || null);
+            setSummary(summaryData || null);
           }
           
-          setByLeague(byLeagueRes.data?.data || []);
-          setByResponsible(byResponsibleRes.data?.data || []);
-          const detailedData = responsibleDetailedRes.data?.data || [];
+          setByLeague((byLeagueRes.data?.data as AnalyticsByLeague[]) || []);
+          setByResponsible((byResponsibleRes.data?.data as AnalyticsByResponsible[]) || []);
+          const detailedData = (responsibleDetailedRes.data?.data as ResponsibleDetailedAnalytics[]) || [];
           console.log('Responsible detailed analytics:', detailedData);
           setResponsibleDetailed(detailedData);
-          setByBetType(byBetTypeRes.data?.data || []);
-          setByCategory(byCategoryRes.data?.data || []);
-          setLegAnalytics(legAnalyticsRes.data?.data || null);
-          setOddsAnalysis(oddsAnalysisRes.data?.data || []);
-          setTeamPerformance(teamPerformanceRes.data?.data || []);
-          setBestWorstPerformers(bestWorstRes.data?.data || null);
-          setStreakAnalysis(streakRes.data?.data || null);
-          setTimeSeries(timeSeriesRes.data?.data || []);
+          setByBetType((byBetTypeRes.data?.data as AnalyticsByBetType[]) || []);
+          setByCategory((byCategoryRes.data?.data as AnalyticsByCategory[]) || []);
+          setLegAnalytics((legAnalyticsRes.data?.data as LegAnalytics) || null);
+          setOddsAnalysis((oddsAnalysisRes.data?.data as OddsAnalysis[]) || []);
+          setTeamPerformance((teamPerformanceRes.data?.data as TeamPerformance[]) || []);
+          setBestWorstPerformers((bestWorstRes.data?.data as BestWorstPerformers) || null);
+          setStreakAnalysis((streakRes.data?.data as StreakAnalysis) || null);
+          setTimeSeries((timeSeriesRes.data?.data as TimeSeriesData[]) || []);
         }
       } catch (error) {
         console.error('Failed to fetch analytics:', error);

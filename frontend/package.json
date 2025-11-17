@@ -4,6 +4,7 @@
   "description": "BetTracer Frontend Application",
   "private": true,
   "scripts": {
+    "prebuild": "node -e \"require('fs').cpSync('../shared/types', 'types/shared-types', {recursive: true, force: true})\"",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
