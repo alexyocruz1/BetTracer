@@ -209,7 +209,7 @@ export default function AnalyticsPage() {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
             />
           </div>
           <div>
@@ -218,7 +218,7 @@ export default function AnalyticsPage() {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
             />
           </div>
           <div>
@@ -226,7 +226,7 @@ export default function AnalyticsPage() {
             <select
               value={granularity}
               onChange={(e) => setGranularity(e.target.value as 'daily' | 'weekly' | 'monthly' | 'all-time')}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
             >
               <option value="all-time">All Time</option>
               <option value="daily">Daily</option>
@@ -240,7 +240,7 @@ export default function AnalyticsPage() {
                 setStartDate('');
                 setEndDate('');
               }}
-              className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-4 py-3 text-base sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 min-h-[44px]"
             >
               Clear Filters
             </button>

@@ -304,7 +304,7 @@ export default function AdminPage() {
                     setSubmitError(null);
                   }
                 }}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
                 placeholder={`Enter ${activeTab} name`}
                 required
                 autoFocus
@@ -318,7 +318,7 @@ export default function AdminPage() {
                 value={formData.metadata}
                 onChange={(e) => setFormData({ ...formData, metadata: e.target.value })}
                 rows={4}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 font-mono text-sm"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 font-mono text-base sm:text-sm"
                 placeholder='{"key": "value"}'
               />
               <p className="mt-1 text-xs text-gray-500">
@@ -339,7 +339,7 @@ export default function AdminPage() {
             <button
               type="submit"
               disabled={submitting || !formData.name.trim()}
-              className="w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border border-transparent rounded-md shadow-sm text-base sm:text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
             >
               {submitting ? 'Adding...' : 'Add Item'}
             </button>

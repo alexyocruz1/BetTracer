@@ -26,3 +26,53 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+/* Mobile optimizations */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="datetime-local"],
+textarea,
+select {
+  font-size: 16px !important; /* Prevents zoom on iOS when focusing inputs */
+}
+
+@media (min-width: 640px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="datetime-local"],
+  textarea,
+  select {
+    font-size: 14px; /* Smaller on desktop */
+  }
+}
+
+/* Ensure touch targets are at least 44x44px for mobile */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (min-width: 640px) {
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    min-height: auto;
+    min-width: auto;
+  }
+}
+

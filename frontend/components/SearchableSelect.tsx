@@ -112,7 +112,7 @@ export default function SearchableSelect({
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="block w-full border border-gray-300 rounded-md px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="block w-full border border-gray-300 rounded-md px-3 py-2.5 pr-8 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           required={required && !value}
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-2">

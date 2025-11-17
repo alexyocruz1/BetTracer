@@ -261,7 +261,7 @@ export default function NewBetPage() {
                 setFormData({ ...formData, date: localDate.toISOString() });
               }
             }}
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
             required
           />
         </div>
@@ -271,35 +271,38 @@ export default function NewBetPage() {
             type="number"
             step="0.01"
             min="0.01"
+            inputMode="decimal"
             value={formData.stake}
             onChange={(e) => setFormData({ ...formData, stake: parseFloat(e.target.value) || 0 })}
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
             required
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Main Bet Odds (optional - auto-calculated from legs)</label>
-          <div className="grid grid-cols-2 gap-4 mt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Decimal</label>
               <input
                 type="number"
                 step="0.01"
                 min="1"
+                inputMode="decimal"
                 value={mainBetDecimalOdds}
                 onChange={(e) => updateMainBetDecimalOdds(e.target.value)}
                 placeholder="2.50"
-                className="block w-full border border-gray-300 rounded-md px-3 py-2"
+                className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
               />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">American</label>
               <input
                 type="text"
+                inputMode="numeric"
                 value={mainBetAmericanOdds}
                 onChange={(e) => updateMainBetAmericanOdds(e.target.value)}
                 placeholder="+150 or -200"
-                className="block w-full border border-gray-300 rounded-md px-3 py-2"
+                className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
               />
             </div>
           </div>
@@ -313,7 +316,7 @@ export default function NewBetPage() {
             value={formData.notes || ''}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value || undefined })}
             rows={3}
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
             placeholder="Add any notes about this bet..."
           />
         </div>
@@ -334,9 +337,9 @@ export default function NewBetPage() {
                 )}
               </div>
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <SearchableSelect
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <SearchableSelect
                       options={teams}
                       value={leg.home_team_id || ''}
                       onChange={(value) => {
@@ -364,7 +367,7 @@ export default function NewBetPage() {
                     />
                   </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <SearchableSelect
                       options={leagues}
@@ -394,7 +397,7 @@ export default function NewBetPage() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <SearchableSelect
                       options={categories}
@@ -426,17 +429,18 @@ export default function NewBetPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Odds *</label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Decimal</label>
                   <input
                     type="number"
                     step="0.01"
                         min="1"
+                        inputMode="decimal"
                         value={leg.odd.toFixed(2)}
                         onChange={(e) => updateLegOdds(index, e.target.value, 'decimal')}
                         placeholder="2.50"
-                        className="block w-full border border-gray-300 rounded-md px-3 py-2"
+                        className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
                         required
                       />
                     </div>
@@ -444,10 +448,11 @@ export default function NewBetPage() {
                       <label className="block text-xs text-gray-500 mb-1">American</label>
                       <input
                         type="text"
+                        inputMode="numeric"
                         value={decimalToAmerican(leg.odd) ? formatAmericanOdds(decimalToAmerican(leg.odd)!) : ''}
                         onChange={(e) => updateLegOdds(index, e.target.value, 'american')}
                         placeholder="+150 or -200"
-                        className="block w-full border border-gray-300 rounded-md px-3 py-2"
+                        className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
                       />
                     </div>
                   </div>
@@ -466,7 +471,7 @@ export default function NewBetPage() {
                       setFormData({ ...formData, legs: newLegs });
                     }}
                     rows={2}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
                     placeholder="Add notes about this leg..."
                   />
                 </div>
@@ -481,18 +486,18 @@ export default function NewBetPage() {
             + Add Leg
           </button>
         </div>
-        <div className="flex justify-end space-x-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 sm:space-x-4">
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            className="w-full sm:w-auto px-4 py-3 border border-gray-300 rounded-md text-base sm:text-sm font-medium text-gray-700 hover:bg-gray-50 min-h-[44px]"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
+            className="w-full sm:w-auto px-4 py-3 border border-transparent rounded-md shadow-sm text-base sm:text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 min-h-[44px]"
           >
             {loading ? 'Creating...' : 'Create Bet'}
           </button>

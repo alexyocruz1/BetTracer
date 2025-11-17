@@ -127,10 +127,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             </div>
             <div className="flex items-center">
-              <span className="text-gray-700 mr-4">{user.email}</span>
+              <span className="text-gray-700 mr-2 sm:mr-4 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{user.email}</span>
               <button
                 onClick={() => signOut()}
-                className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+                className="text-gray-500 hover:text-gray-700 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium min-h-[44px] sm:min-h-0"
               >
                 Sign out
               </button>
