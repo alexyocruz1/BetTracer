@@ -3,7 +3,14 @@ import {
   AnalyticsSummary,
   AnalyticsByLeague,
   AnalyticsByResponsible,
+  AnalyticsByBetType,
+  AnalyticsByCategory,
   TimeSeriesData,
+  LegAnalytics,
+  OddsAnalysis,
+  TeamPerformance,
+  BestWorstPerformers,
+  StreakAnalysis,
 } from '../types';
 import { createError, errorCodes } from '../utils/errors';
 
@@ -225,6 +232,156 @@ export class AnalyticsService {
     return results;
   }
 
+  async getByBetType(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<AnalyticsByBetType[]> {
+    let betsQuery = this.supabase
+      .from('main_bets')
+      .select('*, legs(*)')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+
+    if (startDate) {
+      betsQuery = betsQuery.gte('date', startDate);
+    }
+
+    if (endDate) {
+      betsQuery = betsQuery.lte('date', endDate);
+    }
+
+    const { data: bets, error } = await betsQuery;
+
+    if (error) {
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch by bet type', 500);
+    }
+
+    const betTypeMap = new Map<string, AnalyticsByBetType>();
+
+    bets?.forEach((bet) => {
+      bet.legs?.forEach((leg: any) => {
+        if (!leg.bet_type_id) return;
+
+        const betTypeId = leg.bet_type_id;
+        if (!betTypeMap.has(betTypeId)) {
+          betTypeMap.set(betTypeId, {
+            bet_type_id: betTypeId,
+            bet_type_name: '',
+            total_stake: 0,
+            total_profit: 0,
+            roi: 0,
+            win_rate: 0,
+            bet_count: 0,
+          });
+        }
+
+        const betTypeData = betTypeMap.get(betTypeId)!;
+        betTypeData.total_stake += Number(bet.stake || 0);
+        betTypeData.total_profit += Number(bet.profit_loss || 0);
+        betTypeData.bet_count += 1;
+      });
+    });
+
+    const results = Array.from(betTypeMap.values());
+    for (const result of results) {
+      result.roi = result.total_stake > 0 ? result.total_profit / result.total_stake : 0;
+
+      const { data: betType } = await this.supabase
+        .from('reference_items')
+        .select('name')
+        .eq('id', result.bet_type_id)
+        .single();
+
+      if (betType) {
+        result.bet_type_name = betType.name;
+      }
+
+      const betTypeBets = bets?.filter((b) =>
+        b.legs?.some((l: any) => l.bet_type_id === result.bet_type_id)
+      );
+      const wonBetTypeBets = betTypeBets?.filter((b) => b.state === 'won').length || 0;
+      result.win_rate = betTypeBets?.length ? wonBetTypeBets / betTypeBets.length : 0;
+    }
+
+    return results;
+  }
+
+  async getByCategory(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<AnalyticsByCategory[]> {
+    let betsQuery = this.supabase
+      .from('main_bets')
+      .select('*, legs(*)')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+
+    if (startDate) {
+      betsQuery = betsQuery.gte('date', startDate);
+    }
+
+    if (endDate) {
+      betsQuery = betsQuery.lte('date', endDate);
+    }
+
+    const { data: bets, error } = await betsQuery;
+
+    if (error) {
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch by category', 500);
+    }
+
+    const categoryMap = new Map<string, AnalyticsByCategory>();
+
+    bets?.forEach((bet) => {
+      bet.legs?.forEach((leg: any) => {
+        if (!leg.category_id) return;
+
+        const categoryId = leg.category_id;
+        if (!categoryMap.has(categoryId)) {
+          categoryMap.set(categoryId, {
+            category_id: categoryId,
+            category_name: '',
+            total_stake: 0,
+            total_profit: 0,
+            roi: 0,
+            win_rate: 0,
+            bet_count: 0,
+          });
+        }
+
+        const categoryData = categoryMap.get(categoryId)!;
+        categoryData.total_stake += Number(bet.stake || 0);
+        categoryData.total_profit += Number(bet.profit_loss || 0);
+        categoryData.bet_count += 1;
+      });
+    });
+
+    const results = Array.from(categoryMap.values());
+    for (const result of results) {
+      result.roi = result.total_stake > 0 ? result.total_profit / result.total_stake : 0;
+
+      const { data: category } = await this.supabase
+        .from('reference_items')
+        .select('name')
+        .eq('id', result.category_id)
+        .single();
+
+      if (category) {
+        result.category_name = category.name;
+      }
+
+      const categoryBets = bets?.filter((b) =>
+        b.legs?.some((l: any) => l.category_id === result.category_id)
+      );
+      const wonCategoryBets = categoryBets?.filter((b) => b.state === 'won').length || 0;
+      result.win_rate = categoryBets?.length ? wonCategoryBets / categoryBets.length : 0;
+    }
+
+    return results;
+  }
+
   async getTimeSeries(
     userId: string,
     granularity: 'daily' | 'weekly' | 'monthly',
@@ -285,6 +442,463 @@ export class AnalyticsService {
     });
 
     return Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async getLegAnalytics(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<LegAnalytics> {
+    let betsQuery = this.supabase
+      .from('main_bets')
+      .select('*, legs(*)')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+
+    if (startDate) {
+      betsQuery = betsQuery.gte('date', startDate);
+    }
+
+    if (endDate) {
+      betsQuery = betsQuery.lte('date', endDate);
+    }
+
+    const { data: bets, error } = await betsQuery;
+
+    if (error) {
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch leg analytics', 500);
+    }
+
+    let totalLegs = 0;
+    let wonLegs = 0;
+    let lostLegs = 0;
+    let pendingLegs = 0;
+    let voidLegs = 0;
+    let totalLegOdds = 0;
+
+    const leagueMap = new Map<string, { total: number; won: number }>();
+    const betTypeMap = new Map<string, { total: number; won: number }>();
+
+    bets?.forEach((bet) => {
+      bet.legs?.forEach((leg: any) => {
+        totalLegs++;
+        totalLegOdds += Number(leg.odd || 0);
+
+        if (leg.result_state === 'won') wonLegs++;
+        else if (leg.result_state === 'lost') lostLegs++;
+        else if (leg.result_state === 'void') voidLegs++;
+        else pendingLegs++;
+
+        // Track by league
+        if (leg.league_id) {
+          if (!leagueMap.has(leg.league_id)) {
+            leagueMap.set(leg.league_id, { total: 0, won: 0 });
+          }
+          const leagueData = leagueMap.get(leg.league_id)!;
+          leagueData.total++;
+          if (leg.result_state === 'won') leagueData.won++;
+        }
+
+        // Track by bet type
+        if (leg.bet_type_id) {
+          if (!betTypeMap.has(leg.bet_type_id)) {
+            betTypeMap.set(leg.bet_type_id, { total: 0, won: 0 });
+          }
+          const betTypeData = betTypeMap.get(leg.bet_type_id)!;
+          betTypeData.total++;
+          if (leg.result_state === 'won') betTypeData.won++;
+        }
+      });
+    });
+
+    const legWinRate = totalLegs > 0 ? wonLegs / (wonLegs + lostLegs + voidLegs) : 0;
+    const avgLegOdds = totalLegs > 0 ? totalLegOdds / totalLegs : 0;
+
+    // Get league names
+    const performanceByLeague = [];
+    for (const [leagueId, data] of leagueMap.entries()) {
+      const { data: league } = await this.supabase
+        .from('reference_items')
+        .select('name')
+        .eq('id', leagueId)
+        .single();
+
+      performanceByLeague.push({
+        league_id: leagueId,
+        league_name: league?.name || 'Unknown',
+        total_legs: data.total,
+        won_legs: data.won,
+        win_rate: data.total > 0 ? data.won / data.total : 0,
+      });
+    }
+
+    // Get bet type names
+    const performanceByBetType = [];
+    for (const [betTypeId, data] of betTypeMap.entries()) {
+      const { data: betType } = await this.supabase
+        .from('reference_items')
+        .select('name')
+        .eq('id', betTypeId)
+        .single();
+
+      performanceByBetType.push({
+        bet_type_id: betTypeId,
+        bet_type_name: betType?.name || 'Unknown',
+        total_legs: data.total,
+        won_legs: data.won,
+        win_rate: data.total > 0 ? data.won / data.total : 0,
+      });
+    }
+
+    return {
+      total_legs: totalLegs,
+      won_legs: wonLegs,
+      lost_legs: lostLegs,
+      pending_legs: pendingLegs,
+      void_legs: voidLegs,
+      leg_win_rate: legWinRate,
+      avg_leg_odds: avgLegOdds,
+      performance_by_league: performanceByLeague,
+      performance_by_bet_type: performanceByBetType,
+    };
+  }
+
+  async getOddsAnalysis(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<OddsAnalysis[]> {
+    let query = this.supabase
+      .from('main_bets')
+      .select('date, stake, odds, profit_loss, state')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .not('odds', 'is', null);
+
+    if (startDate) {
+      query = query.gte('date', startDate);
+    }
+
+    if (endDate) {
+      query = query.lte('date', endDate);
+    }
+
+    const { data: bets, error } = await query;
+
+    if (error) {
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch odds analysis', 500);
+    }
+
+    // Define odds ranges
+    const ranges = [
+      { label: '1.0-1.5', min: 1.0, max: 1.5 },
+      { label: '1.5-2.0', min: 1.5, max: 2.0 },
+      { label: '2.0-2.5', min: 2.0, max: 2.5 },
+      { label: '2.5-3.0', min: 2.5, max: 3.0 },
+      { label: '3.0-4.0', min: 3.0, max: 4.0 },
+      { label: '4.0+', min: 4.0, max: Infinity },
+    ];
+
+    const rangeMap = new Map<string, OddsAnalysis>();
+
+    ranges.forEach((range) => {
+      rangeMap.set(range.label, {
+        range: range.label,
+        min_odds: range.min,
+        max_odds: range.max === Infinity ? 999 : range.max,
+        total_bets: 0,
+        total_stake: 0,
+        total_profit: 0,
+        roi: 0,
+        win_rate: 0,
+      });
+    });
+
+    bets?.forEach((bet) => {
+      const odds = Number(bet.odds);
+      if (!odds || odds < 1) return;
+
+      let rangeLabel = '';
+      for (const range of ranges) {
+        if (odds >= range.min && (range.max === Infinity || odds < range.max)) {
+          rangeLabel = range.label;
+          break;
+        }
+      }
+
+      if (rangeLabel && rangeMap.has(rangeLabel)) {
+        const rangeData = rangeMap.get(rangeLabel)!;
+        rangeData.total_bets++;
+        rangeData.total_stake += Number(bet.stake || 0);
+        rangeData.total_profit += Number(bet.profit_loss || 0);
+      }
+    });
+
+    // Calculate ROI and win rate for each range
+    const results = Array.from(rangeMap.values());
+    for (const result of results) {
+      result.roi = result.total_stake > 0 ? result.total_profit / result.total_stake : 0;
+
+      // Calculate win rate for this range
+      const rangeBets = bets?.filter((b) => {
+        const odds = Number(b.odds);
+        if (!odds) return false;
+        return odds >= result.min_odds && odds < (result.max_odds === 999 ? Infinity : result.max_odds);
+      });
+      const wonBets = rangeBets?.filter((b) => b.state === 'won').length || 0;
+      result.win_rate = rangeBets?.length ? wonBets / rangeBets.length : 0;
+    }
+
+    return results.filter((r) => r.total_bets > 0);
+  }
+
+  async getTeamPerformance(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<TeamPerformance[]> {
+    let betsQuery = this.supabase
+      .from('main_bets')
+      .select('*, legs(*)')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+
+    if (startDate) {
+      betsQuery = betsQuery.gte('date', startDate);
+    }
+
+    if (endDate) {
+      betsQuery = betsQuery.lte('date', endDate);
+    }
+
+    const { data: bets, error } = await betsQuery;
+
+    if (error) {
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch team performance', 500);
+    }
+
+    const teamMap = new Map<string, TeamPerformance>();
+
+    bets?.forEach((bet) => {
+      bet.legs?.forEach((leg: any) => {
+        const profit = Number(bet.profit_loss || 0);
+
+        // Process home team
+        if (leg.home_team_id) {
+          if (!teamMap.has(leg.home_team_id)) {
+            teamMap.set(leg.home_team_id, {
+              team_id: leg.home_team_id,
+              team_name: '',
+              as_home: { total_legs: 0, won_legs: 0, win_rate: 0, total_profit: 0 },
+              as_away: { total_legs: 0, won_legs: 0, win_rate: 0, total_profit: 0 },
+              total: { total_legs: 0, won_legs: 0, win_rate: 0, total_profit: 0 },
+            });
+          }
+          const teamData = teamMap.get(leg.home_team_id)!;
+          teamData.as_home.total_legs++;
+          teamData.total.total_legs++;
+          if (leg.result_state === 'won') {
+            teamData.as_home.won_legs++;
+            teamData.total.won_legs++;
+            teamData.as_home.total_profit += profit;
+            teamData.total.total_profit += profit;
+          }
+        }
+
+        // Process away team
+        if (leg.away_team_id) {
+          if (!teamMap.has(leg.away_team_id)) {
+            teamMap.set(leg.away_team_id, {
+              team_id: leg.away_team_id,
+              team_name: '',
+              as_home: { total_legs: 0, won_legs: 0, win_rate: 0, total_profit: 0 },
+              as_away: { total_legs: 0, won_legs: 0, win_rate: 0, total_profit: 0 },
+              total: { total_legs: 0, won_legs: 0, win_rate: 0, total_profit: 0 },
+            });
+          }
+          const teamData = teamMap.get(leg.away_team_id)!;
+          teamData.as_away.total_legs++;
+          teamData.total.total_legs++;
+          if (leg.result_state === 'won') {
+            teamData.as_away.won_legs++;
+            teamData.total.won_legs++;
+            teamData.as_away.total_profit += profit;
+            teamData.total.total_profit += profit;
+          }
+        }
+      });
+    });
+
+    // Calculate win rates and get team names
+    const results = Array.from(teamMap.values());
+    for (const result of results) {
+      result.as_home.win_rate = result.as_home.total_legs > 0 ? result.as_home.won_legs / result.as_home.total_legs : 0;
+      result.as_away.win_rate = result.as_away.total_legs > 0 ? result.as_away.won_legs / result.as_away.total_legs : 0;
+      result.total.win_rate = result.total.total_legs > 0 ? result.total.won_legs / result.total.total_legs : 0;
+
+      const { data: team } = await this.supabase
+        .from('reference_items')
+        .select('name')
+        .eq('id', result.team_id)
+        .single();
+
+      if (team) {
+        result.team_name = team.name;
+      }
+    }
+
+    return results.filter((r) => r.total.total_legs > 0);
+  }
+
+  async getBestWorstPerformers(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<BestWorstPerformers> {
+    const [byLeague, byBetType, byCategory] = await Promise.all([
+      this.getByLeague(userId, startDate, endDate),
+      this.getByBetType(userId, startDate, endDate),
+      this.getByCategory(userId, startDate, endDate),
+    ]);
+
+    return {
+      best_leagues: byLeague.sort((a, b) => b.total_profit - a.total_profit).slice(0, 5),
+      worst_leagues: byLeague.sort((a, b) => a.total_profit - b.total_profit).slice(0, 5),
+      best_bet_types: byBetType.sort((a, b) => b.total_profit - a.total_profit).slice(0, 5),
+      worst_bet_types: byBetType.sort((a, b) => a.total_profit - b.total_profit).slice(0, 5),
+      best_categories: byCategory.sort((a, b) => b.total_profit - a.total_profit).slice(0, 5),
+      worst_categories: byCategory.sort((a, b) => a.total_profit - b.total_profit).slice(0, 5),
+    };
+  }
+
+  async getStreakAnalysis(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<StreakAnalysis> {
+    let query = this.supabase
+      .from('main_bets')
+      .select('date, state, profit_loss')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .in('state', ['won', 'lost'])
+      .order('date', { ascending: true });
+
+    if (startDate) {
+      query = query.gte('date', startDate);
+    }
+
+    if (endDate) {
+      query = query.lte('date', endDate);
+    }
+
+    const { data: bets, error } = await query;
+
+    if (error) {
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch streak analysis', 500);
+    }
+
+    if (!bets || bets.length === 0) {
+      return {
+        current_streak: { type: 'win', length: 0, start_date: '' },
+        longest_win_streak: { length: 0, start_date: '', end_date: '' },
+        longest_loss_streak: { length: 0, start_date: '', end_date: '' },
+        recent_bets: [],
+      };
+    }
+
+    // Calculate streaks
+    let currentStreakType: 'win' | 'loss' = bets[bets.length - 1].state === 'won' ? 'win' : 'loss';
+    let currentStreakLength = 1;
+    let currentStreakStart = bets[bets.length - 1].date;
+
+    for (let i = bets.length - 2; i >= 0; i--) {
+      if (bets[i].state === currentStreakType) {
+        currentStreakLength++;
+        currentStreakStart = bets[i].date;
+      } else {
+        break;
+      }
+    }
+
+    let longestWinStreak = { length: 0, start_date: '', end_date: '' };
+    let longestLossStreak = { length: 0, start_date: '', end_date: '' };
+    let currentWinStreak = 0;
+    let currentLossStreak = 0;
+    let winStreakStart = '';
+    let lossStreakStart = '';
+
+    for (let i = 0; i < bets.length; i++) {
+      const bet = bets[i];
+      if (bet.state === 'won') {
+        if (currentLossStreak > 0) {
+          if (currentLossStreak > longestLossStreak.length) {
+            longestLossStreak = {
+              length: currentLossStreak,
+              start_date: lossStreakStart,
+              end_date: bets[i - 1].date,
+            };
+          }
+          currentLossStreak = 0;
+        }
+        if (currentWinStreak === 0) {
+          winStreakStart = bet.date;
+        }
+        currentWinStreak++;
+      } else if (bet.state === 'lost') {
+        if (currentWinStreak > 0) {
+          if (currentWinStreak > longestWinStreak.length) {
+            longestWinStreak = {
+              length: currentWinStreak,
+              start_date: winStreakStart,
+              end_date: bets[i - 1].date,
+            };
+          }
+          currentWinStreak = 0;
+        }
+        if (currentLossStreak === 0) {
+          lossStreakStart = bet.date;
+        }
+        currentLossStreak++;
+      }
+    }
+
+    // Check final streaks
+    if (currentWinStreak > longestWinStreak.length) {
+      longestWinStreak = {
+        length: currentWinStreak,
+        start_date: winStreakStart,
+        end_date: bets[bets.length - 1].date,
+      };
+    }
+    if (currentLossStreak > longestLossStreak.length) {
+      longestLossStreak = {
+        length: currentLossStreak,
+        start_date: lossStreakStart,
+        end_date: bets[bets.length - 1].date,
+      };
+    }
+
+    // Get recent bets (last 10)
+    const recentBets = bets
+      .slice(-10)
+      .reverse()
+      .map((bet) => ({
+        date: bet.date,
+        state: bet.state as 'won' | 'lost' | 'pending' | 'void',
+        profit_loss: bet.profit_loss,
+      }));
+
+    return {
+      current_streak: {
+        type: currentStreakType,
+        length: currentStreakLength,
+        start_date: currentStreakStart,
+      },
+      longest_win_streak: longestWinStreak,
+      longest_loss_streak: longestLossStreak,
+      recent_bets: recentBets,
+    };
   }
 }
 

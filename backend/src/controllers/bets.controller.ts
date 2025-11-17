@@ -7,11 +7,21 @@ export class BetsController {
   constructor(private betsService: BetsService) {}
 
   createBet = async (req: AuthRequest, res: Response): Promise<Response> => {
-    const userId = req.user!.id;
-    const betData = req.body;
+    try {
+      const userId = req.user!.id;
+      const betData = req.body;
 
-    const bet = await this.betsService.createBet(userId, betData);
-    return sendSuccess(res, bet, 201);
+      console.log('[BetsController] Creating bet for user:', userId);
+      console.log('[BetsController] Request body:', JSON.stringify(betData, null, 2));
+
+      const bet = await this.betsService.createBet(userId, betData);
+      
+      console.log('[BetsController] Bet created successfully, sending response');
+      return sendSuccess(res, bet, 201);
+    } catch (error: any) {
+      console.error('[BetsController] Error creating bet:', error);
+      throw error;
+    }
   };
 
   getBets = async (req: AuthRequest, res: Response): Promise<Response> => {

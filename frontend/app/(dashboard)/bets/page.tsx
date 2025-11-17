@@ -10,19 +10,32 @@ export default function BetsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+    
+    const fetchBets = async () => {
+      try {
+        const { data } = await apiClient.get<{ data: MainBet[] }>('/api/bets');
+        if (!cancelled) {
+          setBets(data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch bets:', error);
+        if (!cancelled) {
+          setBets([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+    
     fetchBets();
+    
+    return () => {
+      cancelled = true;
+    };
   }, []);
-
-  const fetchBets = async () => {
-    try {
-      const { data } = await apiClient.get<{ data: MainBet[] }>('/api/bets');
-      setBets(data.data);
-    } catch (error) {
-      console.error('Failed to fetch bets:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;

@@ -115,11 +115,121 @@ export interface AnalyticsByResponsible {
   bet_count: number;
 }
 
+export interface AnalyticsByBetType {
+  bet_type_id: string;
+  bet_type_name: string;
+  total_stake: number;
+  total_profit: number;
+  roi: number;
+  win_rate: number;
+  bet_count: number;
+}
+
+export interface AnalyticsByCategory {
+  category_id: string;
+  category_name: string;
+  total_stake: number;
+  total_profit: number;
+  roi: number;
+  win_rate: number;
+  bet_count: number;
+}
+
 export interface TimeSeriesData {
   date: string;
   stake: number;
   profit: number;
   bet_count: number;
+}
+
+export interface LegAnalytics {
+  total_legs: number;
+  won_legs: number;
+  lost_legs: number;
+  pending_legs: number;
+  void_legs: number;
+  leg_win_rate: number;
+  avg_leg_odds: number;
+  performance_by_league: Array<{
+    league_id: string;
+    league_name: string;
+    total_legs: number;
+    won_legs: number;
+    win_rate: number;
+  }>;
+  performance_by_bet_type: Array<{
+    bet_type_id: string;
+    bet_type_name: string;
+    total_legs: number;
+    won_legs: number;
+    win_rate: number;
+  }>;
+}
+
+export interface OddsAnalysis {
+  range: string; // e.g., "1.0-1.5", "1.5-2.0", "2.0+"
+  min_odds: number;
+  max_odds: number;
+  total_bets: number;
+  total_stake: number;
+  total_profit: number;
+  roi: number;
+  win_rate: number;
+}
+
+export interface TeamPerformance {
+  team_id: string;
+  team_name: string;
+  as_home: {
+    total_legs: number;
+    won_legs: number;
+    win_rate: number;
+    total_profit: number;
+  };
+  as_away: {
+    total_legs: number;
+    won_legs: number;
+    win_rate: number;
+    total_profit: number;
+  };
+  total: {
+    total_legs: number;
+    won_legs: number;
+    win_rate: number;
+    total_profit: number;
+  };
+}
+
+export interface BestWorstPerformers {
+  best_leagues: AnalyticsByLeague[];
+  worst_leagues: AnalyticsByLeague[];
+  best_bet_types: AnalyticsByBetType[];
+  worst_bet_types: AnalyticsByBetType[];
+  best_categories: AnalyticsByCategory[];
+  worst_categories: AnalyticsByCategory[];
+}
+
+export interface StreakAnalysis {
+  current_streak: {
+    type: 'win' | 'loss';
+    length: number;
+    start_date: string;
+  };
+  longest_win_streak: {
+    length: number;
+    start_date: string;
+    end_date: string;
+  };
+  longest_loss_streak: {
+    length: number;
+    start_date: string;
+    end_date: string;
+  };
+  recent_bets: Array<{
+    date: string;
+    state: 'won' | 'lost' | 'pending' | 'void';
+    profit_loss: number | null;
+  }>;
 }
 
 // ML Prediction types

@@ -12,8 +12,8 @@ export class AnalyticsController {
 
     const summary = await this.analyticsService.getSummary(
       userId,
-      start_date as string,
-      end_date as string
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
     );
 
     return sendSuccess(res, summary);
@@ -25,8 +25,8 @@ export class AnalyticsController {
 
     const byLeague = await this.analyticsService.getByLeague(
       userId,
-      start_date as string,
-      end_date as string
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
     );
 
     return sendSuccess(res, byLeague);
@@ -38,8 +38,8 @@ export class AnalyticsController {
 
     const byResponsible = await this.analyticsService.getByResponsible(
       userId,
-      start_date as string,
-      end_date as string
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
     );
 
     return sendSuccess(res, byResponsible);
@@ -52,11 +52,95 @@ export class AnalyticsController {
     const timeSeries = await this.analyticsService.getTimeSeries(
       userId,
       granularity as 'daily' | 'weekly' | 'monthly',
-      start_date as string,
-      end_date as string
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
     );
 
     return sendSuccess(res, timeSeries);
+  };
+
+  getByBetType = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const byBetType = await this.analyticsService.getByBetType(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, byBetType);
+  };
+
+  getByCategory = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const byCategory = await this.analyticsService.getByCategory(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, byCategory);
+  };
+
+  getLegAnalytics = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const legAnalytics = await this.analyticsService.getLegAnalytics(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, legAnalytics);
+  };
+
+  getOddsAnalysis = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const oddsAnalysis = await this.analyticsService.getOddsAnalysis(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, oddsAnalysis);
+  };
+
+  getTeamPerformance = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const teamPerformance = await this.analyticsService.getTeamPerformance(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, teamPerformance);
+  };
+
+  getBestWorstPerformers = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const performers = await this.analyticsService.getBestWorstPerformers(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, performers);
+  };
+
+  getStreakAnalysis = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const streakAnalysis = await this.analyticsService.getStreakAnalysis(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, streakAnalysis);
   };
 }
 

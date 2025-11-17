@@ -5,6 +5,7 @@ import { updateLegSchema, updateLegStateSchema } from '../schemas/legs.schema';
 import { LegsService } from '../services/legs.service';
 import { LegsController } from '../controllers/legs.controller';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
@@ -21,8 +22,8 @@ router.use((req: AuthRequest, res, next) => {
   next();
 });
 
-router.put('/:id', validate(updateLegSchema), legsController.updateLeg);
-router.patch('/:id/state', validate(updateLegStateSchema), legsController.updateLegState);
+router.put('/:id', validate(updateLegSchema), asyncHandler(legsController.updateLeg));
+router.patch('/:id/state', validate(updateLegStateSchema), asyncHandler(legsController.updateLegState));
 
 export default router;
 

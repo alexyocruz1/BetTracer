@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api/client';
-import { AnalyticsSummary, AnalyticsByLeague, TimeSeriesData } from '@/types';
+import { AnalyticsSummary, AnalyticsByLeague, AnalyticsByResponsible, AnalyticsByBetType, AnalyticsByCategory, TimeSeriesData, LegAnalytics, OddsAnalysis, TeamPerformance, BestWorstPerformers, StreakAnalysis } from '@/types';
 import {
   LineChart,
   Line,
@@ -19,29 +19,125 @@ import {
 export default function AnalyticsPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [byLeague, setByLeague] = useState<AnalyticsByLeague[]>([]);
+  const [byResponsible, setByResponsible] = useState<AnalyticsByResponsible[]>([]);
+  const [byBetType, setByBetType] = useState<AnalyticsByBetType[]>([]);
+  const [byCategory, setByCategory] = useState<AnalyticsByCategory[]>([]);
+  const [legAnalytics, setLegAnalytics] = useState<LegAnalytics | null>(null);
+  const [oddsAnalysis, setOddsAnalysis] = useState<OddsAnalysis[]>([]);
+  const [teamPerformance, setTeamPerformance] = useState<TeamPerformance[]>([]);
+  const [bestWorstPerformers, setBestWorstPerformers] = useState<BestWorstPerformers | null>(null);
+  const [streakAnalysis, setStreakAnalysis] = useState<StreakAnalysis | null>(null);
   const [timeSeries, setTimeSeries] = useState<TimeSeriesData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   useEffect(() => {
-    fetchAnalytics();
-  }, []);
+    let cancelled = false;
+    
+    const fetchAnalytics = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (startDate && startDate.trim()) params.append('start_date', startDate);
+        if (endDate && endDate.trim()) params.append('end_date', endDate);
+        const queryString = params.toString() ? `?${params.toString()}` : '';
 
-  const fetchAnalytics = async () => {
-    try {
-      const [summaryRes, byLeagueRes, timeSeriesRes] = await Promise.all([
-        apiClient.get<{ data: AnalyticsSummary }>('/api/analytics/summary'),
-        apiClient.get<{ data: AnalyticsByLeague[] }>('/api/analytics/by-league'),
-        apiClient.get<{ data: TimeSeriesData[] }>('/api/analytics/time-series?granularity=daily'),
-      ]);
-      setSummary(summaryRes.data.data);
-      setByLeague(byLeagueRes.data.data);
-      setTimeSeries(timeSeriesRes.data.data);
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        console.log('Fetching analytics with query:', queryString || '(no filters)');
+
+        const requests = [
+          { name: 'summary', promise: apiClient.get<{ data: AnalyticsSummary }>(`/api/analytics/summary${queryString}`) },
+          { name: 'byLeague', promise: apiClient.get<{ data: AnalyticsByLeague[] }>(`/api/analytics/by-league${queryString}`) },
+          { name: 'byResponsible', promise: apiClient.get<{ data: AnalyticsByResponsible[] }>(`/api/analytics/by-responsible${queryString}`) },
+          { name: 'byBetType', promise: apiClient.get<{ data: AnalyticsByBetType[] }>(`/api/analytics/by-bet-type${queryString}`) },
+          { name: 'byCategory', promise: apiClient.get<{ data: AnalyticsByCategory[] }>(`/api/analytics/by-category${queryString}`) },
+          { name: 'legAnalytics', promise: apiClient.get<{ data: LegAnalytics }>(`/api/analytics/leg-analytics${queryString}`) },
+          { name: 'oddsAnalysis', promise: apiClient.get<{ data: OddsAnalysis[] }>(`/api/analytics/odds-analysis${queryString}`) },
+          { name: 'teamPerformance', promise: apiClient.get<{ data: TeamPerformance[] }>(`/api/analytics/team-performance${queryString}`) },
+          { name: 'bestWorst', promise: apiClient.get<{ data: BestWorstPerformers }>(`/api/analytics/best-worst-performers${queryString}`) },
+          { name: 'streak', promise: apiClient.get<{ data: StreakAnalysis }>(`/api/analytics/streak-analysis${queryString}`) },
+          { name: 'timeSeries', promise: apiClient.get<{ data: TimeSeriesData[] }>(`/api/analytics/time-series?granularity=daily${queryString ? '&' + queryString.replace('?', '') : ''}`) },
+        ];
+
+        console.log('Starting Promise.allSettled...');
+        const startTime = Date.now();
+        const results = await Promise.allSettled(requests.map(r => r.promise));
+        console.log(`Promise.allSettled completed in ${Date.now() - startTime}ms`);
+        
+        const summaryRes = results[0].status === 'fulfilled' ? results[0].value : { data: { data: null } };
+        const byLeagueRes = results[1].status === 'fulfilled' ? results[1].value : { data: { data: [] } };
+        const byResponsibleRes = results[2].status === 'fulfilled' ? results[2].value : { data: { data: [] } };
+        const byBetTypeRes = results[3].status === 'fulfilled' ? results[3].value : { data: { data: [] } };
+        const byCategoryRes = results[4].status === 'fulfilled' ? results[4].value : { data: { data: [] } };
+        const legAnalyticsRes = results[5].status === 'fulfilled' ? results[5].value : { data: { data: null } };
+        const oddsAnalysisRes = results[6].status === 'fulfilled' ? results[6].value : { data: { data: [] } };
+        const teamPerformanceRes = results[7].status === 'fulfilled' ? results[7].value : { data: { data: [] } };
+        const bestWorstRes = results[8].status === 'fulfilled' ? results[8].value : { data: { data: null } };
+        const streakRes = results[9].status === 'fulfilled' ? results[9].value : { data: { data: null } };
+        const timeSeriesRes = results[10].status === 'fulfilled' ? results[10].value : { data: { data: [] } };
+
+        // Log any failures
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.error(`Failed to fetch ${requests[index].name}:`, result.reason);
+          }
+        });
+        
+        console.log('All requests completed, setting data...');
+        
+        if (!cancelled) {
+          console.log('Analytics data received:', {
+            summary: summaryRes.data.data,
+            byLeague: byLeagueRes.data.data?.length || 0,
+            byResponsible: byResponsibleRes.data.data?.length || 0,
+            byBetType: byBetTypeRes.data.data?.length || 0,
+            byCategory: byCategoryRes.data.data?.length || 0,
+          });
+          setSummary(summaryRes.data.data);
+          setByLeague(byLeagueRes.data.data || []);
+          setByResponsible(byResponsibleRes.data.data || []);
+          setByBetType(byBetTypeRes.data.data || []);
+          setByCategory(byCategoryRes.data.data || []);
+          setLegAnalytics(legAnalyticsRes.data.data || null);
+          setOddsAnalysis(oddsAnalysisRes.data.data || []);
+          setTeamPerformance(teamPerformanceRes.data.data || []);
+          setBestWorstPerformers(bestWorstRes.data.data || null);
+          setStreakAnalysis(streakRes.data.data || null);
+          setTimeSeries(timeSeriesRes.data.data || []);
+        } else {
+          console.log('Component cancelled, not setting data');
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error);
+        if (!cancelled) {
+          setSummary(null);
+          setByLeague([]);
+          setByResponsible([]);
+          setByBetType([]);
+          setByCategory([]);
+          setLegAnalytics(null);
+          setOddsAnalysis([]);
+          setTeamPerformance([]);
+          setBestWorstPerformers(null);
+          setStreakAnalysis(null);
+          setTimeSeries([]);
+        }
+      } finally {
+        console.log('Finally block reached, cancelled:', cancelled);
+        if (!cancelled) {
+          console.log('Setting loading to false');
+          setLoading(false);
+        } else {
+          console.log('Component cancelled, not setting loading to false');
+        }
+      }
+    };
+    
+    fetchAnalytics();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [startDate, endDate]);
 
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;
@@ -55,26 +151,74 @@ export default function AnalyticsPage() {
           Detailed breakdowns of your betting performance by league, time period, and more. 
           Use this page to analyze trends and identify your most profitable betting strategies.
         </p>
+        
+        {/* Date Range Filters */}
+        <div className="mt-4 flex gap-4 items-end">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+              }}
+              className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
       </div>
 
-      {summary && (
+      {summary ? (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
           <div className="bg-white overflow-hidden shadow rounded-lg p-5">
-            <div className="text-2xl font-bold text-gray-900">${summary.total_profit.toFixed(2)}</div>
+            <div className={`text-2xl font-bold ${summary.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ${summary.total_profit.toFixed(2)}
+            </div>
             <div className="text-sm font-medium text-gray-500">Total Profit</div>
           </div>
           <div className="bg-white overflow-hidden shadow rounded-lg p-5">
             <div className="text-2xl font-bold text-gray-900">{(summary.win_rate * 100).toFixed(1)}%</div>
             <div className="text-sm font-medium text-gray-500">Win Rate</div>
+            <div className="text-xs text-gray-400 mt-1">
+              {summary.won_bets}W / {summary.lost_bets}L
+              {summary.pending_bets > 0 && ` / ${summary.pending_bets}P`}
+            </div>
           </div>
           <div className="bg-white overflow-hidden shadow rounded-lg p-5">
-            <div className="text-2xl font-bold text-gray-900">{(summary.roi * 100).toFixed(1)}%</div>
+            <div className={`text-2xl font-bold ${summary.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {(summary.roi * 100).toFixed(1)}%
+            </div>
             <div className="text-sm font-medium text-gray-500">ROI</div>
           </div>
           <div className="bg-white overflow-hidden shadow rounded-lg p-5">
             <div className="text-2xl font-bold text-gray-900">{summary.total_bets}</div>
             <div className="text-sm font-medium text-gray-500">Total Bets</div>
+            <div className="text-xs text-gray-400 mt-1">
+              ${summary.total_stake.toFixed(2)} staked
+            </div>
           </div>
+        </div>
+      ) : (
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <p className="text-gray-500 text-center">No analytics data available. Create some bets to see your performance.</p>
         </div>
       )}
 
@@ -175,6 +319,515 @@ export default function AnalyticsPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {byResponsible.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Performance by Responsible</h2>
+          
+          {/* Bar Chart for Profit by Responsible */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit by Responsible</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={byResponsible}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="responsible_name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  tickFormatter={(value) => `$${value.toFixed(0)}`}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  formatter={(value: number) => `$${value.toFixed(2)}`}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+                <Bar dataKey="total_profit" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Detailed Table */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Detailed Breakdown</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Responsible</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ROI</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Win Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {byResponsible.map((responsible) => (
+                    <tr key={responsible.responsible_id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {responsible.responsible_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${responsible.total_stake.toFixed(2)}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                        responsible.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${responsible.total_profit.toFixed(2)}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                        responsible.roi >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {(responsible.roi * 100).toFixed(1)}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {(responsible.win_rate * 100).toFixed(1)}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {responsible.bet_count}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {byBetType.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Performance by Bet Type</h2>
+          
+          {/* Bar Chart for Profit by Bet Type */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit by Bet Type</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={byBetType}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="bet_type_name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  tickFormatter={(value) => `$${value.toFixed(0)}`}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  formatter={(value: number) => `$${value.toFixed(2)}`}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+                <Bar dataKey="total_profit" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Detailed Table */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Detailed Breakdown</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bet Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ROI</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Win Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {byBetType.map((betType) => (
+                    <tr key={betType.bet_type_id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {betType.bet_type_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${betType.total_stake.toFixed(2)}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                        betType.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${betType.total_profit.toFixed(2)}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                        betType.roi >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {(betType.roi * 100).toFixed(1)}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {(betType.win_rate * 100).toFixed(1)}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {betType.bet_count}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {byCategory.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Performance by Category</h2>
+          
+          {/* Bar Chart for Profit by Category */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit by Category (Top 20)</h3>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={byCategory.slice(0, 20).sort((a, b) => b.total_profit - a.total_profit)}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="category_name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={120}
+                  tick={{ fontSize: 11 }}
+                />
+                <YAxis
+                  tickFormatter={(value) => `$${value.toFixed(0)}`}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  formatter={(value: number) => `$${value.toFixed(2)}`}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+                <Bar dataKey="total_profit" fill="#ec4899" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            {byCategory.length > 20 && (
+              <p className="text-sm text-gray-500 mt-2">Showing top 20 categories by profit (out of {byCategory.length} total)</p>
+            )}
+          </div>
+
+          {/* Detailed Table */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Detailed Breakdown</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ROI</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Win Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {byCategory.sort((a, b) => b.total_profit - a.total_profit).map((category) => (
+                    <tr key={category.category_id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {category.category_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${category.total_stake.toFixed(2)}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                        category.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${category.total_profit.toFixed(2)}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                        category.roi >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {(category.roi * 100).toFixed(1)}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {(category.win_rate * 100).toFixed(1)}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {category.bet_count}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {legAnalytics && legAnalytics.total_legs > 0 && (
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Leg-Level Analytics</h2>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-gray-900">{legAnalytics.total_legs}</div>
+              <div className="text-sm text-gray-600">Total Legs</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">{legAnalytics.won_legs}</div>
+              <div className="text-sm text-gray-600">Won Legs</div>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-red-600">{legAnalytics.lost_legs}</div>
+              <div className="text-sm text-gray-600">Lost Legs</div>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{(legAnalytics.leg_win_rate * 100).toFixed(1)}%</div>
+              <div className="text-sm text-gray-600">Leg Win Rate</div>
+            </div>
+          </div>
+
+          {legAnalytics.performance_by_league.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">Performance by League</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">League</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Legs</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Won</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Win Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {legAnalytics.performance_by_league.map((item) => (
+                      <tr key={item.league_id}>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.league_name}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{item.total_legs}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{item.won_legs}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{(item.win_rate * 100).toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {oddsAnalysis.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Odds Analysis</h2>
+          
+          <div className="mb-6">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={oddsAnalysis}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="range" tick={{ fontSize: 12 }} />
+                <YAxis tickFormatter={(value) => `$${value.toFixed(0)}`} tick={{ fontSize: 12 }} />
+                <Tooltip
+                  formatter={(value: number, name: string) => {
+                    if (name === 'total_profit') return [`$${value.toFixed(2)}`, 'Profit'];
+                    if (name === 'roi') return [`${(value * 100).toFixed(1)}%`, 'ROI'];
+                    return [value, name];
+                  }}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+                <Legend />
+                <Bar dataKey="total_profit" fill="#0ea5e9" name="Profit" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Odds Range</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ROI</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Win Rate</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {oddsAnalysis.map((item) => (
+                  <tr key={item.range}>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.range}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{item.total_bets}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">${item.total_stake.toFixed(2)}</td>
+                    <td className={`px-4 py-3 text-sm font-medium ${
+                      item.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      ${item.total_profit.toFixed(2)}
+                    </td>
+                    <td className={`px-4 py-3 text-sm font-medium ${
+                      item.roi >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {(item.roi * 100).toFixed(1)}%
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{(item.win_rate * 100).toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {bestWorstPerformers && (
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Best & Worst Performers</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {bestWorstPerformers.best_leagues.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-green-600 mb-3">Top 5 Leagues</h3>
+                <div className="space-y-2">
+                  {bestWorstPerformers.best_leagues.map((league, idx) => (
+                    <div key={league.league_id} className="flex justify-between items-center p-2 bg-green-50 rounded">
+                      <span className="text-sm font-medium text-gray-900">{idx + 1}. {league.league_name}</span>
+                      <span className="text-sm font-bold text-green-600">${league.total_profit.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {bestWorstPerformers.worst_leagues.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-red-600 mb-3">Bottom 5 Leagues</h3>
+                <div className="space-y-2">
+                  {bestWorstPerformers.worst_leagues.map((league, idx) => (
+                    <div key={league.league_id} className="flex justify-between items-center p-2 bg-red-50 rounded">
+                      <span className="text-sm font-medium text-gray-900">{idx + 1}. {league.league_name}</span>
+                      <span className="text-sm font-bold text-red-600">${league.total_profit.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {bestWorstPerformers.best_categories.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-green-600 mb-3">Top 5 Categories</h3>
+                <div className="space-y-2">
+                  {bestWorstPerformers.best_categories.map((category, idx) => (
+                    <div key={category.category_id} className="flex justify-between items-center p-2 bg-green-50 rounded">
+                      <span className="text-sm font-medium text-gray-900">{idx + 1}. {category.category_name}</span>
+                      <span className="text-sm font-bold text-green-600">${category.total_profit.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {streakAnalysis && (
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Streak Analysis</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 mb-1">Current Streak</div>
+              <div className={`text-2xl font-bold ${streakAnalysis.current_streak.type === 'win' ? 'text-green-600' : 'text-red-600'}`}>
+                {streakAnalysis.current_streak.length} {streakAnalysis.current_streak.type === 'win' ? 'Wins' : 'Losses'}
+              </div>
+              {streakAnalysis.current_streak.start_date && (
+                <div className="text-xs text-gray-500 mt-1">
+                  Since {new Date(streakAnalysis.current_streak.start_date).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-green-50 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 mb-1">Longest Win Streak</div>
+              <div className="text-2xl font-bold text-green-600">{streakAnalysis.longest_win_streak.length}</div>
+              {streakAnalysis.longest_win_streak.start_date && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {new Date(streakAnalysis.longest_win_streak.start_date).toLocaleDateString()} - {new Date(streakAnalysis.longest_win_streak.end_date).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-red-50 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 mb-1">Longest Loss Streak</div>
+              <div className="text-2xl font-bold text-red-600">{streakAnalysis.longest_loss_streak.length}</div>
+              {streakAnalysis.longest_loss_streak.start_date && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {new Date(streakAnalysis.longest_loss_streak.start_date).toLocaleDateString()} - {new Date(streakAnalysis.longest_loss_streak.end_date).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {streakAnalysis.recent_bets.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Recent Bets</h3>
+              <div className="flex gap-2 flex-wrap">
+                {streakAnalysis.recent_bets.map((bet, idx) => (
+                  <div
+                    key={idx}
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      bet.state === 'won' ? 'bg-green-100 text-green-800' :
+                      bet.state === 'lost' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {bet.state === 'won' ? 'W' : bet.state === 'lost' ? 'L' : bet.state.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {teamPerformance.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Team Performance</h2>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">As Home</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">As Away</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {teamPerformance.slice(0, 20).map((team) => (
+                  <tr key={team.team_id}>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{team.team_name}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <div>{team.as_home.won_legs}/{team.as_home.total_legs} ({(team.as_home.win_rate * 100).toFixed(0)}%)</div>
+                      <div className="text-xs text-gray-500">${team.as_home.total_profit.toFixed(2)}</div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <div>{team.as_away.won_legs}/{team.as_away.total_legs} ({(team.as_away.win_rate * 100).toFixed(0)}%)</div>
+                      <div className="text-xs text-gray-500">${team.as_away.total_profit.toFixed(2)}</div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <div>{team.total.won_legs}/{team.total.total_legs} ({(team.total.win_rate * 100).toFixed(0)}%)</div>
+                      <div className={`text-xs font-medium ${
+                        team.total.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        ${team.total.total_profit.toFixed(2)}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {teamPerformance.length > 20 && (
+              <p className="text-sm text-gray-500 mt-2">Showing top 20 teams (out of {teamPerformance.length} total)</p>
+            )}
           </div>
         </div>
       )}

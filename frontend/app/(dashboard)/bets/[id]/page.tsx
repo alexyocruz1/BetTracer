@@ -11,26 +11,54 @@ export default function BetDetailPage() {
   const [bet, setBet] = useState<MainBet | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-
-  useEffect(() => {
-    if (params.id) {
-      fetchBet(params.id as string);
-    }
-  }, [params.id]);
+  const [updatingLegs, setUpdatingLegs] = useState<Set<string>>(new Set());
 
   const fetchBet = async (id: string) => {
+    setLoading(true);
     try {
       const { data } = await apiClient.get<{ data: MainBet }>(`/api/bets/${id}`);
       setBet(data.data);
     } catch (error) {
       console.error('Failed to fetch bet:', error);
+      setBet(null);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    
+    if (params.id) {
+      const loadBet = async (id: string) => {
+        setLoading(true);
+        try {
+          const { data } = await apiClient.get<{ data: MainBet }>(`/api/bets/${id}`);
+          if (!cancelled) {
+            setBet(data.data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch bet:', error);
+          if (!cancelled) {
+            setBet(null);
+          }
+        } finally {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        }
+      };
+      
+      loadBet(params.id as string);
+    }
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
+
   const updateState = async (state: 'won' | 'lost' | 'void') => {
-    if (!bet) return;
+    if (!bet || updating) return; // Prevent double-clicks and concurrent updates
 
     setUpdating(true);
     try {
@@ -43,11 +71,47 @@ export default function BetDetailPage() {
         await fetchBet(bet.id);
       }
     } catch (error: any) {
+      console.error('Failed to update bet state:', error);
       alert(error.response?.data?.error?.message || 'Failed to update bet state');
       // Refetch on error to ensure UI is in sync
       await fetchBet(bet.id);
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const updateLegState = async (legId: string, resultState: 'won' | 'lost' | 'void') => {
+    if (updatingLegs.has(legId)) return; // Prevent double-clicks
+
+    setUpdatingLegs(prev => new Set(prev).add(legId));
+    try {
+      const { data } = await apiClient.patch<{ data: any }>(`/api/legs/${legId}/state`, { result_state: resultState });
+      
+      // Update the leg in the bet state
+      if (bet && data.data) {
+        setBet({
+          ...bet,
+          legs: bet.legs?.map(leg => 
+            leg.id === legId ? { ...leg, result_state: resultState } : leg
+          ) || [],
+        });
+      } else {
+        // Fallback: refetch if response doesn't include updated leg
+        await fetchBet(bet!.id);
+      }
+    } catch (error: any) {
+      console.error('Failed to update leg state:', error);
+      alert(error.response?.data?.error?.message || 'Failed to update leg state');
+      // Refetch on error to ensure UI is in sync
+      if (bet) {
+        await fetchBet(bet.id);
+      }
+    } finally {
+      setUpdatingLegs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(legId);
+        return newSet;
+      });
     }
   };
 
@@ -152,10 +216,13 @@ export default function BetDetailPage() {
         <div className="space-y-4">
           {bet.legs?.map((leg, index) => (
             <div key={leg.id} className="border border-gray-200 rounded-md p-4">
-              <div className="flex justify-between items-center">
-                <div>
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
                   <h3 className="font-medium">Leg {index + 1}</h3>
-                  <div className="text-sm text-gray-500">Odds: {leg.odd.toFixed(2)}x</div>
+                  <div className="text-sm text-gray-500 mt-1">Odds: {leg.odd.toFixed(2)}x</div>
+                  {leg.notes && (
+                    <div className="text-sm text-gray-600 mt-2">{leg.notes}</div>
+                  )}
                 </div>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   leg.result_state === 'won' ? 'bg-green-100 text-green-800' :
@@ -165,6 +232,31 @@ export default function BetDetailPage() {
                 }`}>
                   {leg.result_state}
                 </span>
+              </div>
+              
+              {/* Leg state controls */}
+              <div className="mt-3 flex space-x-2">
+                <button
+                  onClick={() => updateLegState(leg.id, 'won')}
+                  disabled={updatingLegs.has(leg.id) || leg.result_state === 'won'}
+                  className="px-3 py-1 text-xs bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updatingLegs.has(leg.id) ? 'Updating...' : 'Mark Won'}
+                </button>
+                <button
+                  onClick={() => updateLegState(leg.id, 'lost')}
+                  disabled={updatingLegs.has(leg.id) || leg.result_state === 'lost'}
+                  className="px-3 py-1 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updatingLegs.has(leg.id) ? 'Updating...' : 'Mark Lost'}
+                </button>
+                <button
+                  onClick={() => updateLegState(leg.id, 'void')}
+                  disabled={updatingLegs.has(leg.id) || leg.result_state === 'void'}
+                  className="px-3 py-1 text-xs bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updatingLegs.has(leg.id) ? 'Updating...' : 'Mark Void'}
+                </button>
               </div>
             </div>
           ))}

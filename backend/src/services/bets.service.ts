@@ -6,43 +6,63 @@ export class BetsService {
   constructor(private supabase: SupabaseClient) {}
 
   async createBet(userId: string, betData: CreateBetRequest): Promise<MainBet> {
-    const { legs, ...mainBetData } = betData;
+    try {
+      const { legs, ...mainBetData } = betData;
 
-    // Calculate combined odds if not provided
-    if (!mainBetData.odds && legs.length > 0) {
-      mainBetData.odds = legs.reduce((acc, leg) => acc * leg.odd, 1);
+      console.log('[BetsService] Creating bet for user:', userId);
+      console.log('[BetsService] Bet data:', { ...mainBetData, legsCount: legs.length });
+
+      // Calculate combined odds if not provided
+      if (!mainBetData.odds && legs.length > 0) {
+        mainBetData.odds = legs.reduce((acc, leg) => acc * leg.odd, 1);
+      }
+
+      // Start transaction by creating main bet first
+      console.log('[BetsService] Inserting main bet...');
+      const { data: mainBet, error: mainBetError } = await this.supabase
+        .from('main_bets')
+        .insert({
+          ...mainBetData,
+          user_id: userId,
+        })
+        .select()
+        .single();
+
+      if (mainBetError || !mainBet) {
+        console.error('[BetsService] Failed to create main bet:', mainBetError);
+        throw createError(errorCodes.INTERNAL_SERVER_ERROR, `Failed to create bet: ${mainBetError?.message || 'Unknown error'}`, 500);
+      }
+
+      console.log('[BetsService] Main bet created:', mainBet.id);
+
+      // Create legs
+      const legsData = legs.map((leg) => ({
+        ...leg,
+        main_bet_id: mainBet.id,
+      }));
+
+      console.log('[BetsService] Inserting legs...', legsData.length);
+      const { error: legsError } = await this.supabase.from('legs').insert(legsData);
+
+      if (legsError) {
+        console.error('[BetsService] Failed to create legs:', legsError);
+        // Rollback: delete main bet if legs creation fails
+        await this.supabase.from('main_bets').delete().eq('id', mainBet.id);
+        throw createError(errorCodes.INTERNAL_SERVER_ERROR, `Failed to create legs: ${legsError.message}`, 500);
+      }
+
+      console.log('[BetsService] Legs created successfully');
+
+      // Fetch complete bet with legs
+      console.log('[BetsService] Fetching complete bet with legs...');
+      const completeBet = await this.getBetById(userId, mainBet.id);
+      console.log('[BetsService] Bet created successfully:', completeBet.id);
+      
+      return completeBet;
+    } catch (error: any) {
+      console.error('[BetsService] Error in createBet:', error);
+      throw error;
     }
-
-    // Start transaction by creating main bet first
-    const { data: mainBet, error: mainBetError } = await this.supabase
-      .from('main_bets')
-      .insert({
-        ...mainBetData,
-        user_id: userId,
-      })
-      .select()
-      .single();
-
-    if (mainBetError || !mainBet) {
-      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to create bet', 500);
-    }
-
-    // Create legs
-    const legsData = legs.map((leg) => ({
-      ...leg,
-      main_bet_id: mainBet.id,
-    }));
-
-    const { error: legsError } = await this.supabase.from('legs').insert(legsData);
-
-    if (legsError) {
-      // Rollback: delete main bet if legs creation fails
-      await this.supabase.from('main_bets').delete().eq('id', mainBet.id);
-      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to create legs', 500);
-    }
-
-    // Fetch complete bet with legs
-    return this.getBetById(userId, mainBet.id);
   }
 
   async getBets(
@@ -113,32 +133,45 @@ export class BetsService {
   }
 
   async getBetById(userId: string, betId: string): Promise<MainBet> {
-    const { data: mainBet, error: mainBetError } = await this.supabase
-      .from('main_bets')
-      .select('*')
-      .eq('id', betId)
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-      .single();
+    try {
+      console.log('[BetsService] Fetching bet:', betId, 'for user:', userId);
+      
+      const { data: mainBet, error: mainBetError } = await this.supabase
+        .from('main_bets')
+        .select('*')
+        .eq('id', betId)
+        .eq('user_id', userId)
+        .is('deleted_at', null)
+        .single();
 
-    if (mainBetError || !mainBet) {
-      throw createError(errorCodes.NOT_FOUND, 'Bet not found', 404);
+      if (mainBetError || !mainBet) {
+        console.error('[BetsService] Bet not found:', mainBetError);
+        throw createError(errorCodes.NOT_FOUND, `Bet not found: ${mainBetError?.message || 'Unknown error'}`, 404);
+      }
+
+      console.log('[BetsService] Main bet fetched, fetching legs...');
+
+      // Fetch legs
+      const { data: legs, error: legsError } = await this.supabase
+        .from('legs')
+        .select('*')
+        .eq('main_bet_id', betId);
+
+      if (legsError) {
+        console.error('[BetsService] Failed to fetch legs:', legsError);
+        throw createError(errorCodes.INTERNAL_SERVER_ERROR, `Failed to fetch legs: ${legsError.message}`, 500);
+      }
+
+      console.log('[BetsService] Bet fetched successfully with', legs?.length || 0, 'legs');
+
+      return {
+        ...mainBet,
+        legs: legs || [],
+      } as MainBet;
+    } catch (error: any) {
+      console.error('[BetsService] Error in getBetById:', error);
+      throw error;
     }
-
-    // Fetch legs
-    const { data: legs, error: legsError } = await this.supabase
-      .from('legs')
-      .select('*')
-      .eq('main_bet_id', betId);
-
-    if (legsError) {
-      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch legs', 500);
-    }
-
-    return {
-      ...mainBet,
-      legs: legs || [],
-    } as MainBet;
   }
 
   async updateBet(userId: string, betId: string, updateData: UpdateBetRequest): Promise<MainBet> {

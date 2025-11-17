@@ -58,14 +58,52 @@ export default function NewBetPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // Prevent double-submission
+    
     setLoading(true);
 
     try {
-      await apiClient.post('/api/bets', formData);
+      // Clean up formData before sending - remove undefined/empty values and ensure proper structure
+      const cleanedFormData = {
+        date: formData.date,
+        stake: formData.stake,
+        state: formData.state || 'pending',
+        ...(formData.notes && { notes: formData.notes }),
+        ...(formData.odds && { odds: formData.odds }),
+        legs: formData.legs.map(leg => {
+          const cleanedLeg: any = {
+            odd: leg.odd,
+            result_state: leg.result_state || 'pending',
+          };
+          
+          // Only include UUID fields if they have a value (not empty string)
+          if (leg.home_team_id) cleanedLeg.home_team_id = leg.home_team_id;
+          if (leg.away_team_id) cleanedLeg.away_team_id = leg.away_team_id;
+          if (leg.league_id) cleanedLeg.league_id = leg.league_id;
+          if (leg.bet_type_id) cleanedLeg.bet_type_id = leg.bet_type_id;
+          if (leg.category_id) cleanedLeg.category_id = leg.category_id;
+          if (leg.responsible_id) cleanedLeg.responsible_id = leg.responsible_id;
+          if (leg.notes) cleanedLeg.notes = leg.notes;
+          
+          return cleanedLeg;
+        }),
+      };
+
+      const response = await apiClient.post('/api/bets', cleanedFormData);
+      
+      // Reset loading before navigation (in case navigation fails)
+      setLoading(false);
       router.push('/bets');
     } catch (error: any) {
-      alert(error.response?.data?.error?.message || 'Failed to create bet');
+      console.error('Failed to create bet:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      alert(error.response?.data?.error?.message || error.message || 'Failed to create bet');
     } finally {
+      // Ensure loading is always reset, even if navigation fails
       setLoading(false);
     }
   };
@@ -110,25 +148,44 @@ export default function NewBetPage() {
   };
 
   const updateLegOdds = (index: number, value: string, format: 'decimal' | 'american') => {
-    const newLegs = [...formData.legs];
-    let decimal: number;
-
-    if (format === 'decimal') {
-      decimal = parseFloat(value);
-      if (!isNaN(decimal) && isValidDecimal(decimal)) {
-        newLegs[index].odd = decimal;
+    const newLegs = formData.legs.map((leg, i) => {
+      if (i !== index) {
+        // Return unchanged leg (create new object to avoid mutation)
+        return { ...leg };
       }
-    } else {
-      const cleanValue = value.replace('+', '');
-      const american = parseFloat(cleanValue);
-      if (!isNaN(american) && isValidAmerican(american)) {
-        const converted = americanToDecimal(american);
-        if (converted) {
-          decimal = converted;
-          newLegs[index].odd = decimal;
+      
+      // Update the leg at this index
+      let decimal: number | undefined;
+      
+      if (format === 'decimal') {
+        const parsed = parseFloat(value);
+        if (!isNaN(parsed) && isValidDecimal(parsed)) {
+          decimal = parsed;
+        } else {
+          // If invalid, keep current value
+          return { ...leg };
+        }
+      } else {
+        const cleanValue = value.replace('+', '');
+        const american = parseFloat(cleanValue);
+        if (!isNaN(american) && isValidAmerican(american)) {
+          const converted = americanToDecimal(american);
+          if (converted) {
+            decimal = converted;
+          } else {
+            return { ...leg };
+          }
+        } else {
+          return { ...leg };
         }
       }
-    }
+      
+      // Create new leg object with updated odd
+      return {
+        ...leg,
+        odd: decimal,
+      };
+    });
 
     setFormData({ ...formData, legs: newLegs });
   };
@@ -155,8 +212,32 @@ export default function NewBetPage() {
           <label className="block text-sm font-medium text-gray-700">Date</label>
           <input
             type="datetime-local"
-            value={formData.date.split('T')[0] + 'T' + formData.date.split('T')[1]?.slice(0, 5)}
-            onChange={(e) => setFormData({ ...formData, date: new Date(e.target.value).toISOString() })}
+            value={(() => {
+              // Convert ISO string to local datetime-local format
+              const date = new Date(formData.date);
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              const hours = String(date.getHours()).padStart(2, '0');
+              const minutes = String(date.getMinutes()).padStart(2, '0');
+              return `${year}-${month}-${day}T${hours}:${minutes}`;
+            })()}
+            onChange={(e) => {
+              // Convert datetime-local value to ISO string
+              // datetime-local gives us local time, we need to preserve it
+              const localDateString = e.target.value; // Format: YYYY-MM-DDTHH:mm
+              if (localDateString) {
+                // Parse the local date string
+                const [datePart, timePart] = localDateString.split('T');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hours, minutes] = timePart.split(':').map(Number);
+                
+                // Create date in local timezone (this avoids timezone conversion issues)
+                const localDate = new Date(year, month - 1, day, hours, minutes);
+                // Convert to ISO string
+                setFormData({ ...formData, date: localDate.toISOString() });
+              }
+            }}
             className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
             required
           />
@@ -236,8 +317,9 @@ export default function NewBetPage() {
                       options={teams}
                       value={leg.home_team_id || ''}
                       onChange={(value) => {
-                        const newLegs = [...formData.legs];
-                        newLegs[index].home_team_id = value || undefined;
+                        const newLegs = formData.legs.map((l, i) => 
+                          i === index ? { ...l, home_team_id: value || undefined } : { ...l }
+                        );
                         setFormData({ ...formData, legs: newLegs });
                       }}
                       placeholder="Search home team..."
@@ -249,8 +331,9 @@ export default function NewBetPage() {
                       options={teams}
                       value={leg.away_team_id || ''}
                       onChange={(value) => {
-                        const newLegs = [...formData.legs];
-                        newLegs[index].away_team_id = value || undefined;
+                        const newLegs = formData.legs.map((l, i) => 
+                          i === index ? { ...l, away_team_id: value || undefined } : { ...l }
+                        );
                         setFormData({ ...formData, legs: newLegs });
                       }}
                       placeholder="Search away team..."
@@ -264,8 +347,9 @@ export default function NewBetPage() {
                       options={leagues}
                       value={leg.league_id || ''}
                       onChange={(value) => {
-                        const newLegs = [...formData.legs];
-                        newLegs[index].league_id = value || undefined;
+                        const newLegs = formData.legs.map((l, i) => 
+                          i === index ? { ...l, league_id: value || undefined } : { ...l }
+                        );
                         setFormData({ ...formData, legs: newLegs });
                       }}
                       placeholder="Search league..."
@@ -277,8 +361,9 @@ export default function NewBetPage() {
                       options={betTypes}
                       value={leg.bet_type_id || ''}
                       onChange={(value) => {
-                        const newLegs = [...formData.legs];
-                        newLegs[index].bet_type_id = value || undefined;
+                        const newLegs = formData.legs.map((l, i) => 
+                          i === index ? { ...l, bet_type_id: value || undefined } : { ...l }
+                        );
                         setFormData({ ...formData, legs: newLegs });
                       }}
                       placeholder="Search bet type..."
@@ -292,8 +377,9 @@ export default function NewBetPage() {
                       options={categories}
                       value={leg.category_id || ''}
                       onChange={(value) => {
-                        const newLegs = [...formData.legs];
-                        newLegs[index].category_id = value || undefined;
+                        const newLegs = formData.legs.map((l, i) => 
+                          i === index ? { ...l, category_id: value || undefined } : { ...l }
+                        );
                         setFormData({ ...formData, legs: newLegs });
                       }}
                       placeholder="Search category..."
@@ -305,8 +391,9 @@ export default function NewBetPage() {
                       options={responsibles}
                       value={leg.responsible_id || ''}
                       onChange={(value) => {
-                        const newLegs = [...formData.legs];
-                        newLegs[index].responsible_id = value || undefined;
+                        const newLegs = formData.legs.map((l, i) => 
+                          i === index ? { ...l, responsible_id: value || undefined } : { ...l }
+                        );
                         setFormData({ ...formData, legs: newLegs });
                       }}
                       placeholder="Search responsible..."
@@ -347,13 +434,14 @@ export default function NewBetPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Leg Notes (optional)</label>
-                  <textarea
-                    value={leg.notes || ''}
-                    onChange={(e) => {
-                      const newLegs = [...formData.legs];
-                      newLegs[index].notes = e.target.value || undefined;
-                      setFormData({ ...formData, legs: newLegs });
-                    }}
+                    <textarea
+                      value={leg.notes || ''}
+                      onChange={(e) => {
+                        const newLegs = formData.legs.map((l, i) => 
+                          i === index ? { ...l, notes: e.target.value || undefined } : { ...l }
+                        );
+                        setFormData({ ...formData, legs: newLegs });
+                      }}
                     rows={2}
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                     placeholder="Add notes about this leg..."

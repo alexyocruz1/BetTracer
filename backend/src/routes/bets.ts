@@ -12,6 +12,7 @@ import {
 import { BetsService } from '../services/bets.service';
 import { BetsController } from '../controllers/bets.controller';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
@@ -28,12 +29,12 @@ router.use((req: AuthRequest, res, next) => {
   next();
 });
 
-router.post('/', validate(createBetSchema), betsController.createBet);
-router.get('/', validate(getBetsSchema), betsController.getBets);
-router.get('/:id', validate(getBetSchema), betsController.getBet);
-router.patch('/:id', validate(updateBetSchema), betsController.updateBet);
-router.patch('/:id/state', validate(updateBetStateSchema), betsController.updateBetState);
-router.delete('/:id', validate(deleteBetSchema), betsController.deleteBet);
+router.post('/', validate(createBetSchema), asyncHandler(betsController.createBet));
+router.get('/', validate(getBetsSchema), asyncHandler(betsController.getBets));
+router.get('/:id', validate(getBetSchema), asyncHandler(betsController.getBet));
+router.patch('/:id', validate(updateBetSchema), asyncHandler(betsController.updateBet));
+router.patch('/:id/state', validate(updateBetStateSchema), asyncHandler(betsController.updateBetState));
+router.delete('/:id', validate(deleteBetSchema), asyncHandler(betsController.deleteBet));
 
 export default router;
 
