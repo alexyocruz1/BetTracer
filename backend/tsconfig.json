@@ -18,12 +18,12 @@
     "noUnusedParameters": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
+    "baseUrl": "./src",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./*"]
     }
   },
-  "include": ["src/**/*", "../shared/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }
 
