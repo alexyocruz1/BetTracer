@@ -31,6 +31,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [granularity, setGranularity] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
   useEffect(() => {
     let cancelled = false;
@@ -41,8 +42,6 @@ export default function AnalyticsPage() {
         if (startDate && startDate.trim()) params.append('start_date', startDate);
         if (endDate && endDate.trim()) params.append('end_date', endDate);
         const queryString = params.toString() ? `?${params.toString()}` : '';
-
-        console.log('Fetching analytics with query:', queryString || '(no filters)');
 
         const requests = [
           { name: 'summary', promise: apiClient.get<{ data: AnalyticsSummary }>(`/api/analytics/summary${queryString}`) },
@@ -55,13 +54,10 @@ export default function AnalyticsPage() {
           { name: 'teamPerformance', promise: apiClient.get<{ data: TeamPerformance[] }>(`/api/analytics/team-performance${queryString}`) },
           { name: 'bestWorst', promise: apiClient.get<{ data: BestWorstPerformers }>(`/api/analytics/best-worst-performers${queryString}`) },
           { name: 'streak', promise: apiClient.get<{ data: StreakAnalysis }>(`/api/analytics/streak-analysis${queryString}`) },
-          { name: 'timeSeries', promise: apiClient.get<{ data: TimeSeriesData[] }>(`/api/analytics/time-series?granularity=daily${queryString ? '&' + queryString.replace('?', '') : ''}`) },
+          { name: 'timeSeries', promise: apiClient.get<{ data: TimeSeriesData[] }>(`/api/analytics/time-series?granularity=${granularity}${queryString ? '&' + queryString.replace('?', '') : ''}`) },
         ];
 
-        console.log('Starting Promise.allSettled...');
-        const startTime = Date.now();
         const results = await Promise.allSettled(requests.map(r => r.promise));
-        console.log(`Promise.allSettled completed in ${Date.now() - startTime}ms`);
         
         const summaryRes = results[0].status === 'fulfilled' ? results[0].value : { data: { data: null } };
         const byLeagueRes = results[1].status === 'fulfilled' ? results[1].value : { data: { data: [] } };
@@ -82,16 +78,7 @@ export default function AnalyticsPage() {
           }
         });
         
-        console.log('All requests completed, setting data...');
-        
         if (!cancelled) {
-          console.log('Analytics data received:', {
-            summary: summaryRes.data.data,
-            byLeague: byLeagueRes.data.data?.length || 0,
-            byResponsible: byResponsibleRes.data.data?.length || 0,
-            byBetType: byBetTypeRes.data.data?.length || 0,
-            byCategory: byCategoryRes.data.data?.length || 0,
-          });
           setSummary(summaryRes.data.data);
           setByLeague(byLeagueRes.data.data || []);
           setByResponsible(byResponsibleRes.data.data || []);
@@ -103,8 +90,6 @@ export default function AnalyticsPage() {
           setBestWorstPerformers(bestWorstRes.data.data || null);
           setStreakAnalysis(streakRes.data.data || null);
           setTimeSeries(timeSeriesRes.data.data || []);
-        } else {
-          console.log('Component cancelled, not setting data');
         }
       } catch (error) {
         console.error('Failed to fetch analytics:', error);
@@ -122,12 +107,8 @@ export default function AnalyticsPage() {
           setTimeSeries([]);
         }
       } finally {
-        console.log('Finally block reached, cancelled:', cancelled);
         if (!cancelled) {
-          console.log('Setting loading to false');
           setLoading(false);
-        } else {
-          console.log('Component cancelled, not setting loading to false');
         }
       }
     };
@@ -137,7 +118,7 @@ export default function AnalyticsPage() {
     return () => {
       cancelled = true;
     };
-  }, [startDate, endDate]);
+  }, [startDate, endDate, granularity]);
 
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;
@@ -152,8 +133,8 @@ export default function AnalyticsPage() {
           Use this page to analyze trends and identify your most profitable betting strategies.
         </p>
         
-        {/* Date Range Filters */}
-        <div className="mt-4 flex gap-4 items-end">
+        {/* Filters */}
+        <div className="mt-4 flex flex-wrap gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
             <input
@@ -171,6 +152,18 @@ export default function AnalyticsPage() {
               onChange={(e) => setEndDate(e.target.value)}
               className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Time Period</label>
+            <select
+              value={granularity}
+              onChange={(e) => setGranularity(e.target.value as 'daily' | 'weekly' | 'monthly')}
+              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
           </div>
           {(startDate || endDate) && (
             <button
@@ -834,7 +827,12 @@ export default function AnalyticsPage() {
 
       {timeSeries.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Performance Over Time</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Performance Over Time</h2>
+            <div className="text-sm text-gray-500">
+              Showing {granularity} data
+            </div>
+          </div>
           
           {/* Profit Over Time Line Chart */}
           <div className="mb-6">
