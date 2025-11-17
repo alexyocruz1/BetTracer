@@ -265,13 +265,13 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
+      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
+        <nav className="-mb-px flex space-x-4 sm:space-x-8 min-w-max sm:min-w-0">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -348,15 +348,15 @@ export default function AdminPage() {
 
         {/* Existing Items List */}
         <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
             <h2 className="text-xl font-bold text-gray-900">
               Existing {tabs.find((t) => t.id === activeTab)?.label}
-              {pagination.total > 0 && (
-                <span className="text-sm font-normal text-gray-500 ml-2">
-                  ({pagination.total} total, showing {items.length} on page {pagination.page} of {pagination.totalPages})
-                </span>
-              )}
             </h2>
+            {pagination.total > 0 && (
+              <span className="text-sm font-normal text-gray-500">
+                ({pagination.total} total, showing {items.length} on page {pagination.page} of {pagination.totalPages})
+              </span>
+            )}
           </div>
           
           {/* Search/Filter */}
@@ -430,15 +430,15 @@ export default function AdminPage() {
               </div>
               
               {/* Pagination Controls */}
-              <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-t border-gray-200 pt-4">
+                <div className="flex items-center gap-2 flex-wrap">
                   {pagination.totalPages > 1 && (
                     <>
                       <button
                         type="button"
                         onClick={() => fetchItems(pagination.page - 1)}
                         disabled={pagination.page === 1 || loading}
-                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0"
                       >
                         Previous
                       </button>
@@ -449,7 +449,7 @@ export default function AdminPage() {
                         type="button"
                         onClick={() => fetchItems(pagination.page + 1)}
                         disabled={pagination.page >= pagination.totalPages || loading}
-                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0"
                       >
                         Next
                       </button>
@@ -461,8 +461,8 @@ export default function AdminPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">Items per page:</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-sm text-gray-500 whitespace-nowrap">Items per page:</span>
                   <select
                     value={pagination.limit}
                     onChange={(e) => {
@@ -470,7 +470,7 @@ export default function AdminPage() {
                       setPagination({ ...pagination, limit: newLimit, page: 1 });
                       fetchItems(1, newLimit);
                     }}
-                    className="text-sm border border-gray-300 rounded-md px-2 py-1"
+                    className="text-sm border border-gray-300 rounded-md px-2 py-1 text-base sm:text-sm min-h-[44px] sm:min-h-0"
                     disabled={loading}
                   >
                     <option value={50}>50</option>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 import { AnalyticsSummary, AnalyticsByLeague, AnalyticsByResponsible, AnalyticsByBetType, AnalyticsByCategory, TimeSeriesData, LegAnalytics, OddsAnalysis, TeamPerformance, BestWorstPerformers, StreakAnalysis, ResponsibleDetailedAnalytics } from '@/types';
 import {
@@ -34,7 +34,8 @@ export default function AnalyticsPage() {
   const [endDate, setEndDate] = useState<string>('');
   const [granularity, setGranularity] = useState<'daily' | 'weekly' | 'monthly' | 'all-time'>('all-time');
 
-  useEffect(() => {
+  const fetchAnalytics = useCallback(async () => {
+    setLoading(true);
     let cancelled = false;
     let requestCompleted = false;
 
@@ -59,134 +60,147 @@ export default function AnalyticsPage() {
       }
     }, 30000); // 30 second timeout (analytics has many requests)
     
-    const fetchAnalytics = async () => {
-      try {
-        const params = new URLSearchParams();
-        if (startDate && startDate.trim()) params.append('start_date', startDate);
-        if (endDate && endDate.trim()) params.append('end_date', endDate);
-        const queryString = params.toString() ? `?${params.toString()}` : '';
+    try {
+      const params = new URLSearchParams();
+      if (startDate && startDate.trim()) params.append('start_date', startDate);
+      if (endDate && endDate.trim()) params.append('end_date', endDate);
+      const queryString = params.toString() ? `?${params.toString()}` : '';
 
-        const requests = [
-          { name: 'summary', promise: apiClient.get<{ data: AnalyticsSummary }>(`/api/analytics/summary${queryString}`) },
-          { name: 'byLeague', promise: apiClient.get<{ data: AnalyticsByLeague[] }>(`/api/analytics/by-league${queryString}`) },
-          { name: 'byResponsible', promise: apiClient.get<{ data: AnalyticsByResponsible[] }>(`/api/analytics/by-responsible${queryString}`) },
-          { name: 'responsibleDetailed', promise: apiClient.get<{ data: ResponsibleDetailedAnalytics[] }>(`/api/analytics/responsible-detailed${queryString}`) },
-          { name: 'byBetType', promise: apiClient.get<{ data: AnalyticsByBetType[] }>(`/api/analytics/by-bet-type${queryString}`) },
-          { name: 'byCategory', promise: apiClient.get<{ data: AnalyticsByCategory[] }>(`/api/analytics/by-category${queryString}`) },
-          { name: 'legAnalytics', promise: apiClient.get<{ data: LegAnalytics }>(`/api/analytics/leg-analytics${queryString}`) },
-          { name: 'oddsAnalysis', promise: apiClient.get<{ data: OddsAnalysis[] }>(`/api/analytics/odds-analysis${queryString}`) },
-          { name: 'teamPerformance', promise: apiClient.get<{ data: TeamPerformance[] }>(`/api/analytics/team-performance${queryString}`) },
-          { name: 'bestWorst', promise: apiClient.get<{ data: BestWorstPerformers }>(`/api/analytics/best-worst-performers${queryString}`) },
-          { name: 'streak', promise: apiClient.get<{ data: StreakAnalysis }>(`/api/analytics/streak-analysis${queryString}`) },
-          { name: 'timeSeries', promise: apiClient.get<{ data: TimeSeriesData[] }>(`/api/analytics/time-series?granularity=${granularity}${queryString ? '&' + queryString.replace('?', '') : ''}`) },
-        ];
+      const requests = [
+        { name: 'summary', promise: apiClient.get<{ data: AnalyticsSummary }>(`/api/analytics/summary${queryString}`) },
+        { name: 'byLeague', promise: apiClient.get<{ data: AnalyticsByLeague[] }>(`/api/analytics/by-league${queryString}`) },
+        { name: 'byResponsible', promise: apiClient.get<{ data: AnalyticsByResponsible[] }>(`/api/analytics/by-responsible${queryString}`) },
+        { name: 'responsibleDetailed', promise: apiClient.get<{ data: ResponsibleDetailedAnalytics[] }>(`/api/analytics/responsible-detailed${queryString}`) },
+        { name: 'byBetType', promise: apiClient.get<{ data: AnalyticsByBetType[] }>(`/api/analytics/by-bet-type${queryString}`) },
+        { name: 'byCategory', promise: apiClient.get<{ data: AnalyticsByCategory[] }>(`/api/analytics/by-category${queryString}`) },
+        { name: 'legAnalytics', promise: apiClient.get<{ data: LegAnalytics }>(`/api/analytics/leg-analytics${queryString}`) },
+        { name: 'oddsAnalysis', promise: apiClient.get<{ data: OddsAnalysis[] }>(`/api/analytics/odds-analysis${queryString}`) },
+        { name: 'teamPerformance', promise: apiClient.get<{ data: TeamPerformance[] }>(`/api/analytics/team-performance${queryString}`) },
+        { name: 'bestWorst', promise: apiClient.get<{ data: BestWorstPerformers }>(`/api/analytics/best-worst-performers${queryString}`) },
+        { name: 'streak', promise: apiClient.get<{ data: StreakAnalysis }>(`/api/analytics/streak-analysis${queryString}`) },
+        { name: 'timeSeries', promise: apiClient.get<{ data: TimeSeriesData[] }>(`/api/analytics/time-series?granularity=${granularity}${queryString ? '&' + queryString.replace('?', '') : ''}`) },
+      ];
 
-        const results = await Promise.allSettled(requests.map(r => r.promise));
-        
-        if (requestCompleted || cancelled) return;
-        
-        requestCompleted = true;
-        clearTimeout(timeoutId);
-        
-        const summaryRes = results[0].status === 'fulfilled' ? results[0].value : { data: { data: null } };
-        const byLeagueRes = results[1].status === 'fulfilled' ? results[1].value : { data: { data: [] } };
-        const byResponsibleRes = results[2].status === 'fulfilled' ? results[2].value : { data: { data: [] } };
-        const responsibleDetailedRes = results[3].status === 'fulfilled' ? results[3].value : { data: { data: [] } };
-        const byBetTypeRes = results[4].status === 'fulfilled' ? results[4].value : { data: { data: [] } };
-        const byCategoryRes = results[5].status === 'fulfilled' ? results[5].value : { data: { data: [] } };
-        const legAnalyticsRes = results[6].status === 'fulfilled' ? results[6].value : { data: { data: null } };
-        const oddsAnalysisRes = results[7].status === 'fulfilled' ? results[7].value : { data: { data: [] } };
-        const teamPerformanceRes = results[8].status === 'fulfilled' ? results[8].value : { data: { data: [] } };
-        const bestWorstRes = results[9].status === 'fulfilled' ? results[9].value : { data: { data: null } };
-        const streakRes = results[10].status === 'fulfilled' ? results[10].value : { data: { data: null } };
-        const timeSeriesRes = results[11].status === 'fulfilled' ? results[11].value : { data: { data: [] } };
+      const results = await Promise.allSettled(requests.map(r => r.promise));
+      
+      if (requestCompleted || cancelled) return;
+      
+      requestCompleted = true;
+      clearTimeout(timeoutId);
+      
+      const summaryRes = results[0].status === 'fulfilled' ? results[0].value : { data: { data: null } };
+      const byLeagueRes = results[1].status === 'fulfilled' ? results[1].value : { data: { data: [] } };
+      const byResponsibleRes = results[2].status === 'fulfilled' ? results[2].value : { data: { data: [] } };
+      const responsibleDetailedRes = results[3].status === 'fulfilled' ? results[3].value : { data: { data: [] } };
+      const byBetTypeRes = results[4].status === 'fulfilled' ? results[4].value : { data: { data: [] } };
+      const byCategoryRes = results[5].status === 'fulfilled' ? results[5].value : { data: { data: [] } };
+      const legAnalyticsRes = results[6].status === 'fulfilled' ? results[6].value : { data: { data: null } };
+      const oddsAnalysisRes = results[7].status === 'fulfilled' ? results[7].value : { data: { data: [] } };
+      const teamPerformanceRes = results[8].status === 'fulfilled' ? results[8].value : { data: { data: [] } };
+      const bestWorstRes = results[9].status === 'fulfilled' ? results[9].value : { data: { data: null } };
+      const streakRes = results[10].status === 'fulfilled' ? results[10].value : { data: { data: null } };
+      const timeSeriesRes = results[11].status === 'fulfilled' ? results[11].value : { data: { data: [] } };
 
-        // Log any failures
-        results.forEach((result, index) => {
-          if (result.status === 'rejected') {
-            console.error(`Failed to fetch ${requests[index].name}:`, result.reason);
-          }
-        });
-        
-        if (!cancelled) {
-          // Check if we have any data at all
-          const summaryData = summaryRes.data?.data as AnalyticsSummary | undefined;
-          const hasAnyData = 
-            (summaryData && summaryData.total_bets > 0) ||
-            (byLeagueRes.data?.data && Array.isArray(byLeagueRes.data.data) && byLeagueRes.data.data.length > 0) ||
-            (byResponsibleRes.data?.data && Array.isArray(byResponsibleRes.data.data) && byResponsibleRes.data.data.length > 0) ||
-            (byBetTypeRes.data?.data && Array.isArray(byBetTypeRes.data.data) && byBetTypeRes.data.data.length > 0) ||
-            (byCategoryRes.data?.data && Array.isArray(byCategoryRes.data.data) && byCategoryRes.data.data.length > 0) ||
-            (timeSeriesRes.data?.data && Array.isArray(timeSeriesRes.data.data) && timeSeriesRes.data.data.length > 0);
+      // Log any failures
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Failed to fetch ${requests[index].name}:`, result.reason);
+        }
+      });
+      
+      if (!cancelled) {
+        // Check if we have any data at all
+        const summaryData = summaryRes.data?.data as AnalyticsSummary | undefined;
+        const hasAnyData = 
+          (summaryData && summaryData.total_bets > 0) ||
+          (byLeagueRes.data?.data && Array.isArray(byLeagueRes.data.data) && byLeagueRes.data.data.length > 0) ||
+          (byResponsibleRes.data?.data && Array.isArray(byResponsibleRes.data.data) && byResponsibleRes.data.data.length > 0) ||
+          (byBetTypeRes.data?.data && Array.isArray(byBetTypeRes.data.data) && byBetTypeRes.data.data.length > 0) ||
+          (byCategoryRes.data?.data && Array.isArray(byCategoryRes.data.data) && byCategoryRes.data.data.length > 0) ||
+          (timeSeriesRes.data?.data && Array.isArray(timeSeriesRes.data.data) && timeSeriesRes.data.data.length > 0);
 
-          // If summary request failed but we have other data, create a default summary
-          if (!summaryData && hasAnyData) {
-            setSummary({
-              total_stake: 0,
-              total_profit: 0,
-              roi: 0,
-              win_rate: 0,
-              total_bets: 0,
-              won_bets: 0,
-              lost_bets: 0,
-              pending_bets: 0,
-              cumulative_profit: 0,
-            });
-          } else {
-            setSummary(summaryData || null);
-          }
-          
-          setByLeague((byLeagueRes.data?.data as AnalyticsByLeague[]) || []);
-          setByResponsible((byResponsibleRes.data?.data as AnalyticsByResponsible[]) || []);
-          const detailedData = (responsibleDetailedRes.data?.data as ResponsibleDetailedAnalytics[]) || [];
-          console.log('Responsible detailed analytics:', detailedData);
-          setResponsibleDetailed(detailedData);
-          setByBetType((byBetTypeRes.data?.data as AnalyticsByBetType[]) || []);
-          setByCategory((byCategoryRes.data?.data as AnalyticsByCategory[]) || []);
-          setLegAnalytics((legAnalyticsRes.data?.data as LegAnalytics) || null);
-          setOddsAnalysis((oddsAnalysisRes.data?.data as OddsAnalysis[]) || []);
-          setTeamPerformance((teamPerformanceRes.data?.data as TeamPerformance[]) || []);
-          setBestWorstPerformers((bestWorstRes.data?.data as BestWorstPerformers) || null);
-          setStreakAnalysis((streakRes.data?.data as StreakAnalysis) || null);
-          setTimeSeries((timeSeriesRes.data?.data as TimeSeriesData[]) || []);
+        // If summary request failed but we have other data, create a default summary
+        if (!summaryData && hasAnyData) {
+          setSummary({
+            total_stake: 0,
+            total_profit: 0,
+            roi: 0,
+            win_rate: 0,
+            total_bets: 0,
+            won_bets: 0,
+            lost_bets: 0,
+            pending_bets: 0,
+            cumulative_profit: 0,
+          });
+        } else {
+          setSummary(summaryData || null);
         }
         
-        setLoading(false);
-      } catch (error) {
-        console.error('Failed to fetch analytics:', error);
-        if (requestCompleted || cancelled) return;
-        
-        requestCompleted = true;
+        setByLeague((byLeagueRes.data?.data as AnalyticsByLeague[]) || []);
+        setByResponsible((byResponsibleRes.data?.data as AnalyticsByResponsible[]) || []);
+        const detailedData = (responsibleDetailedRes.data?.data as ResponsibleDetailedAnalytics[]) || [];
+        console.log('Responsible detailed analytics:', detailedData);
+        setResponsibleDetailed(detailedData);
+        setByBetType((byBetTypeRes.data?.data as AnalyticsByBetType[]) || []);
+        setByCategory((byCategoryRes.data?.data as AnalyticsByCategory[]) || []);
+        setLegAnalytics((legAnalyticsRes.data?.data as LegAnalytics) || null);
+        setOddsAnalysis((oddsAnalysisRes.data?.data as OddsAnalysis[]) || []);
+        setTeamPerformance((teamPerformanceRes.data?.data as TeamPerformance[]) || []);
+        setBestWorstPerformers((bestWorstRes.data?.data as BestWorstPerformers) || null);
+        setStreakAnalysis((streakRes.data?.data as StreakAnalysis) || null);
+        setTimeSeries((timeSeriesRes.data?.data as TimeSeriesData[]) || []);
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+      if (requestCompleted || cancelled) return;
+      
+      requestCompleted = true;
+      clearTimeout(timeoutId);
+      setSummary(null);
+      setByLeague([]);
+      setByResponsible([]);
+      setResponsibleDetailed([]);
+      setByBetType([]);
+      setByCategory([]);
+      setLegAnalytics(null);
+      setOddsAnalysis([]);
+      setTeamPerformance([]);
+      setBestWorstPerformers(null);
+      setStreakAnalysis(null);
+      setTimeSeries([]);
+      setLoading(false);
+    } finally {
+      // Ensure loading is always set to false, even if timeout already fired
+      if (!cancelled && !requestCompleted) {
         clearTimeout(timeoutId);
-        setSummary(null);
-        setByLeague([]);
-        setByResponsible([]);
-        setResponsibleDetailed([]);
-        setByBetType([]);
-        setByCategory([]);
-        setLegAnalytics(null);
-        setOddsAnalysis([]);
-        setTeamPerformance([]);
-        setBestWorstPerformers(null);
-        setStreakAnalysis(null);
-        setTimeSeries([]);
         setLoading(false);
-      } finally {
-        // Ensure loading is always set to false, even if timeout already fired
-        if (!cancelled && !requestCompleted) {
-          clearTimeout(timeoutId);
-          setLoading(false);
-        }
+      }
+    }
+  }, [startDate, endDate, granularity]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  // Auto-refresh when page becomes visible (e.g., after updating a bet)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Small delay to ensure any pending updates are complete
+        setTimeout(() => {
+          fetchAnalytics();
+        }, 500);
       }
     };
     
-    fetchAnalytics();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [startDate, endDate, granularity]);
+  }, [fetchAnalytics]);
 
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;
@@ -195,11 +209,36 @@ export default function AnalyticsPage() {
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Detailed breakdowns of your betting performance by league, time period, and more. 
-          Use this page to analyze trends and identify your most profitable betting strategies.
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              Detailed breakdowns of your betting performance by league, time period, and more. 
+              Use this page to analyze trends and identify your most profitable betting strategies.
+            </p>
+          </div>
+          <button
+            onClick={() => fetchAnalytics()}
+            disabled={loading}
+            className="ml-4 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0 flex items-center gap-2"
+            title="Refresh analytics data"
+          >
+            <svg 
+              className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+              />
+            </svg>
+            <span className="hidden sm:inline">{loading ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+        </div>
         
         {/* Filters */}
         <div className="mt-4 flex flex-wrap gap-4 items-end">
