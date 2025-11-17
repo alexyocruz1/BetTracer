@@ -71,8 +71,9 @@ class ApiClient {
           const result = await Promise.race([sessionPromise, timeoutPromise]);
           const { data: sessionData } = result;
 
-          if (sessionData?.access_token) {
-            config.headers.Authorization = `Bearer ${sessionData.access_token}`;
+          // sessionData is { session: Session | null }, so access token via session.access_token
+          if (sessionData?.session?.access_token) {
+            config.headers.Authorization = `Bearer ${sessionData.session.access_token}`;
           }
         } catch (error) {
           // Silently fail - we already tried localStorage
