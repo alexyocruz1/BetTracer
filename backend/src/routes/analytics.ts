@@ -31,6 +31,7 @@ router.get('/team-performance', asyncHandler(analyticsController.getTeamPerforma
 router.get('/best-worst-performers', asyncHandler(analyticsController.getBestWorstPerformers));
 router.get('/streak-analysis', asyncHandler(analyticsController.getStreakAnalysis));
 router.get('/time-series', asyncHandler(analyticsController.getTimeSeries));
+router.get('/responsible-detailed', asyncHandler(analyticsController.getResponsibleDetailedAnalytics));
 
 export default router;
 

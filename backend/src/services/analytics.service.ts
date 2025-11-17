@@ -11,6 +11,7 @@ import {
   TeamPerformance,
   BestWorstPerformers,
   StreakAnalysis,
+  ResponsibleDetailedAnalytics,
 } from '../types';
 import { createError, errorCodes } from '../utils/errors';
 
@@ -384,7 +385,7 @@ export class AnalyticsService {
 
   async getTimeSeries(
     userId: string,
-    granularity: 'daily' | 'weekly' | 'monthly',
+    granularity: 'daily' | 'weekly' | 'monthly' | 'all-time',
     startDate?: string,
     endDate?: string
   ): Promise<TimeSeriesData[]> {
@@ -416,7 +417,7 @@ export class AnalyticsService {
       const date = new Date(bet.date);
       let key: string;
 
-      if (granularity === 'daily') {
+      if (granularity === 'daily' || granularity === 'all-time') {
         key = date.toISOString().split('T')[0];
       } else if (granularity === 'weekly') {
         const weekStart = new Date(date);
@@ -899,6 +900,313 @@ export class AnalyticsService {
       longest_loss_streak: longestLossStreak,
       recent_bets: recentBets,
     };
+  }
+
+  async getResponsibleDetailedAnalytics(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<ResponsibleDetailedAnalytics[]> {
+    // Get all bets with legs
+    let betsQuery = this.supabase
+      .from('main_bets')
+      .select('*, legs(*)')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+
+    if (startDate) {
+      betsQuery = betsQuery.gte('date', startDate);
+    }
+
+    if (endDate) {
+      betsQuery = betsQuery.lte('date', endDate);
+    }
+
+    const { data: bets, error } = await betsQuery;
+
+    if (error) {
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch responsible detailed analytics', 500);
+    }
+
+    // Group legs by responsible_id
+    const responsibleMap = new Map<string, {
+      responsible_id: string;
+      responsible_name: string;
+      bets: any[];
+      legs: any[];
+      leagueMap: Map<string, { league_id: string; league_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
+      teamMap: Map<string, { team_id: string; team_name: string; bet_count: number }>;
+      betTypeMap: Map<string, { bet_type_id: string; bet_type_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
+      categoryMap: Map<string, { category_id: string; category_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
+    }>();
+
+    // Process all bets and legs
+    bets?.forEach((bet) => {
+      bet.legs?.forEach((leg: any) => {
+        if (!leg.responsible_id) return;
+
+        const responsibleId = leg.responsible_id;
+        if (!responsibleMap.has(responsibleId)) {
+          responsibleMap.set(responsibleId, {
+            responsible_id: responsibleId,
+            responsible_name: '',
+            bets: [],
+            legs: [],
+            leagueMap: new Map(),
+            teamMap: new Map(),
+            betTypeMap: new Map(),
+            categoryMap: new Map(),
+          });
+        }
+
+        const responsibleData = responsibleMap.get(responsibleId)!;
+        if (!responsibleData.bets.includes(bet)) {
+          responsibleData.bets.push(bet);
+        }
+        responsibleData.legs.push(leg);
+
+        // Track leagues
+        if (leg.league_id) {
+          if (!responsibleData.leagueMap.has(leg.league_id)) {
+            responsibleData.leagueMap.set(leg.league_id, {
+              league_id: leg.league_id,
+              league_name: '',
+              profit: 0,
+              bet_count: 0,
+              stake: 0,
+              won: 0,
+              total: 0,
+            });
+          }
+          const leagueData = responsibleData.leagueMap.get(leg.league_id)!;
+          leagueData.bet_count += 1;
+          leagueData.stake += Number(bet.stake || 0);
+          leagueData.profit += Number(bet.profit_loss || 0);
+          if (bet.state === 'won') leagueData.won += 1;
+          leagueData.total += 1;
+        }
+
+        // Track teams (home and away)
+        if (leg.home_team_id) {
+          if (!responsibleData.teamMap.has(leg.home_team_id)) {
+            responsibleData.teamMap.set(leg.home_team_id, {
+              team_id: leg.home_team_id,
+              team_name: '',
+              bet_count: 0,
+            });
+          }
+          responsibleData.teamMap.get(leg.home_team_id)!.bet_count += 1;
+        }
+        if (leg.away_team_id) {
+          if (!responsibleData.teamMap.has(leg.away_team_id)) {
+            responsibleData.teamMap.set(leg.away_team_id, {
+              team_id: leg.away_team_id,
+              team_name: '',
+              bet_count: 0,
+            });
+          }
+          responsibleData.teamMap.get(leg.away_team_id)!.bet_count += 1;
+        }
+
+        // Track bet types
+        if (leg.bet_type_id) {
+          if (!responsibleData.betTypeMap.has(leg.bet_type_id)) {
+            responsibleData.betTypeMap.set(leg.bet_type_id, {
+              bet_type_id: leg.bet_type_id,
+              bet_type_name: '',
+              profit: 0,
+              bet_count: 0,
+              stake: 0,
+              won: 0,
+              total: 0,
+            });
+          }
+          const betTypeData = responsibleData.betTypeMap.get(leg.bet_type_id)!;
+          betTypeData.bet_count += 1;
+          betTypeData.stake += Number(bet.stake || 0);
+          betTypeData.profit += Number(bet.profit_loss || 0);
+          if (bet.state === 'won') betTypeData.won += 1;
+          betTypeData.total += 1;
+        }
+
+        // Track categories
+        if (leg.category_id) {
+          if (!responsibleData.categoryMap.has(leg.category_id)) {
+            responsibleData.categoryMap.set(leg.category_id, {
+              category_id: leg.category_id,
+              category_name: '',
+              profit: 0,
+              bet_count: 0,
+              stake: 0,
+              won: 0,
+              total: 0,
+            });
+          }
+          const categoryData = responsibleData.categoryMap.get(leg.category_id)!;
+          categoryData.bet_count += 1;
+          categoryData.stake += Number(bet.stake || 0);
+          categoryData.profit += Number(bet.profit_loss || 0);
+          if (bet.state === 'won') categoryData.won += 1;
+          categoryData.total += 1;
+        }
+      });
+    });
+
+    // Fetch reference item names and build results
+    const results: ResponsibleDetailedAnalytics[] = [];
+    for (const [responsibleId, data] of responsibleMap.entries()) {
+      // Get responsible name
+      const { data: responsible } = await this.supabase
+        .from('reference_items')
+        .select('name')
+        .eq('id', responsibleId)
+        .single();
+
+      const responsibleName = responsible?.name || 'Unknown';
+
+      // Calculate summary
+      const totalStake = data.bets.reduce((sum, b) => sum + Number(b.stake || 0), 0);
+      const totalProfit = data.bets.reduce((sum, b) => sum + Number(b.profit_loss || 0), 0);
+      const wonBets = data.bets.filter((b) => b.state === 'won').length;
+      const winRate = data.bets.length > 0 ? wonBets / data.bets.length : 0;
+      const roi = totalStake > 0 ? totalProfit / totalStake : 0;
+
+      // Get league names and find most profitable
+      const leagueDataArray = Array.from(data.leagueMap.values());
+      for (const leagueData of leagueDataArray) {
+        const { data: league } = await this.supabase
+          .from('reference_items')
+          .select('name')
+          .eq('id', leagueData.league_id)
+          .single();
+        if (league) {
+          leagueData.league_name = league.name;
+        }
+      }
+
+      // Find most profitable league
+      const mostProfitableLeague = leagueDataArray.length > 0
+        ? leagueDataArray.reduce((best, current) => 
+            current.profit > best.profit ? current : best
+          )
+        : null;
+
+      // Find favorite league (most bets)
+      const favoriteLeague = leagueDataArray.length > 0
+        ? leagueDataArray.reduce((best, current) => 
+            current.bet_count > best.bet_count ? current : best
+          )
+        : null;
+
+      // Get team names and find favorite team
+      const teamDataArray = Array.from(data.teamMap.values());
+      for (const teamData of teamDataArray) {
+        const { data: team } = await this.supabase
+          .from('reference_items')
+          .select('name')
+          .eq('id', teamData.team_id)
+          .single();
+        if (team) {
+          teamData.team_name = team.name;
+        }
+      }
+
+      const favoriteTeam = teamDataArray.length > 0
+        ? teamDataArray.reduce((best, current) => 
+            current.bet_count > best.bet_count ? current : best
+          )
+        : null;
+
+      // Get bet type names
+      const betTypeDataArray = Array.from(data.betTypeMap.values());
+      for (const betTypeData of betTypeDataArray) {
+        const { data: betType } = await this.supabase
+          .from('reference_items')
+          .select('name')
+          .eq('id', betTypeData.bet_type_id)
+          .single();
+        if (betType) {
+          betTypeData.bet_type_name = betType.name;
+        }
+      }
+
+      // Get category names
+      const categoryDataArray = Array.from(data.categoryMap.values());
+      for (const categoryData of categoryDataArray) {
+        const { data: category } = await this.supabase
+          .from('reference_items')
+          .select('name')
+          .eq('id', categoryData.category_id)
+          .single();
+        if (category) {
+          categoryData.category_name = category.name;
+        }
+      }
+
+      // Build performance arrays
+      const performanceByLeague = leagueDataArray.map(league => ({
+        league_id: league.league_id,
+        league_name: league.league_name,
+        total_stake: league.stake,
+        total_profit: league.profit,
+        roi: league.stake > 0 ? league.profit / league.stake : 0,
+        win_rate: league.total > 0 ? league.won / league.total : 0,
+        bet_count: league.bet_count,
+      }));
+
+      const performanceByBetType = betTypeDataArray.map(bt => ({
+        bet_type_id: bt.bet_type_id,
+        bet_type_name: bt.bet_type_name,
+        total_stake: bt.stake,
+        total_profit: bt.profit,
+        roi: bt.stake > 0 ? bt.profit / bt.stake : 0,
+        win_rate: bt.total > 0 ? bt.won / bt.total : 0,
+        bet_count: bt.bet_count,
+      }));
+
+      const performanceByCategory = categoryDataArray.map(cat => ({
+        category_id: cat.category_id,
+        category_name: cat.category_name,
+        total_stake: cat.stake,
+        total_profit: cat.profit,
+        roi: cat.stake > 0 ? cat.profit / cat.stake : 0,
+        win_rate: cat.total > 0 ? cat.won / cat.total : 0,
+        bet_count: cat.bet_count,
+      }));
+
+      results.push({
+        responsible_id: responsibleId,
+        responsible_name: responsibleName,
+        summary: {
+          total_stake: totalStake,
+          total_profit: totalProfit,
+          roi,
+          win_rate: winRate,
+          bet_count: data.bets.length,
+        },
+        most_profitable_league: mostProfitableLeague ? {
+          league_id: mostProfitableLeague.league_id,
+          league_name: mostProfitableLeague.league_name,
+          total_profit: mostProfitableLeague.profit,
+          bet_count: mostProfitableLeague.bet_count,
+        } : null,
+        favorite_league: favoriteLeague ? {
+          league_id: favoriteLeague.league_id,
+          league_name: favoriteLeague.league_name,
+          bet_count: favoriteLeague.bet_count,
+        } : null,
+        favorite_team: favoriteTeam ? {
+          team_id: favoriteTeam.team_id,
+          team_name: favoriteTeam.team_name,
+          bet_count: favoriteTeam.bet_count,
+        } : null,
+        performance_by_league: performanceByLeague,
+        performance_by_bet_type: performanceByBetType,
+        performance_by_category: performanceByCategory,
+      });
+    }
+
+    return results;
   }
 }
 

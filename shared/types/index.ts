@@ -232,6 +232,61 @@ export interface StreakAnalysis {
   }>;
 }
 
+export interface ResponsibleDetailedAnalytics {
+  responsible_id: string;
+  responsible_name: string;
+  summary: {
+    total_stake: number;
+    total_profit: number;
+    roi: number;
+    win_rate: number;
+    bet_count: number;
+  };
+  most_profitable_league: {
+    league_id: string;
+    league_name: string;
+    total_profit: number;
+    bet_count: number;
+  } | null;
+  favorite_league: {
+    league_id: string;
+    league_name: string;
+    bet_count: number;
+  } | null;
+  favorite_team: {
+    team_id: string;
+    team_name: string;
+    bet_count: number;
+  } | null;
+  performance_by_league: Array<{
+    league_id: string;
+    league_name: string;
+    total_stake: number;
+    total_profit: number;
+    roi: number;
+    win_rate: number;
+    bet_count: number;
+  }>;
+  performance_by_bet_type: Array<{
+    bet_type_id: string;
+    bet_type_name: string;
+    total_stake: number;
+    total_profit: number;
+    roi: number;
+    win_rate: number;
+    bet_count: number;
+  }>;
+  performance_by_category: Array<{
+    category_id: string;
+    category_name: string;
+    total_stake: number;
+    total_profit: number;
+    roi: number;
+    win_rate: number;
+    bet_count: number;
+  }>;
+}
+
 // ML Prediction types
 export interface MLPredictRequest {
   legs: MLPredictLeg[];

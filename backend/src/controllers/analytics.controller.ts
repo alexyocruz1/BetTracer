@@ -47,11 +47,11 @@ export class AnalyticsController {
 
   getTimeSeries = async (req: AuthRequest, res: Response): Promise<Response> => {
     const userId = req.user!.id;
-    const { granularity = 'daily', start_date, end_date } = req.query;
+    const { granularity = 'all-time', start_date, end_date } = req.query;
 
     const timeSeries = await this.analyticsService.getTimeSeries(
       userId,
-      granularity as 'daily' | 'weekly' | 'monthly',
+      granularity as 'daily' | 'weekly' | 'monthly' | 'all-time',
       start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
       end_date && String(end_date).trim() ? String(end_date).trim() : undefined
     );
@@ -141,6 +141,18 @@ export class AnalyticsController {
       end_date && String(end_date).trim() ? String(end_date).trim() : undefined
     );
     return sendSuccess(res, streakAnalysis);
+  };
+
+  getResponsibleDetailedAnalytics = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const detailedAnalytics = await this.analyticsService.getResponsibleDetailedAnalytics(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, detailedAnalytics);
   };
 }
 
