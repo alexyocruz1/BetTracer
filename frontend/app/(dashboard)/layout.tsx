@@ -25,9 +25,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   useEffect(() => {
+    // Only redirect if we're sure there's no user (after loading completes)
     if (!loading && !user) {
-      router.push('/login');
-      return;
+      // Use replace to avoid adding to history stack (prevents back button issues in Edge)
+      router.replace('/login');
     }
   }, [user, loading, router]);
 

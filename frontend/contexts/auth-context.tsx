@@ -41,31 +41,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchAdminStatus(session.user.id);
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
+
+    // Set a timeout to ensure loading is always set to false
+    timeoutId = setTimeout(() => {
+      if (mounted) {
+        console.warn('[Auth] Session check timeout - setting loading to false');
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    }, 10000); // 10 second timeout
+
+    // Get initial session with error handling
+    supabase.auth
+      .getSession()
+      .then(async ({ data: { session }, error }) => {
+        if (!mounted) return;
+        
+        clearTimeout(timeoutId);
+        
+        if (error) {
+          console.error('[Auth] Error getting session:', error);
+          setSession(null);
+          setUser(null);
+          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          try {
+            await fetchAdminStatus(session.user.id);
+          } catch (error) {
+            console.error('[Auth] Error fetching admin status:', error);
+            setIsAdmin(false);
+          }
+        } else {
+          setIsAdmin(false);
+        }
+        
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (!mounted) return;
+        clearTimeout(timeoutId);
+        console.error('[Auth] Failed to get session:', error);
+        setSession(null);
+        setUser(null);
+        setIsAdmin(false);
+        setLoading(false);
+      });
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
+      
       if (session?.user) {
-        await fetchAdminStatus(session.user.id);
+        try {
+          await fetchAdminStatus(session.user.id);
+        } catch (error) {
+          console.error('[Auth] Error fetching admin status:', error);
+          setIsAdmin(false);
+        }
       } else {
         setIsAdmin(false);
       }
+      
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
