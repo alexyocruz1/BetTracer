@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -11,19 +11,55 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const router = useRouter();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutFiredRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    timeoutFiredRef.current = false;
+
+    // Add a safety timeout to ensure loading is always reset
+    timeoutRef.current = setTimeout(() => {
+      timeoutFiredRef.current = true;
+      console.warn('[Login] Sign in taking too long, resetting loading state');
+      setLoading(false);
+      setError('Sign in is taking longer than expected. Please check your connection and try again.');
+    }, 15000); // 15 second safety timeout
 
     try {
       await signIn(email, password);
-      router.push('/');
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
-    } finally {
+      
+      // Only proceed if timeout hasn't fired
+      if (timeoutFiredRef.current) {
+        return;
+      }
+      
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
       setLoading(false);
+      
+      // Wait a moment for auth state to update, then redirect
+      setTimeout(() => {
+        router.push('/');
+        // Fallback redirect if router doesn't work
+        setTimeout(() => {
+          if (window.location.pathname !== '/') {
+            window.location.href = '/';
+          }
+        }, 500);
+      }, 100);
+    } catch (err: any) {
+      if (!timeoutFiredRef.current) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        console.error('[Login] Sign in error:', err);
+        setError(err.message || 'Failed to sign in. Please check your credentials and try again.');
+        setLoading(false);
+      }
     }
   };
 
