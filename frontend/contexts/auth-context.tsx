@@ -131,27 +131,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    // Add timeout to prevent hanging
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Sign in request timed out. Please check your connection and try again.')), 10000);
+    // Since network requests succeed but promise might hang, use a race with session check
+    const signInPromise = supabase.auth.signInWithPassword({ email, password });
+    
+    // Also start checking for session after a short delay (workaround for Edge)
+    const sessionCheckPromise = new Promise<void>((resolve, reject) => {
+      let attempts = 0;
+      const maxAttempts = 20; // Check for 2 seconds (20 * 100ms)
+      
+      const checkSession = async () => {
+        attempts++;
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          resolve();
+        } else if (error) {
+          reject(error);
+        } else if (attempts >= maxAttempts) {
+          reject(new Error('Sign in may have succeeded but session not found. Please refresh the page.'));
+        } else {
+          setTimeout(checkSession, 100);
+        }
+      };
+      
+      // Start checking after 500ms (give network request time to complete)
+      setTimeout(checkSession, 500);
     });
 
     try {
-      const signInPromise = supabase.auth.signInWithPassword({ email, password });
-      const result = await Promise.race([signInPromise, timeoutPromise]) as Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>;
-      
-      if (result.error) {
-        throw result.error;
-      }
+      // Race between the signIn promise and session check
+      // This handles cases where signIn promise hangs but session is created
+      await Promise.race([
+        signInPromise.then(({ data, error }) => {
+          if (error) throw error;
+          if (!data?.session) throw new Error('Sign in succeeded but no session was created');
+        }),
+        sessionCheckPromise,
+      ]);
     } catch (error: any) {
-      // If it's our timeout error, throw it as-is
-      if (error.message?.includes('timed out')) {
-        throw error;
-      }
-      // Otherwise, it's a Supabase error
+      // Handle Supabase errors
       if (error.error) {
         throw error.error;
       }
+      
+      // Handle other errors
       throw error;
     }
   };
