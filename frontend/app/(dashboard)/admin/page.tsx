@@ -304,7 +304,7 @@ export default function AdminPage() {
                     setSubmitError(null);
                   }
                 }}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
                 placeholder={`Enter ${activeTab} name`}
                 required
                 autoFocus
@@ -366,7 +366,7 @@ export default function AdminPage() {
               placeholder={`Search ${activeTab}s...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           {loading ? (

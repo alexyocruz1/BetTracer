@@ -274,7 +274,7 @@ export default function NewBetPage() {
             inputMode="decimal"
             value={formData.stake}
             onChange={(e) => setFormData({ ...formData, stake: parseFloat(e.target.value) || 0 })}
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
             required
           />
         </div>
@@ -291,7 +291,7 @@ export default function NewBetPage() {
                 value={mainBetDecimalOdds}
                 onChange={(e) => updateMainBetDecimalOdds(e.target.value)}
                 placeholder="2.50"
-                className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+                className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
               />
             </div>
             <div>
@@ -302,7 +302,7 @@ export default function NewBetPage() {
                 value={mainBetAmericanOdds}
                 onChange={(e) => updateMainBetAmericanOdds(e.target.value)}
                 placeholder="+150 or -200"
-                className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+                className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
               />
             </div>
           </div>
@@ -440,7 +440,7 @@ export default function NewBetPage() {
                         value={leg.odd.toFixed(2)}
                         onChange={(e) => updateLegOdds(index, e.target.value, 'decimal')}
                         placeholder="2.50"
-                        className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+                        className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
                         required
                       />
                     </div>
@@ -452,7 +452,7 @@ export default function NewBetPage() {
                         value={decimalToAmerican(leg.odd) ? formatAmericanOdds(decimalToAmerican(leg.odd)!) : ''}
                         onChange={(e) => updateLegOdds(index, e.target.value, 'american')}
                         placeholder="+150 or -200"
-                        className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+                        className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
                       />
                     </div>
                   </div>

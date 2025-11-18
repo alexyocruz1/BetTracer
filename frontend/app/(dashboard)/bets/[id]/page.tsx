@@ -188,7 +188,6 @@ export default function BetDetailPage() {
       
       // Use html-to-image which handles CSS better than html2canvas
       const dataUrl = await toPng(betslipRef.current, {
-        backgroundColor: null,
         pixelRatio: 2, // 2x scale for high quality (2160px wide, perfect for TikTok)
         width: 1080,
         height: betslipRef.current.scrollHeight,

@@ -248,7 +248,7 @@ export default function AnalyticsPage() {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
             />
           </div>
           <div>
@@ -257,7 +257,7 @@ export default function AnalyticsPage() {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
             />
           </div>
           <div>
@@ -265,7 +265,7 @@ export default function AnalyticsPage() {
             <select
               value={granularity}
               onChange={(e) => setGranularity(e.target.value as 'daily' | 'weekly' | 'monthly' | 'all-time')}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
             >
               <option value="all-time">All Time</option>
               <option value="daily">Daily</option>
