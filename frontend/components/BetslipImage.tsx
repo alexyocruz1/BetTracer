@@ -219,13 +219,17 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
                 )}
 
                 {/* Bet Type and Category */}
-                <div className="flex gap-3 mb-3 flex-wrap">
+                <div className="flex gap-3 mb-3 flex-wrap items-center">
                   {leg.bet_type_id && (
                     <span 
-                      className="px-4 py-1.5 rounded-full text-base font-semibold"
+                      className="px-4 py-1.5 rounded-full text-base font-semibold inline-flex items-center justify-center"
                       style={{ 
                         background: 'rgba(59, 130, 246, 0.4)',
                         border: '1px solid rgba(59, 130, 246, 0.6)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: '1.5',
                       }}
                     >
                       {getReferenceName(leg.bet_type_id)}
@@ -233,10 +237,14 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
                   )}
                   {leg.category_id && (
                     <span 
-                      className="px-4 py-1.5 rounded-full text-base font-semibold"
+                      className="px-4 py-1.5 rounded-full text-base font-semibold inline-flex items-center justify-center"
                       style={{ 
                         background: 'rgba(168, 85, 247, 0.4)',
                         border: '1px solid rgba(168, 85, 247, 0.6)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: '1.5',
                       }}
                     >
                       {getReferenceName(leg.category_id)}
