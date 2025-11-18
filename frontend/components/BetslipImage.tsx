@@ -91,17 +91,21 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
       }}
     >
       {/* Header */}
-      <div className="text-center mb-12">
-        <div className="mb-4">
-          <div className="text-3xl text-gray-300 font-medium">{formatDate(bet.date)}</div>
+      <div className="text-center mb-14">
+        <div className="mb-6">
+          <div className="text-6xl text-white font-bold mb-2">{formatDate(bet.date)}</div>
+          {bet.id && (
+            <div className="text-xl text-gray-400 font-mono">ID: {bet.id.slice(0, 8).toUpperCase()}</div>
+          )}
         </div>
-        {bet.state && bet.state !== 'pending' && (
+        {bet.state && (
           <div 
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-full text-2xl font-bold"
+            className="inline-flex items-center gap-3 px-8 py-3 rounded-full text-3xl font-bold"
             style={{
               backgroundColor: `${getStateColor(bet.state)}20`,
               color: getStateColor(bet.state),
-              border: `2px solid ${getStateColor(bet.state)}`,
+              border: `3px solid ${getStateColor(bet.state)}`,
+              boxShadow: `0 4px 12px ${getStateColor(bet.state)}40`,
             }}
           >
             <span>{getStateEmoji(bet.state)}</span>
@@ -112,11 +116,12 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
 
       {/* Main Bet Info */}
       <div 
-        className="rounded-3xl p-12 mb-10 border-2"
+        className="rounded-3xl p-12 mb-12 border-2"
         style={{
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
           borderColor: 'rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
         }}
       >
         <div className="flex justify-between items-start mb-10" style={{ gap: '60px' }}>
@@ -168,39 +173,48 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
             )}
           </div>
         </div>
+        {/* Bet Notes */}
+        {bet.notes && (
+          <div className="mt-8 pt-8 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}>
+            <div className="text-xl text-gray-300 font-medium mb-2">Notes</div>
+            <div className="text-lg text-gray-200 italic">{bet.notes}</div>
+          </div>
+        )}
       </div>
 
       {/* Legs */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         {bet.legs?.map((leg, index) => (
           <div
             key={leg.id}
-            className="rounded-2xl p-8 border-2 relative"
+            className="rounded-2xl p-10 border-2 relative"
             style={{
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
               borderColor: 'rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
             }}
           >
             {/* Leg number badge */}
             <div 
               style={{
                 position: 'absolute',
-                top: '-16px',
-                left: '-16px',
-                width: '64px',
-                height: '64px',
+                top: '-20px',
+                left: '-20px',
+                width: '80px',
+                height: '80px',
                 backgroundColor: '#1e293b',
-                border: '2px solid #fbbf24',
+                border: '3px solid #fbbf24',
                 borderRadius: '50%',
                 color: '#fbbf24',
-                fontSize: '24px',
+                fontSize: '32px',
                 fontWeight: '900',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxSizing: 'border-box',
                 zIndex: 10,
+                boxShadow: '0 4px 12px rgba(251, 191, 36, 0.4)',
               }}
             >
               {index + 1}
@@ -210,10 +224,10 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
               <div className="flex-1">
                 {/* Teams */}
                 {(leg.home_team_id || leg.away_team_id) && (
-                  <div className="text-3xl mb-3 font-bold">
+                  <div className="text-5xl mb-4 font-bold">
                     <span className="text-white">{getReferenceName(leg.home_team_id)}</span>
                     {leg.home_team_id && leg.away_team_id && (
-                      <span className="mx-4 text-gray-400 font-normal">vs</span>
+                      <span className="mx-6 text-gray-300 font-semibold text-4xl">vs</span>
                     )}
                     <span className="text-white">{getReferenceName(leg.away_team_id)}</span>
                   </div>
@@ -221,25 +235,25 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
 
                 {/* League */}
                 {leg.league_id && (
-                  <div className="text-xl text-gray-300 mb-3 font-medium">
+                  <div className="text-3xl text-gray-300 mb-4 font-semibold">
                     {getReferenceName(leg.league_id)}
                   </div>
                 )}
 
                 {/* Bet Type and Category */}
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
                   {leg.bet_type_id && (
                     <div
                       style={{ 
                         background: 'rgba(59, 130, 246, 0.4)',
-                        border: '1px solid rgba(59, 130, 246, 0.6)',
+                        border: '2px solid rgba(59, 130, 246, 0.6)',
                         borderRadius: '9999px',
-                        paddingLeft: '16px',
-                        paddingRight: '16px',
-                        paddingTop: '12px',
-                        paddingBottom: '12px',
-                        fontSize: '16px',
-                        fontWeight: '600',
+                        paddingLeft: '20px',
+                        paddingRight: '20px',
+                        paddingTop: '14px',
+                        paddingBottom: '14px',
+                        fontSize: '22px',
+                        fontWeight: '700',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -254,14 +268,14 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
                     <div
                       style={{ 
                         background: 'rgba(168, 85, 247, 0.4)',
-                        border: '1px solid rgba(168, 85, 247, 0.6)',
+                        border: '2px solid rgba(168, 85, 247, 0.6)',
                         borderRadius: '9999px',
-                        paddingLeft: '16px',
-                        paddingRight: '16px',
-                        paddingTop: '12px',
-                        paddingBottom: '12px',
-                        fontSize: '16px',
-                        fontWeight: '600',
+                        paddingLeft: '20px',
+                        paddingRight: '20px',
+                        paddingTop: '14px',
+                        paddingBottom: '14px',
+                        fontSize: '22px',
+                        fontWeight: '700',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -275,12 +289,13 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
                 </div>
 
                 {/* Leg State */}
-                {leg.result_state && leg.result_state !== 'pending' && (
+                {leg.result_state && (
                   <div 
-                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-lg font-bold mt-2"
+                    className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-2xl font-bold mt-3"
                     style={{
                       backgroundColor: `${getStateColor(leg.result_state)}30`,
                       color: getStateColor(leg.result_state),
+                      border: `2px solid ${getStateColor(leg.result_state)}60`,
                     }}
                   >
                     <span>{getStateEmoji(leg.result_state)}</span>
@@ -290,7 +305,7 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
 
                 {/* Notes */}
                 {leg.notes && (
-                  <div className="text-base text-gray-300 mt-4 italic border-l-4 pl-3" style={{ borderColor: 'rgba(255, 255, 255, 0.3)' }}>
+                  <div className="text-xl text-gray-300 mt-5 italic border-l-4 pl-4" style={{ borderColor: 'rgba(255, 255, 255, 0.3)' }}>
                     {leg.notes}
                   </div>
                 )}
@@ -298,10 +313,13 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
 
               {/* Odds */}
               <div className="text-right ml-8 flex-shrink-0">
-                <div className="text-xl text-gray-300 mb-2 font-medium">Odds</div>
+                <div className="text-2xl text-gray-300 mb-3 font-semibold">Odds</div>
                 <div 
                   className="text-6xl font-black"
-                  style={{ color: '#fbbf24' }}
+                  style={{ 
+                    color: '#fbbf24',
+                    textShadow: '0 2px 8px rgba(251, 191, 36, 0.3)',
+                  }}
                 >
                   {leg.odd.toFixed(2)}x
                 </div>
@@ -312,13 +330,14 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
       </div>
 
       {/* Footer */}
-      <div className="mt-12 pt-8 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+      <div className="mt-20 pt-12 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
         <div className="text-center">
-          <div className="text-lg text-gray-400 font-medium mb-1">Generated by</div>
+          <div className="text-3xl text-gray-400 font-semibold mb-3">Generated by</div>
           <div 
-            className="text-2xl font-bold"
+            className="text-5xl font-bold"
             style={{
               color: '#60a5fa',
+              textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
             }}
           >
             BetTracer
