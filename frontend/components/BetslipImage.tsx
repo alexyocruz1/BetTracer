@@ -92,10 +92,8 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
     >
       {/* Header */}
       <div className="text-center mb-12">
-        <div className="flex items-center justify-center gap-4 mb-4">
+        <div className="mb-4">
           <div className="text-3xl text-gray-300 font-medium">{formatDate(bet.date)}</div>
-          <div className="text-3xl text-gray-500">•</div>
-          <div className="text-3xl text-gray-300 font-medium">{formatTime(bet.date)}</div>
         </div>
         {bet.state && bet.state !== 'pending' && (
           <div 
@@ -191,6 +189,10 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
                 backgroundColor: '#1e293b',
                 borderColor: '#fbbf24',
                 color: '#fbbf24',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                lineHeight: '1',
               }}
             >
               {index + 1}
@@ -286,10 +288,7 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
           <div 
             className="text-2xl font-bold"
             style={{
-              background: 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
+              color: '#60a5fa',
             }}
           >
             BetTracer
