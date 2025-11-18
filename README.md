@@ -156,26 +156,6 @@ npm test
 - Multi-tenancy support
 - Mobile app
 
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines.
-
-## 📝 License
-
-[Add your license here]
-
-## 👥 Team
-
-[Add team members here]
-
-## 🗺️ Roadmap
-
-See [`BetTracerGuide.md`](./BetTracerGuide.md) for the complete roadmap (Phases 0-7).
-
-## 📞 Support
-
-[Add support contact information]
-
 ---
 
 Built with ❤️ using modern web technologies.
