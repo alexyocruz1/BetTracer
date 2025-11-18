@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
 import { MainBet, ReferenceItem } from '@/types';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import BetslipImage from '@/components/BetslipImage';
 
 export default function BetDetailPage() {
@@ -185,21 +185,22 @@ export default function BetDetailPage() {
 
     try {
       setGeneratingBetslip(true);
-      const canvas = await html2canvas(betslipRef.current, {
+      
+      // Use html-to-image which handles CSS better than html2canvas
+      const dataUrl = await toPng(betslipRef.current, {
         backgroundColor: null,
-        scale: 2, // 2x scale for high quality (2160px wide, perfect for TikTok)
-        logging: false,
-        useCORS: true,
+        pixelRatio: 2, // 2x scale for high quality (2160px wide, perfect for TikTok)
         width: 1080,
         height: betslipRef.current.scrollHeight,
-        windowWidth: 1080,
-        windowHeight: betslipRef.current.scrollHeight,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+        },
       });
 
       const link = document.createElement('a');
       link.download = `betslip-${bet.id}-${new Date().toISOString().split('T')[0]}.png`;
-      // Export as PNG with high quality (TikTok supports PNG)
-      link.href = canvas.toDataURL('image/png', 1.0);
+      link.href = dataUrl;
       link.click();
 
       setShowBetslipPreview(false);

@@ -44,7 +44,7 @@ export default function LoginPage() {
       
       // Wait a moment for auth state to update, then redirect
       setTimeout(() => {
-        router.push('/');
+      router.push('/');
         // Fallback redirect if router doesn't work
         setTimeout(() => {
           if (window.location.pathname !== '/') {
@@ -59,7 +59,7 @@ export default function LoginPage() {
         }
         console.error('[Login] Sign in error:', err);
         setError(err.message || 'Failed to sign in. Please check your credentials and try again.');
-        setLoading(false);
+      setLoading(false);
       }
     }
   };
@@ -100,16 +100,16 @@ export default function LoginPage() {
                 Password
               </label>
               <div className="mt-1 relative">
-                <input
-                  id="password"
-                  name="password"
+              <input
+                id="password"
+                name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  required
+                required
                   className="block w-full px-3 py-2.5 pr-10 text-base sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}

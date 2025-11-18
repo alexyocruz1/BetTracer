@@ -184,15 +184,23 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
           >
             {/* Leg number badge */}
             <div 
-              className="absolute -top-4 -left-4 w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black border-2 z-10"
               style={{
+                position: 'absolute',
+                top: '-16px',
+                left: '-16px',
+                width: '64px',
+                height: '64px',
                 backgroundColor: '#1e293b',
-                borderColor: '#fbbf24',
+                border: '2px solid #fbbf24',
+                borderRadius: '50%',
                 color: '#fbbf24',
+                fontSize: '24px',
+                fontWeight: '900',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                lineHeight: '1',
+                boxSizing: 'border-box',
+                zIndex: 10,
               }}
             >
               {index + 1}
@@ -219,50 +227,50 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
                 )}
 
                 {/* Bet Type and Category */}
-                <div className="flex gap-3 mb-3 flex-wrap" style={{ alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
                   {leg.bet_type_id && (
-                    <span 
+                    <div
                       style={{ 
                         background: 'rgba(59, 130, 246, 0.4)',
                         border: '1px solid rgba(59, 130, 246, 0.6)',
                         borderRadius: '9999px',
                         paddingLeft: '16px',
                         paddingRight: '16px',
-                        paddingTop: '10px',
-                        paddingBottom: '10px',
+                        paddingTop: '12px',
+                        paddingBottom: '12px',
                         fontSize: '16px',
                         fontWeight: '600',
-                        display: 'table-cell',
-                        verticalAlign: 'middle',
-                        textAlign: 'center',
-                        lineHeight: '1',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         whiteSpace: 'nowrap',
+                        boxSizing: 'border-box',
                       }}
                     >
                       {getReferenceName(leg.bet_type_id)}
-                    </span>
+                    </div>
                   )}
                   {leg.category_id && (
-                    <span 
+                    <div
                       style={{ 
                         background: 'rgba(168, 85, 247, 0.4)',
                         border: '1px solid rgba(168, 85, 247, 0.6)',
                         borderRadius: '9999px',
                         paddingLeft: '16px',
                         paddingRight: '16px',
-                        paddingTop: '10px',
-                        paddingBottom: '10px',
+                        paddingTop: '12px',
+                        paddingBottom: '12px',
                         fontSize: '16px',
                         fontWeight: '600',
-                        display: 'table-cell',
-                        verticalAlign: 'middle',
-                        textAlign: 'center',
-                        lineHeight: '1',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         whiteSpace: 'nowrap',
+                        boxSizing: 'border-box',
                       }}
                     >
                       {getReferenceName(leg.category_id)}
-                    </span>
+                    </div>
                   )}
                 </div>
 
@@ -320,4 +328,5 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
     </div>
   );
 }
+
 

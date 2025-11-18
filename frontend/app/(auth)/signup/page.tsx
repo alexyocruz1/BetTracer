@@ -64,16 +64,16 @@ export default function SignupPage() {
                 Password
               </label>
               <div className="mt-1 relative">
-                <input
-                  id="password"
-                  name="password"
+              <input
+                id="password"
+                name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  required
+                required
                   className="block w-full px-3 py-2.5 pr-10 text-base sm:text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
