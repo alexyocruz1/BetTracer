@@ -425,6 +425,16 @@ export default function BetDetailPage() {
                     </div>
                   )}
 
+                  {/* Responsible */}
+                  {leg.responsible_id && getReferenceName(leg.responsible_id) && (
+                    <div className="mt-2">
+                      <span className="text-sm text-gray-500">Responsible: </span>
+                      <span className="text-sm font-medium text-gray-700">
+                        {getReferenceName(leg.responsible_id)}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="text-sm text-gray-500 mt-2">Odds: {leg.odd.toFixed(2)}x</div>
                   {leg.notes && (
                     <div className="text-sm text-gray-600 mt-2">{leg.notes}</div>
