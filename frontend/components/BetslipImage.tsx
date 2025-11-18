@@ -219,17 +219,24 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
                 )}
 
                 {/* Bet Type and Category */}
-                <div className="flex gap-3 mb-3 flex-wrap items-center">
+                <div className="flex gap-3 mb-3 flex-wrap" style={{ alignItems: 'center' }}>
                   {leg.bet_type_id && (
                     <span 
-                      className="px-4 py-1.5 rounded-full text-base font-semibold inline-flex items-center justify-center"
                       style={{ 
                         background: 'rgba(59, 130, 246, 0.4)',
                         border: '1px solid rgba(59, 130, 246, 0.6)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        lineHeight: '1.5',
+                        borderRadius: '9999px',
+                        paddingLeft: '16px',
+                        paddingRight: '16px',
+                        paddingTop: '10px',
+                        paddingBottom: '10px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        display: 'table-cell',
+                        verticalAlign: 'middle',
+                        textAlign: 'center',
+                        lineHeight: '1',
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {getReferenceName(leg.bet_type_id)}
@@ -237,14 +244,21 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
                   )}
                   {leg.category_id && (
                     <span 
-                      className="px-4 py-1.5 rounded-full text-base font-semibold inline-flex items-center justify-center"
                       style={{ 
                         background: 'rgba(168, 85, 247, 0.4)',
                         border: '1px solid rgba(168, 85, 247, 0.6)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        lineHeight: '1.5',
+                        borderRadius: '9999px',
+                        paddingLeft: '16px',
+                        paddingRight: '16px',
+                        paddingTop: '10px',
+                        paddingBottom: '10px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        display: 'table-cell',
+                        verticalAlign: 'middle',
+                        textAlign: 'center',
+                        lineHeight: '1',
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {getReferenceName(leg.category_id)}
