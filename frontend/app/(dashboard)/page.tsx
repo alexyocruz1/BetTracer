@@ -11,7 +11,7 @@ export default function DashboardPage() {
   const [recentBets, setRecentBets] = useState<MainBet[]>([]);
   const [streakAnalysis, setStreakAnalysis] = useState<StreakAnalysis | null>(null);
   const [bestWorst, setBestWorst] = useState<BestWorstPerformers | null>(null);
-  const [timeSeries, setTimeSeries] = useState<TimeSeriesData[]>([]);
+  const [timeSeries, setTimeSeries] = useState<(TimeSeriesData & { cumulative_profit: number })[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,12 +31,17 @@ export default function DashboardPage() {
     const fetchDashboardData = async () => {
       try {
         // Fetch all dashboard data in parallel
+        // Calculate date 30 days ago
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+
         const [summaryRes, betsRes, streakRes, bestWorstRes, timeSeriesRes] = await Promise.allSettled([
           apiClient.get<{ data: AnalyticsSummary }>('/api/analytics/summary'),
           apiClient.get<{ data: { bets: MainBet[]; total: number; totalPages: number } }>('/api/bets?limit=5&offset=0'),
           apiClient.get<{ data: StreakAnalysis }>('/api/analytics/streak-analysis'),
           apiClient.get<{ data: BestWorstPerformers }>('/api/analytics/best-worst-performers'),
-          apiClient.get<{ data: TimeSeriesData[] }>('/api/analytics/time-series?granularity=daily&start_date=' + new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
+          apiClient.get<{ data: TimeSeriesData[] }>(`/api/analytics/time-series?granularity=daily&start_date=${startDate}`),
         ]);
 
         if (requestCompleted || cancelled) return;
@@ -54,7 +59,17 @@ export default function DashboardPage() {
           setBestWorst(bestWorstRes.value.data.data);
         }
         if (timeSeriesRes.status === 'fulfilled') {
-          setTimeSeries(timeSeriesRes.value.data.data || []);
+          const rawData = timeSeriesRes.value.data.data || [];
+          // Calculate cumulative profit for the chart
+          let cumulative = 0;
+          const chartData = rawData.map((item) => {
+            cumulative += item.profit;
+            return {
+              ...item,
+              cumulative_profit: cumulative,
+            };
+          });
+          setTimeSeries(chartData);
         }
 
         requestCompleted = true;
@@ -263,94 +278,94 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Recent Activity & Performance */}
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Bets */}
-        {recentBets.length > 0 && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Bets</h2>
-              <Link href="/bets" className="text-sm text-primary-600 hover:text-primary-500">
-                View All →
-              </Link>
-            </div>
-            <div className="space-y-3">
-              {recentBets.slice(0, 5).map((bet) => (
-                <Link
-                  key={bet.id}
-                  href={`/bets/${bet.id}`}
-                  className="block p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          bet.state === 'won' ? 'bg-green-100 text-green-800' :
-                          bet.state === 'lost' ? 'bg-red-100 text-red-800' :
-                          bet.state === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {bet.state.toUpperCase()}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {new Date(bet.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="mt-1 text-sm text-gray-900">
-                        ${bet.stake.toFixed(2)} @ {bet.odds?.toFixed(2) || 'N/A'}
-                      </div>
-                    </div>
-                    {bet.profit_loss !== null && bet.profit_loss !== undefined && (
-                      <div className={`text-sm font-semibold ${
-                        bet.profit_loss >= 0 ? 'text-green-600' : 'text-red-600'
+      {/* Recent Bets */}
+      {recentBets.length > 0 && (
+        <div className="mt-6 bg-white shadow rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Bets</h2>
+            <Link href="/bets" className="text-sm text-primary-600 hover:text-primary-500">
+              View All →
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {recentBets.slice(0, 5).map((bet) => (
+              <Link
+                key={bet.id}
+                href={`/bets/${bet.id}`}
+                className="block p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        bet.state === 'won' ? 'bg-green-100 text-green-800' :
+                        bet.state === 'lost' ? 'bg-red-100 text-red-800' :
+                        bet.state === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
                       }`}>
-                        {bet.profit_loss >= 0 ? '+' : ''}${bet.profit_loss.toFixed(2)}
-                      </div>
-                    )}
+                        {bet.state.toUpperCase()}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {new Date(bet.date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm text-gray-900">
+                      ${bet.stake.toFixed(2)} @ {bet.odds?.toFixed(2) || 'N/A'}
+                    </div>
                   </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Profit Chart */}
-        {timeSeries.length > 0 && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Profit Trend (Last 30 Days)</h2>
-              <Link href="/analytics" className="text-sm text-primary-600 hover:text-primary-500">
-                View Details →
+                  {bet.profit_loss !== null && bet.profit_loss !== undefined && (
+                    <div className={`text-sm font-semibold ${
+                      bet.profit_loss >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {bet.profit_loss >= 0 ? '+' : ''}${bet.profit_loss.toFixed(2)}
+                    </div>
+                  )}
+                </div>
               </Link>
-            </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={timeSeries}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => {
-                    const date = new Date(value);
-                    return `${date.getMonth() + 1}/${date.getDate()}`;
-                  }}
-                />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip 
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cumulative Profit']}
-                  labelFormatter={(label) => new Date(label).toLocaleDateString()}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="cumulative_profit" 
-                  stroke="#10b981" 
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Profit Chart - Full Width */}
+      {timeSeries.length > 0 && (
+        <div className="mt-6 bg-white shadow rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Profit Trend (Last 30 Days)</h2>
+            <Link href="/analytics" className="text-sm text-primary-600 hover:text-primary-500">
+              View Details →
+            </Link>
+          </div>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={timeSeries}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                }}
+              />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value) => `$${value.toFixed(0)}`}
+              />
+              <Tooltip 
+                formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cumulative Profit']}
+                labelFormatter={(label) => new Date(label).toLocaleDateString()}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="cumulative_profit" 
+                stroke="#10b981" 
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Top/Bottom Performers */}
       {bestWorst && (
