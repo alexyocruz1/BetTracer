@@ -167,5 +167,113 @@ export class AnalyticsController {
     );
     return sendSuccess(res, detailedAnalytics);
   };
+
+  getTemporalAnalytics = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const temporal = await this.analyticsService.getTemporalAnalytics(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, temporal);
+  };
+
+  getStakeAnalysis = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const stakeAnalysis = await this.analyticsService.getStakeAnalysis(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, stakeAnalysis);
+  };
+
+  getCombinationAnalytics = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const combinations = await this.analyticsService.getCombinationAnalytics(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, combinations);
+  };
+
+  getRiskMetrics = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const riskMetrics = await this.analyticsService.getRiskMetrics(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, riskMetrics);
+  };
+
+  getPeriodComparison = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const comparison = await this.analyticsService.getPeriodComparison(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, comparison);
+  };
+
+  getEVAnalysis = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const evAnalysis = await this.analyticsService.getEVAnalysis(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, evAnalysis);
+  };
+
+  getRecoveryAnalysis = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const recovery = await this.analyticsService.getRecoveryAnalysis(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, recovery);
+  };
+
+  getBankrollAnalysis = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const bankroll = await this.analyticsService.getBankrollAnalysis(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, bankroll);
+  };
+
+  getFrequencyAnalysis = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const frequency = await this.analyticsService.getFrequencyAnalysis(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, frequency);
+  };
 }
 

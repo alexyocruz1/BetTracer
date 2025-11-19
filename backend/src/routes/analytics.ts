@@ -33,6 +33,15 @@ router.get('/streak-analysis', asyncHandler(analyticsController.getStreakAnalysi
 router.get('/time-series', asyncHandler(analyticsController.getTimeSeries));
 router.get('/responsible-detailed', asyncHandler(analyticsController.getResponsibleDetailedAnalytics));
 router.get('/by-legs', asyncHandler(analyticsController.getByLegs));
+router.get('/temporal', asyncHandler(analyticsController.getTemporalAnalytics));
+router.get('/stake-analysis', asyncHandler(analyticsController.getStakeAnalysis));
+router.get('/combinations', asyncHandler(analyticsController.getCombinationAnalytics));
+router.get('/risk-metrics', asyncHandler(analyticsController.getRiskMetrics));
+router.get('/period-comparison', asyncHandler(analyticsController.getPeriodComparison));
+router.get('/ev-analysis', asyncHandler(analyticsController.getEVAnalysis));
+router.get('/recovery', asyncHandler(analyticsController.getRecoveryAnalysis));
+router.get('/bankroll', asyncHandler(analyticsController.getBankrollAnalysis));
+router.get('/frequency', asyncHandler(analyticsController.getFrequencyAnalysis));
 
 export default router;
 
