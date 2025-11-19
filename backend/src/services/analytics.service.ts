@@ -854,10 +854,6 @@ export class AnalyticsService {
     // Use filtered bets for longest streaks
     const betsForLongest = filteredBets || bets;
 
-    if (error) {
-      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch streak analysis', 500);
-    }
-
     if (!bets || bets.length === 0) {
       return {
         current_streak: { type: 'win', length: 0, start_date: '' },
