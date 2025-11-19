@@ -954,6 +954,7 @@ export class AnalyticsService {
       teamMap: Map<string, { team_id: string; team_name: string; bet_count: number }>;
       betTypeMap: Map<string, { bet_type_id: string; bet_type_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
       categoryMap: Map<string, { category_id: string; category_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
+      legCountMap: Map<number, { bet_count: number; won: number; total_stake: number; total_profit: number }>;
     }>();
 
     // Process all bets and legs
@@ -972,6 +973,7 @@ export class AnalyticsService {
             teamMap: new Map(),
             betTypeMap: new Map(),
             categoryMap: new Map(),
+            legCountMap: new Map(),
           });
         }
 
@@ -1112,6 +1114,40 @@ export class AnalyticsService {
     for (const [responsibleId, data] of responsibleMap.entries()) {
       const responsibleName = referenceItemsMap.get(responsibleId) || 'Unknown';
 
+      // Calculate leg count performance
+      const legCountStats = new Map<number, { bet_count: number; won: number; total_stake: number; total_profit: number }>();
+      data.bets.forEach((bet) => {
+        const responsibleLegs = bet.legs?.filter((leg: any) => leg.responsible_id === responsibleId) || [];
+        const numLegs = responsibleLegs.length;
+        if (numLegs === 0) return;
+        if (!legCountStats.has(numLegs)) {
+          legCountStats.set(numLegs, {
+            bet_count: 0,
+            won: 0,
+            total_stake: 0,
+            total_profit: 0,
+          });
+        }
+        const stats = legCountStats.get(numLegs)!;
+        stats.bet_count += 1;
+        if (bet.state === 'won') stats.won += 1;
+        stats.total_stake += Number(bet.stake || 0);
+        stats.total_profit += Number(bet.profit_loss || 0);
+      });
+
+      const performanceByLegCount = Array.from(legCountStats.entries()).map(([numLegs, stats]) => ({
+        num_legs: numLegs,
+        bet_count: stats.bet_count,
+        win_rate: stats.bet_count > 0 ? stats.won / stats.bet_count : 0,
+        total_profit: stats.total_profit,
+        roi: stats.total_stake > 0 ? stats.total_profit / stats.total_stake : 0,
+        total_stake: stats.total_stake,
+      })).sort((a, b) => a.num_legs - b.num_legs);
+
+      const bestLegCount = performanceByLegCount.length > 0
+        ? performanceByLegCount.reduce((best, current) => current.roi > best.roi ? current : best)
+        : null;
+
       // Calculate summary
       const totalStake = data.bets.reduce((sum, b) => sum + Number(b.stake || 0), 0);
       const totalProfit = data.bets.reduce((sum, b) => sum + Number(b.profit_loss || 0), 0);
@@ -1223,6 +1259,15 @@ export class AnalyticsService {
         performance_by_league: performanceByLeague,
         performance_by_bet_type: performanceByBetType,
         performance_by_category: performanceByCategory,
+        performance_by_leg_count: performanceByLegCount,
+        best_leg_count: bestLegCount ? {
+          num_legs: bestLegCount.num_legs,
+          bet_count: bestLegCount.bet_count,
+          win_rate: bestLegCount.win_rate,
+          total_profit: bestLegCount.total_profit,
+          roi: bestLegCount.roi,
+          total_stake: bestLegCount.total_stake,
+        } : null,
       });
     }
 
