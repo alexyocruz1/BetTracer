@@ -1528,7 +1528,9 @@ export class AnalyticsService {
         return a.month_number - b.month_number;
       });
 
-    // Weekend vs weekday
+    // Weekend vs weekday - return both in an array format
+    // Note: The type expects a single object, but we'll return weekend data
+    // Frontend can calculate weekday from total - weekend if needed
     const weekendWinRate = weekendBets.bets.length > 0 ? weekendBets.won / weekendBets.bets.length : 0;
     const weekdayWinRate = weekdayBets.bets.length > 0 ? weekdayBets.won / weekdayBets.bets.length : 0;
 
@@ -1893,7 +1895,10 @@ export class AnalyticsService {
 
     const averageWin = wins.length > 0 ? wins.reduce((a, b) => a + b, 0) / wins.length : 0;
     const averageLoss = losses.length > 0 ? Math.abs(losses.reduce((a, b) => a + b, 0) / losses.length) : 0;
-    const profitFactor = losses.length > 0 ? Math.abs(wins.reduce((a, b) => a + b, 0) / losses.reduce((a, b) => a + b, 0)) : 0;
+    // Profit factor = total wins / total losses (absolute values)
+    const totalWins = wins.reduce((a, b) => a + b, 0);
+    const totalLosses = Math.abs(losses.reduce((a, b) => a + b, 0));
+    const profitFactor = totalLosses > 0 ? totalWins / totalLosses : (totalWins > 0 ? Infinity : 0);
     const winLossRatio = averageLoss > 0 ? averageWin / averageLoss : 0;
 
     const largestWin = wins.length > 0 ? Math.max(...wins) : 0;
@@ -2099,11 +2104,7 @@ export class AnalyticsService {
       const odds = Number(bet.odds || 0);
       const stake = Number(bet.stake || 0);
       const profit = Number(bet.profit_loss || 0);
-      const winRate = bet.state === 'won' ? 1 : 0;
-
-      // Expected ROI = (odds * winRate) - 1
-      const expectedROI = (odds * winRate) - 1;
-      const actualROI = stake > 0 ? profit / stake : 0;
+      // Note: We'll calculate expected ROI using actual win rates per category/bet type, not per bet
 
       bet.legs?.forEach((leg: any) => {
         if (leg.category_id) {
@@ -2135,11 +2136,15 @@ export class AnalyticsService {
     });
 
     // Build EV by category
+    // Expected ROI = (odds * probability) - 1, where probability is the implied probability from odds
+    // But we use actual win rate as the probability estimate
     const evByCategory = Array.from(categoryMap.entries()).map(([categoryId, data]) => {
       const betCount = data.bets.length;
       const avgOdds = betCount > 0 ? data.totalOdds / betCount : 0;
-      const winRate = data.bets.filter(b => b.state === 'won').length / betCount;
-      const expectedROI = (avgOdds * winRate) - 1;
+      const actualWinRate = data.bets.filter(b => b.state === 'won').length / betCount;
+      // Expected ROI using actual win rate as probability estimate
+      // If avgOdds is 2.0 and win rate is 60%, expected ROI = (2.0 * 0.6) - 1 = 0.2 (20%)
+      const expectedROI = (avgOdds * actualWinRate) - 1;
       const actualROI = data.stake > 0 ? data.profit / data.stake : 0;
 
       return {
@@ -2158,8 +2163,8 @@ export class AnalyticsService {
     const evByBetType = Array.from(betTypeMap.entries()).map(([betTypeId, data]) => {
       const betCount = data.bets.length;
       const avgOdds = betCount > 0 ? data.totalOdds / betCount : 0;
-      const winRate = data.bets.filter(b => b.state === 'won').length / betCount;
-      const expectedROI = (avgOdds * winRate) - 1;
+      const actualWinRate = data.bets.filter(b => b.state === 'won').length / betCount;
+      const expectedROI = (avgOdds * actualWinRate) - 1;
       const actualROI = data.stake > 0 ? data.profit / data.stake : 0;
 
       return {
@@ -2182,32 +2187,61 @@ export class AnalyticsService {
     const avgOdds = allBets.length > 0
       ? allBets.reduce((sum, b) => sum + Number(b.odds || 0), 0) / allBets.length
       : 0;
-    const winRate = allBets.length > 0
+    const overallWinRate = allBets.length > 0
       ? allBets.filter(b => b.state === 'won').length / allBets.length
       : 0;
-    const expectedROI = (avgOdds * winRate) - 1;
+    // Expected ROI using overall win rate
+    const expectedROI = (avgOdds * overallWinRate) - 1;
     const overallEV = overallROI - expectedROI;
 
-    // Value bets (simplified - bets with positive EV)
+    // Value bets: Bets where actual ROI exceeded expected ROI based on category/bet type averages
+    // For each bet, compare its actual result to the expected result for its category/bet type
     const valueBets = allBets
-      .filter(b => {
+      .map(b => {
         const odds = Number(b.odds || 0);
         const stake = Number(b.stake || 0);
         const profit = Number(b.profit_loss || 0);
-        const winRate = b.state === 'won' ? 1 : 0;
-        const expectedROI = (odds * winRate) - 1;
         const actualROI = stake > 0 ? profit / stake : 0;
-        return actualROI > expectedROI;
+        
+        // Find expected ROI from category or bet type
+        let expectedROIForBet = expectedROI; // Default to overall
+        const categoryId = b.legs?.[0]?.category_id;
+        const betTypeId = b.legs?.[0]?.bet_type_id;
+        
+        if (categoryId && categoryMap.has(categoryId)) {
+          const catData = categoryMap.get(categoryId)!;
+          const catWinRate = catData.bets.filter(bet => bet.state === 'won').length / catData.bets.length;
+          const catAvgOdds = catData.bets.length > 0 
+            ? catData.bets.reduce((sum, bet) => sum + Number(bet.odds || 0), 0) / catData.bets.length 
+            : odds;
+          expectedROIForBet = (catAvgOdds * catWinRate) - 1;
+        } else if (betTypeId && betTypeMap.has(betTypeId)) {
+          const btData = betTypeMap.get(betTypeId)!;
+          const btWinRate = btData.bets.filter(bet => bet.state === 'won').length / btData.bets.length;
+          const btAvgOdds = btData.bets.length > 0 
+            ? btData.bets.reduce((sum, bet) => sum + Number(bet.odds || 0), 0) / btData.bets.length 
+            : odds;
+          expectedROIForBet = (btAvgOdds * btWinRate) - 1;
+        }
+        
+        return {
+          bet: b,
+          actualROI,
+          expectedROI: expectedROIForBet,
+          isValueBet: actualROI > expectedROIForBet,
+        };
       })
+      .filter(v => v.isValueBet)
+      .sort((a, b) => (b.actualROI - b.expectedROI) - (a.actualROI - a.expectedROI))
       .slice(0, 20)
-      .map(b => ({
-        bet_id: b.id,
-        date: b.date,
-        odds: Number(b.odds || 0),
-        stake: Number(b.stake || 0),
-        expected_value: (Number(b.odds || 0) * (b.state === 'won' ? 1 : 0) - 1) * Number(b.stake || 0),
-        actual_result: Number(b.profit_loss || 0),
-        category: b.legs?.[0]?.category_id ? refMap.get(b.legs[0].category_id) : undefined,
+      .map(v => ({
+        bet_id: v.bet.id,
+        date: v.bet.date,
+        odds: Number(v.bet.odds || 0),
+        stake: Number(v.bet.stake || 0),
+        expected_value: v.expectedROI * Number(v.bet.stake || 0),
+        actual_result: Number(v.bet.profit_loss || 0),
+        category: v.bet.legs?.[0]?.category_id ? refMap.get(v.bet.legs[0].category_id) : undefined,
       }));
 
     return {
@@ -2331,8 +2365,15 @@ export class AnalyticsService {
       ? completedRecoveries.reduce((sum, r) => sum + r.recovery_days, 0) / completedRecoveries.length
       : 0;
 
-    const totalLosses = bets.filter(b => b.state === 'lost').reduce((sum, b) => sum + Math.abs(Number(b.profit_loss || 0)), 0);
-    const totalRecovered = Math.max(0, cumulative); // Assuming we're above starting point
+    // Calculate recovery rate: how much of losses have been recovered
+    // Total losses = sum of all negative profit_loss values
+    const totalLosses = bets
+      .filter(b => b.state === 'lost')
+      .reduce((sum, b) => sum + Math.abs(Number(b.profit_loss || 0)), 0);
+    
+    // Total recovered = current cumulative profit (if positive)
+    // If cumulative is negative, we haven't recovered anything
+    const totalRecovered = Math.max(0, cumulative);
     const recoveryRate = totalLosses > 0 ? (totalRecovered / totalLosses) * 100 : 0;
 
     // Post-loss performance
@@ -2410,15 +2451,35 @@ export class AnalyticsService {
       };
     }
 
-    // Calculate bankroll over time
-    let bankroll = 0;
-    const bankrollHistory: Array<{ date: string; amount: number }> = [];
+    // Calculate starting bankroll estimate
+    // Strategy: Estimate from first bet stake (assume user had at least 10x the first stake)
+    // Or use cumulative profit to work backwards if available
     const firstBet = bets[0];
-    const startingBankroll = 1000; // Default starting bankroll (can be made configurable)
-    bankroll = startingBankroll;
+    let startingBankroll = 1000; // Default fallback
+    
+    if (firstBet) {
+      const firstStake = Number(firstBet.stake || 0);
+      // Estimate starting bankroll as 10x first stake, with minimum $100
+      startingBankroll = Math.max(100, firstStake * 10);
+      
+      // If we have cumulative profit data, we can work backwards more accurately
+      // But for now, use the estimate
+    }
+
+    // Calculate bankroll over time
+    // Note: profit_loss is net (winnings - stake for wins, -stake for losses)
+    // So: bankroll = starting_bankroll + sum(profit_loss)
+    let bankroll = startingBankroll;
+    const bankrollHistory: Array<{ date: string; amount: number }> = [];
+    const bankrollAtBet: Map<string, number> = new Map(); // Track bankroll at time of each bet
 
     bets.forEach((bet) => {
+      // Store bankroll before this bet for stake percentage calculation
+      bankrollAtBet.set(bet.id, bankroll);
+      
+      // Update bankroll after this bet's result
       bankroll += Number(bet.profit_loss || 0);
+      
       bankrollHistory.push({
         date: bet.date,
         amount: bankroll,
@@ -2429,6 +2490,7 @@ export class AnalyticsService {
     const growthRate = startingBankroll > 0 ? ((currentBankroll - startingBankroll) / startingBankroll) * 100 : 0;
 
     // Stake percentage distribution
+    // IMPORTANT: Use bankroll at the time each bet was placed, not current bankroll
     const stakePctRanges = [
       { min: 0, max: 1, label: '0-1%' },
       { min: 1, max: 2, label: '1-2%' },
@@ -2441,7 +2503,9 @@ export class AnalyticsService {
 
     bets.forEach((bet) => {
       const stake = Number(bet.stake || 0);
-      const stakePct = bankroll > 0 ? (stake / bankroll) * 100 : 0;
+      // Use bankroll at the time this bet was placed
+      const bankrollAtTime = bankrollAtBet.get(bet.id) || startingBankroll;
+      const stakePct = bankrollAtTime > 0 ? (stake / bankrollAtTime) * 100 : 0;
       const range = stakePctRanges.find(r => stakePct >= r.min && stakePct < r.max);
       if (!range) return;
 
