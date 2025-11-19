@@ -814,8 +814,13 @@ export class AnalyticsService {
       query = query.gte('date', startDate);
     }
 
+    // Include today's bets - if endDate is provided, make sure it includes the full day
+    // If no endDate, include all bets up to now
     if (endDate) {
-      query = query.lte('date', endDate);
+      // Add time to include the full end date (23:59:59)
+      const endDateWithTime = new Date(endDate);
+      endDateWithTime.setHours(23, 59, 59, 999);
+      query = query.lte('date', endDateWithTime.toISOString());
     }
 
     const { data: bets, error } = await query;
@@ -1409,12 +1414,20 @@ export class AnalyticsService {
         by_hour: [],
         by_month: [],
         weekend_vs_weekday: {
-          type: 'weekend',
-          total_bets: 0,
-          win_rate: 0,
-          total_profit: 0,
-          roi: 0,
-          total_stake: 0,
+          weekend: {
+            total_bets: 0,
+            win_rate: 0,
+            total_profit: 0,
+            roi: 0,
+            total_stake: 0,
+          },
+          weekday: {
+            total_bets: 0,
+            win_rate: 0,
+            total_profit: 0,
+            roi: 0,
+            total_stake: 0,
+          },
         },
       };
     }
@@ -1528,9 +1541,7 @@ export class AnalyticsService {
         return a.month_number - b.month_number;
       });
 
-    // Weekend vs weekday - return both in an array format
-    // Note: The type expects a single object, but we'll return weekend data
-    // Frontend can calculate weekday from total - weekend if needed
+    // Weekend vs weekday
     const weekendWinRate = weekendBets.bets.length > 0 ? weekendBets.won / weekendBets.bets.length : 0;
     const weekdayWinRate = weekdayBets.bets.length > 0 ? weekdayBets.won / weekdayBets.bets.length : 0;
 
@@ -1539,12 +1550,20 @@ export class AnalyticsService {
       by_hour: byHour,
       by_month: byMonth,
       weekend_vs_weekday: {
-        type: 'weekend',
-        total_bets: weekendBets.bets.length,
-        win_rate: weekendWinRate,
-        total_profit: weekendBets.profit,
-        roi: weekendBets.stake > 0 ? weekendBets.profit / weekendBets.stake : 0,
-        total_stake: weekendBets.stake,
+        weekend: {
+          total_bets: weekendBets.bets.length,
+          win_rate: weekendWinRate,
+          total_profit: weekendBets.profit,
+          roi: weekendBets.stake > 0 ? weekendBets.profit / weekendBets.stake : 0,
+          total_stake: weekendBets.stake,
+        },
+        weekday: {
+          total_bets: weekdayBets.bets.length,
+          win_rate: weekdayWinRate,
+          total_profit: weekdayBets.profit,
+          roi: weekdayBets.stake > 0 ? weekdayBets.profit / weekdayBets.stake : 0,
+          total_stake: weekdayBets.stake,
+        },
       },
     };
   }
@@ -2006,9 +2025,23 @@ export class AnalyticsService {
       ? ((currentSummary.total_bets - previousSummary.total_bets) / previousSummary.total_bets) * 100
       : 0;
     const winRateChange = currentSummary.win_rate - previousSummary.win_rate;
-    const profitChange = previousSummary.total_profit !== 0
-      ? ((currentSummary.total_profit - previousSummary.total_profit) / Math.abs(previousSummary.total_profit)) * 100
-      : currentSummary.total_profit - previousSummary.total_profit;
+    // Calculate profit change with better handling of small denominators
+    let profitChange: number;
+    if (previousSummary.total_profit === 0) {
+      // If previous was 0, show absolute change
+      profitChange = currentSummary.total_profit;
+    } else if (Math.abs(previousSummary.total_profit) < 1) {
+      // If previous profit is very small (< $1), show absolute change to avoid misleading percentages
+      profitChange = currentSummary.total_profit - previousSummary.total_profit;
+    } else {
+      // Normal percentage calculation
+      profitChange = ((currentSummary.total_profit - previousSummary.total_profit) / Math.abs(previousSummary.total_profit)) * 100;
+      // Cap at reasonable percentage to avoid misleading numbers
+      if (Math.abs(profitChange) > 1000) {
+        // If change is > 1000%, show absolute change instead
+        profitChange = currentSummary.total_profit - previousSummary.total_profit;
+      }
+    }
     const roiChange = currentSummary.roi - previousSummary.roi;
     const stakeChange = previousSummary.total_stake > 0
       ? ((currentSummary.total_stake - previousSummary.total_stake) / previousSummary.total_stake) * 100

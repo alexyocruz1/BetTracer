@@ -345,12 +345,20 @@ export interface TemporalAnalytics {
     total_stake: number;
   }[];
   weekend_vs_weekday: {
-    type: 'weekend' | 'weekday';
-    total_bets: number;
-    win_rate: number;
-    total_profit: number;
-    roi: number;
-    total_stake: number;
+    weekend: {
+      total_bets: number;
+      win_rate: number;
+      total_profit: number;
+      roi: number;
+      total_stake: number;
+    };
+    weekday: {
+      total_bets: number;
+      win_rate: number;
+      total_profit: number;
+      roi: number;
+      total_stake: number;
+    };
   };
 }
 

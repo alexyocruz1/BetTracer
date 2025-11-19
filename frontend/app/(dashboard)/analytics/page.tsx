@@ -1759,7 +1759,10 @@ export default function AnalyticsPage() {
               <div>
                 <span className="text-gray-600">Profit:</span>
                 <span className={`ml-2 font-medium ${periodComparison.change.profit_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {periodComparison.change.profit_change >= 0 ? '+' : ''}{periodComparison.change.profit_change.toFixed(1)}%
+                    {Math.abs(periodComparison.change.profit_change) > 1000 
+                      ? `$${periodComparison.change.profit_change >= 0 ? '+' : ''}${periodComparison.change.profit_change.toFixed(2)}`
+                      : `${periodComparison.change.profit_change >= 0 ? '+' : ''}${periodComparison.change.profit_change.toFixed(1)}%`
+                    }
                 </span>
               </div>
               <div>
@@ -1858,22 +1861,22 @@ export default function AnalyticsPage() {
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Bets:</span>
-                  <span className="font-medium">{temporal.weekend_vs_weekday.total_bets}</span>
+                  <span className="font-medium">{temporal.weekend_vs_weekday.weekend.total_bets}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Win Rate:</span>
-                  <span className="font-medium">{(temporal.weekend_vs_weekday.win_rate * 100).toFixed(1)}%</span>
+                  <span className="font-medium">{(temporal.weekend_vs_weekday.weekend.win_rate * 100).toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">ROI:</span>
-                  <span className={`font-medium ${temporal.weekend_vs_weekday.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {(temporal.weekend_vs_weekday.roi * 100).toFixed(1)}%
+                  <span className={`font-medium ${temporal.weekend_vs_weekday.weekend.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {(temporal.weekend_vs_weekday.weekend.roi * 100).toFixed(1)}%
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Profit:</span>
-                  <span className={`font-medium ${temporal.weekend_vs_weekday.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ${temporal.weekend_vs_weekday.total_profit.toFixed(2)}
+                  <span className={`font-medium ${temporal.weekend_vs_weekday.weekend.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ${temporal.weekend_vs_weekday.weekend.total_profit.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -1883,19 +1886,23 @@ export default function AnalyticsPage() {
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Bets:</span>
-                  <span className="font-medium">-</span>
+                  <span className="font-medium">{temporal.weekend_vs_weekday.weekday.total_bets}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Win Rate:</span>
-                  <span className="font-medium">-</span>
+                  <span className="font-medium">{(temporal.weekend_vs_weekday.weekday.win_rate * 100).toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">ROI:</span>
-                  <span className="font-medium">-</span>
+                  <span className={`font-medium ${temporal.weekend_vs_weekday.weekday.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {(temporal.weekend_vs_weekday.weekday.roi * 100).toFixed(1)}%
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Profit:</span>
-                  <span className="font-medium">-</span>
+                  <span className={`font-medium ${temporal.weekend_vs_weekday.weekday.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ${temporal.weekend_vs_weekday.weekday.total_profit.toFixed(2)}
+                  </span>
                 </div>
               </div>
             </div>
