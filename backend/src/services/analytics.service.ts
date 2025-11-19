@@ -802,7 +802,18 @@ export class AnalyticsService {
     startDate?: string,
     endDate?: string
   ): Promise<StreakAnalysis> {
-    let query = this.supabase
+    // For current streak, we need ALL bets including today, regardless of filters
+    // So we'll fetch all bets for current streak, and use filters only for longest streaks if needed
+    let allBetsQuery = this.supabase
+      .from('main_bets')
+      .select('date, state, profit_loss')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .in('state', ['won', 'lost'])
+      .order('date', { ascending: true });
+
+    // For longest streaks, we can apply date filters
+    let filteredQuery = this.supabase
       .from('main_bets')
       .select('date, state, profit_loss')
       .eq('user_id', userId)
@@ -811,19 +822,37 @@ export class AnalyticsService {
       .order('date', { ascending: true });
 
     if (startDate) {
-      query = query.gte('date', startDate);
+      filteredQuery = filteredQuery.gte('date', startDate);
     }
-
-    // Include today's bets - if endDate is provided, make sure it includes the full day
-    // If no endDate, include all bets up to now
     if (endDate) {
-      // Add time to include the full end date (23:59:59)
-      const endDateWithTime = new Date(endDate);
-      endDateWithTime.setHours(23, 59, 59, 999);
-      query = query.lte('date', endDateWithTime.toISOString());
+      // Parse the endDate and ensure it includes the full day
+      let endDateParsed: Date;
+      if (endDate.includes('T')) {
+        endDateParsed = new Date(endDate);
+      } else {
+        // If it's just a date string, create date at end of day
+        endDateParsed = new Date(endDate);
+        endDateParsed.setHours(23, 59, 59, 999);
+      }
+      filteredQuery = filteredQuery.lte('date', endDateParsed.toISOString());
     }
 
-    const { data: bets, error } = await query;
+    // Fetch all bets for current streak (always includes today)
+    const { data: allBets, error: allBetsError } = await allBetsQuery;
+    
+    // Fetch filtered bets for longest streaks (if filters are applied)
+    const { data: filteredBets, error: filteredError } = startDate || endDate 
+      ? await filteredQuery 
+      : { data: allBets, error: allBetsError };
+
+    if (allBetsError || filteredError) {
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch streak analysis', 500);
+    }
+
+    // Use all bets for current streak calculation (includes today)
+    const bets = allBets || [];
+    // Use filtered bets for longest streaks
+    const betsForLongest = filteredBets || bets;
 
     if (error) {
       throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch streak analysis', 500);
@@ -859,15 +888,16 @@ export class AnalyticsService {
     let winStreakStart = '';
     let lossStreakStart = '';
 
-    for (let i = 0; i < bets.length; i++) {
-      const bet = bets[i];
+    // Calculate longest streaks using filtered bets (if filters applied)
+    for (let i = 0; i < betsForLongest.length; i++) {
+      const bet = betsForLongest[i];
       if (bet.state === 'won') {
         if (currentLossStreak > 0) {
           if (currentLossStreak > longestLossStreak.length) {
             longestLossStreak = {
               length: currentLossStreak,
               start_date: lossStreakStart,
-              end_date: bets[i - 1].date,
+              end_date: betsForLongest[i - 1].date,
             };
           }
           currentLossStreak = 0;
@@ -882,7 +912,7 @@ export class AnalyticsService {
             longestWinStreak = {
               length: currentWinStreak,
               start_date: winStreakStart,
-              end_date: bets[i - 1].date,
+              end_date: betsForLongest[i - 1].date,
             };
           }
           currentWinStreak = 0;
@@ -895,18 +925,18 @@ export class AnalyticsService {
     }
 
     // Check final streaks
-    if (currentWinStreak > longestWinStreak.length) {
+    if (currentWinStreak > longestWinStreak.length && betsForLongest.length > 0) {
       longestWinStreak = {
         length: currentWinStreak,
         start_date: winStreakStart,
-        end_date: bets[bets.length - 1].date,
+        end_date: betsForLongest[betsForLongest.length - 1].date,
       };
     }
-    if (currentLossStreak > longestLossStreak.length) {
+    if (currentLossStreak > longestLossStreak.length && betsForLongest.length > 0) {
       longestLossStreak = {
         length: currentLossStreak,
         start_date: lossStreakStart,
-        end_date: bets[bets.length - 1].date,
+        end_date: betsForLongest[betsForLongest.length - 1].date,
       };
     }
 
