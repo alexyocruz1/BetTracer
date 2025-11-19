@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
-import { AnalyticsSummary, AnalyticsByLeague, AnalyticsByResponsible, AnalyticsByBetType, AnalyticsByCategory, TimeSeriesData, LegAnalytics, OddsAnalysis, TeamPerformance, BestWorstPerformers, StreakAnalysis, ResponsibleDetailedAnalytics } from '@/types';
+import { AnalyticsSummary, AnalyticsByLeague, AnalyticsByResponsible, AnalyticsByBetType, AnalyticsByCategory, TimeSeriesData, LegAnalytics, OddsAnalysis, TeamPerformance, BestWorstPerformers, StreakAnalysis, ResponsibleDetailedAnalytics, AnalyticsByLegs } from '@/types';
 import {
   LineChart,
   Line,
@@ -29,6 +29,7 @@ export default function AnalyticsPage() {
   const [bestWorstPerformers, setBestWorstPerformers] = useState<BestWorstPerformers | null>(null);
   const [streakAnalysis, setStreakAnalysis] = useState<StreakAnalysis | null>(null);
   const [timeSeries, setTimeSeries] = useState<TimeSeriesData[]>([]);
+  const [byLegs, setByLegs] = useState<AnalyticsByLegs[]>([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -56,6 +57,7 @@ export default function AnalyticsPage() {
         setBestWorstPerformers(null);
         setStreakAnalysis(null);
         setTimeSeries([]);
+        setByLegs([]);
         setLoading(false);
       }
     }, 30000); // 30 second timeout (analytics has many requests)
@@ -79,6 +81,7 @@ export default function AnalyticsPage() {
         { name: 'bestWorst', promise: apiClient.get<{ data: BestWorstPerformers }>(`/api/analytics/best-worst-performers${queryString}`) },
         { name: 'streak', promise: apiClient.get<{ data: StreakAnalysis }>(`/api/analytics/streak-analysis${queryString}`) },
         { name: 'timeSeries', promise: apiClient.get<{ data: TimeSeriesData[] }>(`/api/analytics/time-series?granularity=${granularity}${queryString ? '&' + queryString.replace('?', '') : ''}`) },
+        { name: 'byLegs', promise: apiClient.get<{ data: AnalyticsByLegs[] }>(`/api/analytics/by-legs${queryString}`) },
       ];
 
       const results = await Promise.allSettled(requests.map(r => r.promise));
@@ -100,6 +103,7 @@ export default function AnalyticsPage() {
       const bestWorstRes = results[9].status === 'fulfilled' ? results[9].value : { data: { data: null } };
       const streakRes = results[10].status === 'fulfilled' ? results[10].value : { data: { data: null } };
       const timeSeriesRes = results[11].status === 'fulfilled' ? results[11].value : { data: { data: [] } };
+      const byLegsRes = results[12].status === 'fulfilled' ? results[12].value : { data: { data: [] } };
 
       // Log any failures
       results.forEach((result, index) => {
@@ -144,6 +148,7 @@ export default function AnalyticsPage() {
         setByBetType((byBetTypeRes.data?.data as AnalyticsByBetType[]) || []);
         setByCategory((byCategoryRes.data?.data as AnalyticsByCategory[]) || []);
         setLegAnalytics((legAnalyticsRes.data?.data as LegAnalytics) || null);
+        setByLegs((byLegsRes.data?.data as AnalyticsByLegs[]) || []);
         setOddsAnalysis((oddsAnalysisRes.data?.data as OddsAnalysis[]) || []);
         setTeamPerformance((teamPerformanceRes.data?.data as TeamPerformance[]) || []);
         setBestWorstPerformers((bestWorstRes.data?.data as BestWorstPerformers) || null);
@@ -421,6 +426,176 @@ export default function AnalyticsPage() {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {byLegs.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Performance by Number of Legs</h2>
+          <p className="text-sm text-gray-600 mb-6">
+            Analyze which bet sizes (number of legs) perform best. Are 2-leg bets more profitable than 3 or 4-leg bets?
+          </p>
+          
+          {/* Bar Chart for ROI by Legs */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">ROI by Number of Legs</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={byLegs}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="num_legs"
+                  label={{ value: 'Number of Legs', position: 'insideBottom', offset: -5 }}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
+                  tick={{ fontSize: 12 }}
+                  label={{ value: 'ROI (%)', angle: -90, position: 'insideLeft' }}
+                />
+                <Tooltip
+                  formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+                <Bar 
+                  dataKey="roi" 
+                  radius={[4, 4, 0, 0]}
+                  fill="#10b981"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Bar Chart for Win Rate by Legs */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Win Rate by Number of Legs</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={byLegs}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="num_legs"
+                  label={{ value: 'Number of Legs', position: 'insideBottom', offset: -5 }}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
+                  tick={{ fontSize: 12 }}
+                  label={{ value: 'Win Rate (%)', angle: -90, position: 'insideLeft' }}
+                />
+                <Tooltip
+                  formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                />
+                <Bar dataKey="win_rate" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Detailed Table */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Detailed Breakdown</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Legs</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Won</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lost</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Win Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ROI</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Odds</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {byLegs.map((legs) => {
+                    const isBestROI = byLegs.filter(l => l.bet_count > 0).every(l => l.roi <= legs.roi || l.num_legs === legs.num_legs);
+                    const isBestWinRate = byLegs.filter(l => l.bet_count > 0).every(l => l.win_rate <= legs.win_rate || l.num_legs === legs.num_legs);
+                    
+                    return (
+                      <tr key={legs.num_legs} className={isBestROI && legs.bet_count > 0 ? 'bg-green-50' : ''}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className="text-sm font-bold text-gray-900">{legs.num_legs}</span>
+                            {isBestROI && legs.bet_count > 0 && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                Best ROI
+                              </span>
+                            )}
+                            {isBestWinRate && !isBestROI && legs.bet_count > 0 && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                Best Win Rate
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {legs.bet_count}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                          {legs.won_bets}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
+                          {legs.lost_bets}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {(legs.win_rate * 100).toFixed(1)}%
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          ${legs.total_stake.toFixed(2)}
+                        </td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                          legs.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          ${legs.total_profit.toFixed(2)}
+                        </td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                          legs.roi >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {(legs.roi * 100).toFixed(1)}%
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {legs.avg_odds.toFixed(2)}x
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Summary Insights */}
+          {byLegs.length > 0 && (
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h4 className="text-sm font-semibold text-blue-900 mb-2">💡 Insights</h4>
+              {(() => {
+                const bestROI = byLegs.filter(l => l.bet_count > 0).reduce((best, current) => 
+                  current.roi > best.roi ? current : best, byLegs[0]
+                );
+                const bestWinRate = byLegs.filter(l => l.bet_count > 0).reduce((best, current) => 
+                  current.win_rate > best.win_rate ? current : best, byLegs[0]
+                );
+                
+                return (
+                  <div className="text-sm text-blue-800 space-y-1">
+                    {bestROI && bestROI.bet_count > 0 && (
+                      <p>
+                        <strong>{bestROI.num_legs}-leg bets</strong> have the best ROI at {(bestROI.roi * 100).toFixed(1)}% 
+                        ({bestROI.bet_count} bets, ${bestROI.total_profit.toFixed(2)} profit)
+                      </p>
+                    )}
+                    {bestWinRate && bestWinRate.bet_count > 0 && bestWinRate.num_legs !== bestROI.num_legs && (
+                      <p>
+                        <strong>{bestWinRate.num_legs}-leg bets</strong> have the highest win rate at {(bestWinRate.win_rate * 100).toFixed(1)}%
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       )}
 

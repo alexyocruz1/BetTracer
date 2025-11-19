@@ -12,6 +12,7 @@ import {
   BestWorstPerformers,
   StreakAnalysis,
   ResponsibleDetailedAnalytics,
+  AnalyticsByLegs,
 } from '../types';
 import { createError, errorCodes } from '../utils/errors';
 
@@ -1222,6 +1223,101 @@ export class AnalyticsService {
         performance_by_league: performanceByLeague,
         performance_by_bet_type: performanceByBetType,
         performance_by_category: performanceByCategory,
+      });
+    }
+
+    return results;
+  }
+
+  async getByLegs(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<AnalyticsByLegs[]> {
+    // Get all bets with legs
+    let betsQuery = this.supabase
+      .from('main_bets')
+      .select('*, legs(*)')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+
+    if (startDate) {
+      betsQuery = betsQuery.gte('date', startDate);
+    }
+
+    if (endDate) {
+      betsQuery = betsQuery.lte('date', endDate);
+    }
+
+    const { data: bets, error } = await betsQuery;
+
+    if (error) {
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch bets by legs', 500);
+    }
+
+    if (!bets || bets.length === 0) {
+      return [];
+    }
+
+    // Group bets by number of legs
+    const betsByLegs = new Map<number, {
+      bets: any[];
+      totalStake: number;
+      totalProfit: number;
+      wonBets: number;
+      lostBets: number;
+      totalOdds: number;
+    }>();
+
+    for (const bet of bets) {
+      const legs = bet.legs || [];
+      const numLegs = legs.length;
+
+      if (numLegs === 0) continue; // Skip bets with no legs
+
+      if (!betsByLegs.has(numLegs)) {
+        betsByLegs.set(numLegs, {
+          bets: [],
+          totalStake: 0,
+          totalProfit: 0,
+          wonBets: 0,
+          lostBets: 0,
+          totalOdds: 0,
+        });
+      }
+
+      const group = betsByLegs.get(numLegs)!;
+      group.bets.push(bet);
+      group.totalStake += Number(bet.stake || 0);
+      group.totalProfit += Number(bet.profit_loss || 0);
+      group.totalOdds += Number(bet.odds || 0);
+
+      if (bet.state === 'won') {
+        group.wonBets++;
+      } else if (bet.state === 'lost') {
+        group.lostBets++;
+      }
+    }
+
+    // Convert to array and calculate metrics
+    const results: AnalyticsByLegs[] = [];
+
+    for (const [numLegs, data] of Array.from(betsByLegs.entries()).sort((a, b) => a[0] - b[0])) {
+      const betCount = data.bets.length;
+      const winRate = betCount > 0 ? data.wonBets / betCount : 0;
+      const roi = data.totalStake > 0 ? data.totalProfit / data.totalStake : 0;
+      const avgOdds = betCount > 0 ? data.totalOdds / betCount : 0;
+
+      results.push({
+        num_legs: numLegs,
+        total_stake: data.totalStake,
+        total_profit: data.totalProfit,
+        roi,
+        win_rate: winRate,
+        bet_count: betCount,
+        won_bets: data.wonBets,
+        lost_bets: data.lostBets,
+        avg_odds: avgOdds,
       });
     }
 

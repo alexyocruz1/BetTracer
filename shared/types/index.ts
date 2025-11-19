@@ -135,6 +135,18 @@ export interface AnalyticsByCategory {
   bet_count: number;
 }
 
+export interface AnalyticsByLegs {
+  num_legs: number;
+  total_stake: number;
+  total_profit: number;
+  roi: number;
+  win_rate: number;
+  bet_count: number;
+  won_bets: number;
+  lost_bets: number;
+  avg_odds: number;
+}
+
 export interface TimeSeriesData {
   date: string;
   stake: number;
