@@ -803,14 +803,16 @@ export class AnalyticsService {
     endDate?: string
   ): Promise<StreakAnalysis> {
     // For current streak, we need ALL bets including today, regardless of filters
-    // So we'll fetch all bets for current streak, and use filters only for longest streaks if needed
+    // CRITICAL: No date filters applied to this query - it gets ALL bets for the user
+    // This ensures today's bets are ALWAYS included in current streak calculation
     let allBetsQuery = this.supabase
       .from('main_bets')
       .select('date, state, profit_loss')
       .eq('user_id', userId)
       .is('deleted_at', null)
-      .in('state', ['won', 'lost'])
+      .in('state', ['won', 'lost', 'pending'])
       .order('date', { ascending: true });
+    // NOTE: No .gte() or .lte() date filters here - this ensures ALL bets are fetched
 
     // For longest streaks, we can apply date filters
     let filteredQuery = this.supabase
@@ -863,17 +865,43 @@ export class AnalyticsService {
       };
     }
 
-    // Calculate streaks
-    let currentStreakType: 'win' | 'loss' = bets[bets.length - 1].state === 'won' ? 'win' : 'loss';
-    let currentStreakLength = 1;
-    let currentStreakStart = bets[bets.length - 1].date;
+    // Calculate current streak from the most recent bets
+    // Filter to only resolved bets (won/lost) for streak calculation
+    // Pending bets don't count in streaks, but we need to see them to know if there are newer bets
+    const resolvedBets = bets.filter(b => b.state === 'won' || b.state === 'lost');
+    
+    if (resolvedBets.length === 0) {
+      return {
+        current_streak: { type: 'win', length: 0, start_date: '' },
+        longest_win_streak: { length: 0, start_date: '', end_date: '' },
+        longest_loss_streak: { length: 0, start_date: '', end_date: '' },
+        recent_bets: bets.slice(-10).reverse().map((bet) => ({
+          date: bet.date,
+          state: bet.state as 'won' | 'lost' | 'pending' | 'void',
+          profit_loss: bet.profit_loss,
+        })),
+      };
+    }
 
-    for (let i = bets.length - 2; i >= 0; i--) {
-      if (bets[i].state === currentStreakType) {
+    // Calculate current streak from resolved bets
+    // IMPORTANT: We fetch ALL bets (no date filter) so today's bets are always included
+    // Start from the MOST RECENT resolved bet (last in array since sorted ascending by date)
+    // This ensures today's bets are included if they're marked as won/lost
+    const mostRecentBet = resolvedBets[resolvedBets.length - 1];
+    const mostRecentState = mostRecentBet.state; // 'won' or 'lost'
+    let currentStreakType: 'win' | 'loss' = mostRecentState === 'won' ? 'win' : 'loss';
+    let currentStreakLength = 1;
+    let currentStreakStart = mostRecentBet.date;
+
+    // Go backwards from the most recent bet to count consecutive wins/losses
+    // This builds the current streak from the most recent bet backwards
+    // IMPORTANT: Compare state ('won'/'lost') not streak type ('win'/'loss')
+    for (let i = resolvedBets.length - 2; i >= 0; i--) {
+      if (resolvedBets[i].state === mostRecentState) {
         currentStreakLength++;
-        currentStreakStart = bets[i].date;
+        currentStreakStart = resolvedBets[i].date;
       } else {
-        break;
+        break; // Streak broken, stop counting
       }
     }
 
@@ -936,7 +964,7 @@ export class AnalyticsService {
       };
     }
 
-    // Get recent bets (last 10)
+    // Get recent bets (last 10) - include all bets (won, lost, pending)
     const recentBets = bets
       .slice(-10)
       .reverse()
