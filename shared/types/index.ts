@@ -624,6 +624,63 @@ export interface MLPredictResponse {
   suggested_stake?: number;
   expected_value?: number;
   confidence?: number;
+  // Enhanced decision-making features
+  recommendation?: 'strong_value' | 'value' | 'neutral' | 'avoid';
+  recommendation_reason?: string;
+  kelly_stake?: number;
+  kelly_percentage?: number;
+  value_detected?: number; // Percentage value (e.g., +15 means 15% edge)
+  risk_warnings?: string[];
+  leg_optimization?: {
+    suggestions: Array<{
+      remove_leg: number;
+      ev_improvement: number;
+      new_combined_probability: number;
+      new_ev: number;
+    }>;
+    message: string;
+  };
+  bankroll_health?: 'healthy' | 'caution' | 'critical';
+  bankroll_advice?: string;
+  optimal_timing?: {
+    best_day?: { day: number; win_rate: number };
+    worst_day?: { day: number; win_rate: number };
+    weekend_advantage?: {
+      weekend_win_rate: number;
+      weekday_win_rate: number;
+      message: string;
+    };
+  };
+  parlay_risk?: {
+    current_leg_count: number;
+    current_win_rate: number;
+    best_leg_count: { legs: number; win_rate: number };
+    worst_leg_count: { legs: number; win_rate: number };
+    risk_level: 'high' | 'medium' | 'low';
+    message: string;
+  };
+  responsible_insights?: {
+    insights: Array<{
+      leg: number;
+      responsible_id: string;
+      win_rate: number;
+      message: string;
+    }>;
+    best_responsible: {
+      leg: number;
+      responsible_id: string;
+      win_rate: number;
+      message: string;
+    };
+    message: string;
+  };
+  streak_impact?: {
+    streak_type: 'win' | 'loss';
+    streak_length: number;
+    recommendation: 'reduce_stakes' | 'maintain' | 'normal';
+    message: string;
+    stake_reduction_pct?: number;
+  };
 }
 
 // API Response types
