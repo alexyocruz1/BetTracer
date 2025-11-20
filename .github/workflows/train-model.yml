@@ -1,0 +1,47 @@
+name: Train ML Model
+
+on:
+  workflow_dispatch: # Manual trigger
+  schedule:
+    # Retrain every Monday at 3 AM UTC
+    - cron: '0 3 * * 1'
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          cd ml_service
+          pip install -r requirements.txt
+      
+      - name: Train model
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          cd ml_service
+          python train.py
+      
+      - name: Upload model artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: trained-model
+          path: ml_service/models/
+          retention-days: 30
+      
+      - name: Commit and push model (if changed)
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add ml_service/models/
+          git diff --staged --quiet || (git commit -m "Auto-update ML model [skip ci]" && git push)
+
