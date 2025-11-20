@@ -83,7 +83,7 @@ export class MLController {
           if (temporal.by_day_of_week && temporal.by_day_of_week.length > 0) {
             temporalWinRates.day_of_week = {};
             temporal.by_day_of_week.forEach((day) => {
-              temporalWinRates.day_of_week[day.day_of_week] = day.win_rate;
+              temporalWinRates.day_of_week[day.day_number] = day.win_rate;
             });
           }
 
@@ -98,12 +98,16 @@ export class MLController {
 
         // Build combination performance map
         const combinationPerformance: Record<string, { wins: number; losses: number }> = {};
-        if (combination) {
-          combination.forEach((combo) => {
+        if (combination && combination.league_bet_type) {
+          combination.league_bet_type.forEach((combo: any) => {
             const key = `${combo.league_id || ''}_${combo.bet_type_id || ''}`;
+            const totalBets = combo.total_bets || 0;
+            const winRate = combo.win_rate || 0;
+            const wins = Math.round(totalBets * winRate);
+            const losses = totalBets - wins;
             combinationPerformance[key] = {
-              wins: combo.won_bets || 0,
-              losses: combo.lost_bets || 0,
+              wins,
+              losses,
             };
           });
         }
