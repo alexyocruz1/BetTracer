@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { BetsService } from '../services/bets.service';
 import { sendSuccess } from '../utils/responses';
+import { invalidateUserMLCache } from './ml.controller';
 
 export class BetsController {
   constructor(private betsService: BetsService) {}
@@ -82,6 +83,13 @@ export class BetsController {
     const stateData = req.body;
 
     const bet = await this.betsService.updateBetState(userId, id, stateData);
+    
+    // Invalidate ML cache when bet state changes (affects user analytics)
+    // This ensures predictions reflect updated win rates, streaks, bankroll health, etc.
+    if (stateData.state === 'won' || stateData.state === 'lost') {
+      invalidateUserMLCache(userId);
+    }
+    
     return sendSuccess(res, bet);
   };
 

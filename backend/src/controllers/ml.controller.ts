@@ -2,8 +2,67 @@ import { Request, Response } from 'express';
 import axios from 'axios';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AnalyticsService } from '../services/analytics.service';
+import crypto from 'crypto';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+
+// In-memory cache for ML predictions
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  expiresAt: number;
+}
+
+const predictionCache = new Map<string, CacheEntry>();
+// Cache TTL: 10 minutes - balances freshness with resource efficiency
+// User analytics (win rates, streaks) don't change dramatically in minutes
+// But predictions should update reasonably frequently for active betting
+const CACHE_TTL = parseInt(process.env.ML_CACHE_TTL || '600000', 10); // 10 minutes default, configurable
+const CACHE_MAX_SIZE = 1000; // Max cache entries
+
+// Clean up expired cache entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of predictionCache.entries()) {
+    if (entry.expiresAt < now) {
+      predictionCache.delete(key);
+    }
+  }
+  // If cache is too large, remove oldest entries
+  if (predictionCache.size > CACHE_MAX_SIZE) {
+    const entries = Array.from(predictionCache.entries())
+      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toRemove = entries.slice(0, predictionCache.size - CACHE_MAX_SIZE);
+    toRemove.forEach(([key]) => predictionCache.delete(key));
+  }
+}, 60000); // Clean up every minute
+
+function generateCacheKey(userId: string, payload: any): string {
+  // Create a hash of the prediction request
+  const keyData = JSON.stringify({
+    userId,
+    legs: payload.legs?.map((l: any) => ({
+      odd: l.odd,
+      league_id: l.league_id,
+      bet_type_id: l.bet_type_id,
+      category_id: l.category_id,
+      responsible_id: l.responsible_id,
+    })),
+    stake: payload.stake,
+  });
+  return crypto.createHash('sha256').update(keyData).digest('hex');
+}
+
+// Invalidate cache for a user when their analytics change (e.g., bet state updated)
+// Note: Since cache keys are hashed, we clear all entries when user data changes
+// This is acceptable because cache TTL is short (10 min) and user actions are infrequent
+export function invalidateUserMLCache(userId: string): void {
+  const beforeSize = predictionCache.size;
+  // Clear all cache entries when user analytics change
+  // Alternative: Could track userId in cache entries for selective invalidation
+  predictionCache.clear();
+  console.log(`[MLController] Invalidated ML cache (${beforeSize} entries cleared) for user ${userId}`);
+}
 
 export class MLController {
   constructor(private analyticsService: AnalyticsService) {}
@@ -11,6 +70,14 @@ export class MLController {
   predict = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
       const userId = req.user!.id;
+      
+      // Check cache first
+      const cacheKey = generateCacheKey(userId, req.body);
+      const cached = predictionCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        console.log('[MLController] Returning cached prediction');
+        return res.json(cached.data);
+      }
       
       // Fetch user analytics data for enhanced predictions
       let userAnalytics = null;
@@ -160,6 +227,14 @@ export class MLController {
       const response = await axios.post(`${ML_SERVICE_URL}/predict`, requestBody, {
         timeout: 15000, // Increased timeout for analytics processing
       });
+
+      // Cache the response
+      const cacheEntry: CacheEntry = {
+        data: response.data,
+        timestamp: Date.now(),
+        expiresAt: Date.now() + CACHE_TTL,
+      };
+      predictionCache.set(cacheKey, cacheEntry);
 
       return res.json(response.data);
     } catch (error: any) {

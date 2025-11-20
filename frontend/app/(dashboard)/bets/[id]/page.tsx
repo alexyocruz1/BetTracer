@@ -160,8 +160,29 @@ export default function BetDetailPage() {
     await runMLPrediction(payload);
   };
 
+  // Debounced prediction trigger - only call if bet data actually changed
   useEffect(() => {
-    triggerPrediction(bet);
+    if (!bet || !bet.legs || bet.legs.length === 0) {
+      resetMLPrediction();
+      return;
+    }
+
+    // Only trigger if we don't have a recent prediction for this exact bet
+    const betHash = `${bet.id}-${bet.stake}-${bet.legs.map(l => `${l.id}:${l.odd}`).join('|')}`;
+    const lastPredictionHash = sessionStorage.getItem(`ml-prediction-${bet.id}`);
+    
+    // If bet hasn't changed, don't re-fetch (cache will handle it)
+    if (lastPredictionHash === betHash && mlPrediction) {
+      return;
+    }
+
+    // Debounce the prediction call
+    const timeoutId = setTimeout(() => {
+      triggerPrediction(bet);
+      sessionStorage.setItem(`ml-prediction-${bet.id}`, betHash);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     bet?.id,
