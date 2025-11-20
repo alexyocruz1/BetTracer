@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
-import { ReferenceItem, CreateBetRequest, MLPredictionRequest } from '@/types';
+import { ReferenceItem, CreateBetRequest, MLPredictRequest } from '@/types';
 import {
   decimalToAmerican,
   americanToDecimal,
@@ -105,7 +105,7 @@ export default function NewBetPage() {
     };
   });
 
-  const buildPredictionPayload = (): MLPredictionRequest | null => {
+  const buildPredictionPayload = (): MLPredictRequest | null => {
     if (!formData.legs.length) {
       return null;
     }

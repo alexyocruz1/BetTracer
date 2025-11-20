@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
-import { MainBet, ReferenceItem, MLPredictionRequest } from '@/types';
+import { MainBet, ReferenceItem, MLPredictRequest } from '@/types';
 import { toPng } from 'html-to-image';
 import BetslipImage from '@/components/BetslipImage';
 import { useMLPrediction } from '@/hooks/useMLPrediction';
@@ -136,7 +136,7 @@ export default function BetDetailPage() {
       return;
     }
 
-    const payload: MLPredictionRequest = {
+    const payload: MLPredictRequest = {
       legs: currentBet.legs
         .filter((leg) => leg.odd > 0)
         .map(

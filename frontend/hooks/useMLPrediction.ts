@@ -1,26 +1,26 @@
 import { useCallback, useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api/client';
 import {
-  MLPredictionRequest,
-  MLPredictionResponse,
+  MLPredictRequest,
+  MLPredictResponse,
 } from '@/types';
 
 interface UseMLPredictionResult {
-  prediction: MLPredictionResponse | null;
+  prediction: MLPredictResponse | null;
   loading: boolean;
   error: string | null;
   lastUpdated: Date | null;
-  predict: (payload: MLPredictionRequest) => Promise<void>;
+  predict: (payload: MLPredictRequest) => Promise<void>;
   reset: () => void;
 }
 
 export function useMLPrediction(): UseMLPredictionResult {
-  const [prediction, setPrediction] = useState<MLPredictionResponse | null>(null);
+  const [prediction, setPrediction] = useState<MLPredictResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const predict = useCallback(async (payload: MLPredictionRequest) => {
+  const predict = useCallback(async (payload: MLPredictRequest) => {
     if (!payload.legs || payload.legs.length === 0) {
       setError('Add at least one leg to generate a prediction.');
       setPrediction(null);
@@ -31,7 +31,7 @@ export function useMLPrediction(): UseMLPredictionResult {
     setError(null);
 
     try {
-      const { data } = await apiClient.post<MLPredictionResponse>('/api/ml/predict', payload);
+      const { data } = await apiClient.post<MLPredictResponse>('/api/ml/predict', payload);
       setPrediction(data);
       setLastUpdated(new Date());
     } catch (err: any) {
