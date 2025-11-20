@@ -1,0 +1,19 @@
+# Test Dockerfile to simulate Railway/Nixpacks build
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Test the pip installation approach
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10 && \
+    python3.10 -m pip install --upgrade pip setuptools wheel && \
+    python3.10 -m pip install -r requirements.txt
+
+# Copy the rest of the app
+COPY . .
+
+# Test that the app can start
+CMD ["python3.10", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+

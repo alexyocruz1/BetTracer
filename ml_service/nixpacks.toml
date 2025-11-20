@@ -1,9 +1,12 @@
 [phases.setup]
-nixPkgs = ["python310"]
+nixPkgs = ["python310", "curl"]
 
 [phases.install]
-cmds = ["python3.10 -m pip install --upgrade pip", "python3.10 -m pip install -r requirements.txt"]
+cmds = [
+  "curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10",
+  "python3.10 -m pip install --upgrade pip setuptools wheel",
+  "python3.10 -m pip install -r requirements.txt"
+]
 
 [start]
 cmd = "python3.10 -m uvicorn app:app --host 0.0.0.0 --port $PORT"
-
