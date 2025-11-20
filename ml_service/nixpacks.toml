@@ -9,5 +9,10 @@ cmds = [
   "/app/.venv/bin/pip install -r requirements.txt"
 ]
 
+[phases.build]
+cmds = [
+  "/app/.venv/bin/pip install -r requirements.txt"
+]
+
 [start]
 cmd = "/app/.venv/bin/uvicorn app:app --host 0.0.0.0 --port $PORT"
