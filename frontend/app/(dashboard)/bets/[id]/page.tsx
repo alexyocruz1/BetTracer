@@ -3,9 +3,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
-import { MainBet, ReferenceItem } from '@/types';
+import { MainBet, ReferenceItem, MLPredictionRequest } from '@/types';
 import { toPng } from 'html-to-image';
 import BetslipImage from '@/components/BetslipImage';
+import { useMLPrediction } from '@/hooks/useMLPrediction';
+import MLInsights, { LegSummary } from '@/components/bets/MLInsights';
 
 export default function BetDetailPage() {
   const params = useParams();
@@ -19,6 +21,14 @@ export default function BetDetailPage() {
   const [betslipReady, setBetslipReady] = useState(false);
   const betslipRef = useRef<HTMLDivElement>(null);
   const [referenceItems, setReferenceItems] = useState<Map<string, ReferenceItem>>(new Map());
+  const {
+    predict: runMLPrediction,
+    prediction: mlPrediction,
+    loading: mlLoading,
+    error: mlError,
+    lastUpdated: mlLastUpdated,
+    reset: resetMLPrediction,
+  } = useMLPrediction();
 
   const fetchBet = async (id: string) => {
     setLoading(true);
@@ -103,6 +113,61 @@ export default function BetDetailPage() {
     }
     return item.name;
   };
+
+  const mlLegSummaries: LegSummary[] = bet?.legs
+    ? bet.legs.map((leg, index) => {
+        const parts = [
+          getReferenceName(leg.bet_type_id),
+          getReferenceName(leg.league_id),
+          getReferenceName(leg.responsible_id),
+        ].filter(Boolean);
+        return {
+          id: leg.id,
+          odd: leg.odd,
+          label: parts.length ? parts.join(' • ') : `Leg ${index + 1}`,
+        };
+      })
+    : [];
+
+  const triggerPrediction = async (targetBet?: MainBet | null) => {
+    const currentBet = targetBet ?? bet;
+    if (!currentBet || !currentBet.legs || currentBet.legs.length === 0) {
+      resetMLPrediction();
+      return;
+    }
+
+    const payload: MLPredictionRequest = {
+      legs: currentBet.legs
+        .filter((leg) => leg.odd > 0)
+        .map(
+          ({ odd, league_id, bet_type_id, category_id, responsible_id }) => ({
+            odd,
+            league_id,
+            bet_type_id,
+            category_id,
+            responsible_id,
+          })
+        ),
+      stake: currentBet.stake,
+      user_id: currentBet.user_id,
+    };
+
+    if (payload.legs.length === 0) {
+      resetMLPrediction();
+      return;
+    }
+
+    await runMLPrediction(payload);
+  };
+
+  useEffect(() => {
+    triggerPrediction(bet);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    bet?.id,
+    bet?.stake,
+    bet?.legs?.map((leg) => `${leg.id}:${leg.odd}`).join('|'),
+  ]);
 
   const updateState = async (state: 'won' | 'lost' | 'void') => {
     if (!bet || updating) return; // Prevent double-clicks and concurrent updates
@@ -350,6 +415,18 @@ export default function BetDetailPage() {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="mb-6">
+        <MLInsights
+          legs={mlLegSummaries}
+          stake={bet?.stake}
+          prediction={mlPrediction}
+          loading={mlLoading}
+          error={mlError}
+          onRetry={() => triggerPrediction(bet)}
+          lastUpdated={mlLastUpdated}
+        />
       </div>
 
       <div className="bg-white shadow rounded-lg p-6">

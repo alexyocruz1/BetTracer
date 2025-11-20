@@ -15,6 +15,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import MLScenarioSimulator from '@/components/analytics/MLScenarioSimulator';
 
 export default function AnalyticsPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -335,6 +336,10 @@ export default function AnalyticsPage() {
             </button>
           )}
         </div>
+      </div>
+
+      <div className="mb-8">
+        <MLScenarioSimulator />
       </div>
 
       {summary ? (

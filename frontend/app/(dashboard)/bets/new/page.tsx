@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
-import { ReferenceItem, CreateBetRequest } from '@/types';
+import { ReferenceItem, CreateBetRequest, MLPredictionRequest } from '@/types';
 import {
   decimalToAmerican,
   americanToDecimal,
@@ -12,6 +12,8 @@ import {
   isValidAmerican,
 } from '@/lib/utils/odds';
 import SearchableSelect from '@/components/SearchableSelect';
+import { useMLPrediction } from '@/hooks/useMLPrediction';
+import MLInsights, { LegSummary } from '@/components/bets/MLInsights';
 
 export default function NewBetPage() {
   const router = useRouter();
@@ -28,6 +30,14 @@ export default function NewBetPage() {
     state: 'pending',
     legs: [{ odd: 1, result_state: 'pending' }],
   });
+  const {
+    predict: runDraftPrediction,
+    prediction: draftPrediction,
+    loading: draftPredictionLoading,
+    error: draftPredictionError,
+    lastUpdated: draftPredictionUpdated,
+    reset: resetDraftPrediction,
+  } = useMLPrediction();
   
   // Local state for odds display (decimal/American)
   const [mainBetDecimalOdds, setMainBetDecimalOdds] = useState<string>('');
@@ -78,6 +88,63 @@ export default function NewBetPage() {
       console.error('Failed to fetch reference items:', error);
     }
   };
+
+  const getReferenceLabel = (items: ReferenceItem[], id?: string) =>
+    id ? items.find((item) => item.id === id)?.name || '' : '';
+
+  const legSummaries: LegSummary[] = formData.legs.map((leg, index) => {
+    const parts = [
+      getReferenceLabel(betTypes, leg.bet_type_id),
+      getReferenceLabel(leagues, leg.league_id),
+      getReferenceLabel(responsibles, leg.responsible_id),
+    ].filter(Boolean);
+    return {
+      id: `draft-${index}`,
+      odd: leg.odd,
+      label: parts.length ? parts.join(' • ') : `Leg ${index + 1}`,
+    };
+  });
+
+  const buildPredictionPayload = (): MLPredictionRequest | null => {
+    if (!formData.legs.length) {
+      return null;
+    }
+
+    const legs = formData.legs
+      .filter((leg) => leg.odd > 0)
+      .map(({ odd, league_id, bet_type_id, category_id, responsible_id }) => ({
+        odd,
+        league_id,
+        bet_type_id,
+        category_id,
+        responsible_id,
+      }));
+
+    if (!legs.length) {
+      return null;
+    }
+
+    return {
+      legs,
+      stake: formData.stake,
+    };
+  };
+
+  const handleRunPrediction = async () => {
+    const payload = buildPredictionPayload();
+    if (!payload) {
+      alert('Add legs with valid odds to generate a prediction.');
+      return;
+    }
+
+    await runDraftPrediction(payload);
+  };
+
+  useEffect(() => {
+    if (!formData.legs.length) {
+      resetDraftPrediction();
+    }
+  }, [formData.legs.length, resetDraftPrediction]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -319,6 +386,21 @@ export default function NewBetPage() {
             className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
             placeholder="Add any notes about this bet..."
           />
+        </div>
+        <div>
+          <MLInsights
+            title="Draft ML Prediction"
+            legs={legSummaries}
+            stake={formData.stake}
+            prediction={draftPrediction}
+            loading={draftPredictionLoading}
+            error={draftPredictionError}
+            onRetry={handleRunPrediction}
+            lastUpdated={draftPredictionUpdated}
+          />
+          <p className="mt-2 text-xs text-gray-500">
+            Predictions update when you press Refresh. Add stake and legs to get tailored insights.
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Legs</label>
