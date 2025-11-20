@@ -37,6 +37,29 @@ export interface Leg {
   updated_at: string;
 }
 
+// Machine Learning prediction types
+export interface MLPredictionLegInput {
+  odd: number;
+  league_id?: string;
+  bet_type_id?: string;
+  category_id?: string;
+  responsible_id?: string;
+}
+
+export interface MLPredictionRequest {
+  legs: MLPredictionLegInput[];
+  stake?: number;
+  user_id?: string;
+}
+
+export interface MLPredictionResponse {
+  per_leg_probabilities: number[];
+  combined_probability: number;
+  suggested_stake?: number;
+  expected_value?: number;
+  confidence?: number;
+}
+
 // Reference items
 export interface ReferenceItem {
   id: string;
