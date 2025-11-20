@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { mlController } from '../controllers/ml.controller';
-import { authMiddleware } from '../middleware/auth.middleware';
+import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.post('/predict', authMiddleware, mlController.predict);
+router.post('/predict', authenticate, mlController.predict);
 
 export default router;
