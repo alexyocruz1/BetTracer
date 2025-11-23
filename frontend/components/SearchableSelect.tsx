@@ -96,7 +96,7 @@ export default function SearchableSelect({
   return (
     <div className="relative">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {label}
         </label>
       )}
@@ -112,7 +112,7 @@ export default function SearchableSelect({
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="block w-full border border-gray-300 rounded-md px-3 py-2.5 pr-8 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2.5 pr-8 text-base sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           required={required && !value}
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-2">
@@ -120,7 +120,8 @@ export default function SearchableSelect({
             <button
               type="button"
               onClick={handleClear}
-              className="text-gray-400 hover:text-gray-600 mr-1"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 mr-1"
+              aria-label="Clear selection"
             >
               <svg
                 className="w-4 h-4"
@@ -158,10 +159,10 @@ export default function SearchableSelect({
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
+          className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto"
         >
           {filteredOptions.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-gray-500">
+            <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
               No options found
             </div>
           ) : (
@@ -170,9 +171,9 @@ export default function SearchableSelect({
                 key={option.id}
                 type="button"
                 onClick={() => handleSelect(option)}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none ${
-                  index === highlightedIndex ? 'bg-gray-100' : ''
-                } ${value === option.id ? 'bg-primary-50 text-primary-700' : ''}`}
+                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none text-gray-900 dark:text-gray-100 ${
+                  index === highlightedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
+                } ${value === option.id ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : ''}`}
               >
                 {option.name}
               </button>

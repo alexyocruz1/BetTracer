@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut, isAdmin } = useAuth();
@@ -64,12 +65,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <nav className="bg-white dark:bg-gray-800 shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center px-2 py-2 text-xl font-bold text-primary-600">
+              <Link href="/" className="flex items-center px-2 py-2 text-xl font-bold text-primary-600 dark:text-primary-400">
                 BetTracer
               </Link>
               {/* Desktop Navigation */}
@@ -78,8 +79,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   href="/"
                   className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
                     isActive('/', true)
-                      ? 'border-b-2 border-primary-500 text-gray-900'
-                      : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    ? 'border-b-2 border-primary-500 text-gray-900 dark:text-gray-100'
+                    : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                   }`}
                 >
                   Dashboard
@@ -88,8 +89,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   href="/bets"
                   className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
                     isActive('/bets')
-                      ? 'border-b-2 border-primary-500 text-gray-900'
-                      : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    ? 'border-b-2 border-primary-500 text-gray-900 dark:text-gray-100'
+                    : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                   }`}
                 >
                   Bets
@@ -98,8 +99,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   href="/bets/new"
                   className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
                     isActive('/bets/new', true)
-                      ? 'border-b-2 border-primary-500 text-gray-900'
-                      : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    ? 'border-b-2 border-primary-500 text-gray-900 dark:text-gray-100'
+                    : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                   }`}
                 >
                   New Bet
@@ -108,8 +109,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   href="/analytics"
                   className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
                     isActive('/analytics', true)
-                      ? 'border-b-2 border-primary-500 text-gray-900'
-                      : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    ? 'border-b-2 border-primary-500 text-gray-900 dark:text-gray-100'
+                    : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                   }`}
                 >
                   Analytics
@@ -119,8 +120,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     href="/admin"
                     className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors ${
                       isActive('/admin', true)
-                        ? 'border-b-2 border-primary-500 text-gray-900'
-                        : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    ? 'border-b-2 border-primary-500 text-gray-900 dark:text-gray-100'
+                    : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                     }`}
                   >
                     Admin
@@ -128,11 +129,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )}
               </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
+              {/* Theme toggle */}
+              <ThemeToggle />
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 min-h-[44px] min-w-[44px]"
+                className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-400 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 min-h-[44px] min-w-[44px]"
                 aria-label="Toggle menu"
               >
                 {mobileMenuOpen ? (
@@ -147,10 +150,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </button>
               {/* Desktop user info */}
               <div className="hidden sm:flex sm:items-center">
-                <span className="text-gray-700 mr-4 text-sm truncate max-w-[200px]">{user.email}</span>
+                <span className="text-gray-700 dark:text-gray-300 mr-4 text-sm truncate max-w-[200px]">{user.email}</span>
                 <button
                   onClick={() => signOut()}
-                  className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 rounded-md text-sm font-medium"
                 >
                   Sign out
                 </button>
@@ -161,15 +164,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-gray-200">
+          <div className="sm:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <div className="px-2 pt-2 pb-3 space-y-1">
               <Link
                 href="/"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                className={`block px-3 py-2 rounded-md text-base font-medium min-h-[44px] flex items-center ${
                   isActive('/', true)
-                    ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-500'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-500 dark:bg-primary-900/20 dark:text-primary-300'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`}
               >
                 Dashboard
@@ -177,10 +180,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 href="/bets"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                className={`block px-3 py-2 rounded-md text-base font-medium min-h-[44px] flex items-center ${
                   isActive('/bets')
-                    ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-500'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-500 dark:bg-primary-900/20 dark:text-primary-300'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`}
               >
                 Bets
@@ -188,10 +191,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 href="/bets/new"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                className={`block px-3 py-2 rounded-md text-base font-medium min-h-[44px] flex items-center ${
                   isActive('/bets/new', true)
-                    ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-500'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-500 dark:bg-primary-900/20 dark:text-primary-300'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`}
               >
                 New Bet
@@ -199,10 +202,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 href="/analytics"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                className={`block px-3 py-2 rounded-md text-base font-medium min-h-[44px] flex items-center ${
                   isActive('/analytics', true)
-                    ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-500'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-500 dark:bg-primary-900/20 dark:text-primary-300'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`}
               >
                 Analytics
@@ -211,23 +214,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Link
                   href="/admin"
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  className={`block px-3 py-2 rounded-md text-base font-medium min-h-[44px] flex items-center ${
                     isActive('/admin', true)
-                      ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-500'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-500 dark:bg-primary-900/20 dark:text-primary-300'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
                   }`}
                 >
                   Admin
                 </Link>
               )}
-              <div className="border-t border-gray-200 pt-2 mt-2">
-                <div className="px-3 py-2 text-sm text-gray-700 truncate">{user.email}</div>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+                <div className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 truncate">{user.email}</div>
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
                     signOut();
                   }}
-                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 min-h-[44px]"
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100 min-h-[44px]"
                 >
                   Sign out
                 </button>

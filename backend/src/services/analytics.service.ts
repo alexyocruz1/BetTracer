@@ -28,6 +28,27 @@ import { createError, errorCodes } from '../utils/errors';
 export class AnalyticsService {
   constructor(private supabase: SupabaseClient) {}
 
+  // Helper function to calculate effective odds excluding voided legs
+  private calculateEffectiveOdds(bet: any): number {
+    if (!bet.legs || bet.legs.length === 0) {
+      return Number(bet.odds || 0);
+    }
+
+    const nonVoidedLegs = bet.legs.filter((leg: any) => leg.result_state !== 'void');
+    
+    if (nonVoidedLegs.length === 0) {
+      // All legs are voided
+      return 0;
+    }
+
+    // Calculate effective odds by multiplying non-voided legs
+    const effectiveOdds = nonVoidedLegs.reduce((acc: number, leg: any) => {
+      return acc * Number(leg.odd || 1);
+    }, 1);
+
+    return effectiveOdds;
+  }
+
   async getSummary(
     userId: string,
     startDate?: string,
@@ -581,7 +602,7 @@ export class AnalyticsService {
   ): Promise<OddsAnalysis[]> {
     let query = this.supabase
       .from('main_bets')
-      .select('date, stake, odds, profit_loss, state')
+      .select('date, stake, odds, profit_loss, state, legs(*)')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .not('odds', 'is', null);
@@ -626,12 +647,13 @@ export class AnalyticsService {
     });
 
     bets?.forEach((bet) => {
-      const odds = Number(bet.odds);
-      if (!odds || odds < 1) return;
+      // Use effective odds (excluding voided legs) for analytics
+      const effectiveOdds = this.calculateEffectiveOdds(bet);
+      if (!effectiveOdds || effectiveOdds < 1) return;
 
       let rangeLabel = '';
       for (const range of ranges) {
-        if (odds >= range.min && (range.max === Infinity || odds < range.max)) {
+        if (effectiveOdds >= range.min && (range.max === Infinity || effectiveOdds < range.max)) {
           rangeLabel = range.label;
           break;
         }
@@ -1403,7 +1425,9 @@ export class AnalyticsService {
       group.bets.push(bet);
       group.totalStake += Number(bet.stake || 0);
       group.totalProfit += Number(bet.profit_loss || 0);
-      group.totalOdds += Number(bet.odds || 0);
+      // Use effective odds (excluding voided legs) for analytics
+      const effectiveOdds = this.calculateEffectiveOdds(bet);
+      group.totalOdds += effectiveOdds;
 
       if (bet.state === 'won') {
         group.wonBets++;
@@ -1691,7 +1715,9 @@ export class AnalyticsService {
       data.bets.push(bet);
       data.stake += stake;
       data.profit += Number(bet.profit_loss || 0);
-      data.totalOdds += Number(bet.odds || 0);
+      // Use effective odds (excluding voided legs) for analytics
+      const effectiveOdds = this.calculateEffectiveOdds(bet);
+      data.totalOdds += effectiveOdds;
       if (bet.state === 'won') data.won++;
       if (bet.state === 'lost') data.lost++;
     });
@@ -2188,7 +2214,8 @@ export class AnalyticsService {
     }>();
 
     bets?.forEach((bet) => {
-      const odds = Number(bet.odds || 0);
+      // Use effective odds (excluding voided legs) for analytics
+      const effectiveOdds = this.calculateEffectiveOdds(bet);
       const stake = Number(bet.stake || 0);
       const profit = Number(bet.profit_loss || 0);
       // Note: We'll calculate expected ROI using actual win rates per category/bet type, not per bet
@@ -2201,7 +2228,7 @@ export class AnalyticsService {
           const data = categoryMap.get(leg.category_id)!;
           if (!data.bets.includes(bet)) {
             data.bets.push(bet);
-            data.totalOdds += odds;
+            data.totalOdds += effectiveOdds;
             data.stake += stake;
             data.profit += profit;
           }
@@ -2214,7 +2241,7 @@ export class AnalyticsService {
           const data = betTypeMap.get(leg.bet_type_id)!;
           if (!data.bets.includes(bet)) {
             data.bets.push(bet);
-            data.totalOdds += odds;
+            data.totalOdds += effectiveOdds;
             data.stake += stake;
             data.profit += profit;
           }
@@ -2271,8 +2298,9 @@ export class AnalyticsService {
     const totalStake = allBets.reduce((sum, b) => sum + Number(b.stake || 0), 0);
     const totalProfit = allBets.reduce((sum, b) => sum + Number(b.profit_loss || 0), 0);
     const overallROI = totalStake > 0 ? totalProfit / totalStake : 0;
+    // Use effective odds (excluding voided legs) for analytics
     const avgOdds = allBets.length > 0
-      ? allBets.reduce((sum, b) => sum + Number(b.odds || 0), 0) / allBets.length
+      ? allBets.reduce((sum, b) => sum + this.calculateEffectiveOdds(b), 0) / allBets.length
       : 0;
     const overallWinRate = allBets.length > 0
       ? allBets.filter(b => b.state === 'won').length / allBets.length
@@ -2285,7 +2313,8 @@ export class AnalyticsService {
     // For each bet, compare its actual result to the expected result for its category/bet type
     const valueBets = allBets
       .map(b => {
-        const odds = Number(b.odds || 0);
+        // Use effective odds (excluding voided legs) for analytics
+        const effectiveOdds = this.calculateEffectiveOdds(b);
         const stake = Number(b.stake || 0);
         const profit = Number(b.profit_loss || 0);
         const actualROI = stake > 0 ? profit / stake : 0;
@@ -2299,15 +2328,15 @@ export class AnalyticsService {
           const catData = categoryMap.get(categoryId)!;
           const catWinRate = catData.bets.filter(bet => bet.state === 'won').length / catData.bets.length;
           const catAvgOdds = catData.bets.length > 0 
-            ? catData.bets.reduce((sum, bet) => sum + Number(bet.odds || 0), 0) / catData.bets.length 
-            : odds;
+            ? catData.totalOdds / catData.bets.length
+            : effectiveOdds;
           expectedROIForBet = (catAvgOdds * catWinRate) - 1;
         } else if (betTypeId && betTypeMap.has(betTypeId)) {
           const btData = betTypeMap.get(betTypeId)!;
           const btWinRate = btData.bets.filter(bet => bet.state === 'won').length / btData.bets.length;
           const btAvgOdds = btData.bets.length > 0 
-            ? btData.bets.reduce((sum, bet) => sum + Number(bet.odds || 0), 0) / btData.bets.length 
-            : odds;
+            ? btData.totalOdds / btData.bets.length
+            : effectiveOdds;
           expectedROIForBet = (btAvgOdds * btWinRate) - 1;
         }
         
@@ -2502,7 +2531,7 @@ export class AnalyticsService {
   ): Promise<BankrollAnalysis> {
     let betsQuery = this.supabase
       .from('main_bets')
-      .select('*')
+      .select('*, legs(*)')
       .eq('user_id', userId)
       .is('deleted_at', null)
       .order('date', { ascending: true });
@@ -2619,8 +2648,9 @@ export class AnalyticsService {
 
     // Kelly Criterion (simplified)
     const winRate = bets.filter(b => b.state === 'won').length / bets.length;
+    // Use effective odds (excluding voided legs) for analytics
     const avgOdds = bets.length > 0
-      ? bets.reduce((sum, b) => sum + Number(b.odds || 0), 0) / bets.length
+      ? bets.reduce((sum, b) => sum + this.calculateEffectiveOdds(b), 0) / bets.length
       : 0;
     const kellyPct = avgOdds > 0 ? (winRate * avgOdds - 1) / (avgOdds - 1) : 0;
     const recommendedStakePct = Math.max(0, Math.min(25, kellyPct * 100)); // Cap at 25%

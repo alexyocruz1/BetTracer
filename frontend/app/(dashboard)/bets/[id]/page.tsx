@@ -114,6 +114,25 @@ export default function BetDetailPage() {
     return item.name;
   };
 
+  // Calculate effective odds excluding voided legs
+  const calculateEffectiveOdds = (): { effectiveOdds: number; hasVoidedLegs: boolean; voidedCount: number } => {
+    if (!bet || !bet.legs || bet.legs.length === 0) {
+      return { effectiveOdds: bet?.odds || 0, hasVoidedLegs: false, voidedCount: 0 };
+    }
+
+    const nonVoidedLegs = bet.legs.filter(leg => leg.result_state !== 'void');
+    const voidedCount = bet.legs.length - nonVoidedLegs.length;
+    const hasVoidedLegs = voidedCount > 0;
+
+    if (nonVoidedLegs.length === 0) {
+      // All legs are voided
+      return { effectiveOdds: 0, hasVoidedLegs: true, voidedCount };
+    }
+
+    const effectiveOdds = nonVoidedLegs.reduce((acc, leg) => acc * leg.odd, 1);
+    return { effectiveOdds, hasVoidedLegs, voidedCount };
+  };
+
   const mlLegSummaries: LegSummary[] = bet?.legs
     ? bet.legs.map((leg, index) => {
         const parts = [
@@ -138,7 +157,7 @@ export default function BetDetailPage() {
 
     const payload: MLPredictRequest = {
       legs: currentBet.legs
-        .filter((leg) => leg.odd > 0)
+        .filter((leg) => leg.odd > 0 && leg.result_state !== 'void')
         .map(
           ({ odd, league_id, bet_type_id, category_id, responsible_id }) => ({
             odd,
@@ -306,6 +325,8 @@ export default function BetDetailPage() {
     return <div className="text-center py-12">Bet not found</div>;
   }
 
+  const { effectiveOdds, hasVoidedLegs, voidedCount } = calculateEffectiveOdds();
+
   return (
     <div className="px-4 py-6 sm:px-0">
       {/* Betslip Preview Modal */}
@@ -370,7 +391,22 @@ export default function BetDetailPage() {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-500">Odds</label>
-            <div className="text-lg font-semibold">{bet.odds?.toFixed(2)}x</div>
+            <div className="text-lg font-semibold">
+              {hasVoidedLegs ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="line-through text-gray-400">{bet.odds?.toFixed(2)}x</span>
+                    <span className="text-primary-600 font-bold">{effectiveOdds.toFixed(2)}x</span>
+                    <span className="text-xs text-gray-500">(Effective)</span>
+                  </div>
+                  <div className="text-xs text-amber-600 font-medium">
+                    {voidedCount} leg{voidedCount > 1 ? 's' : ''} voided
+                  </div>
+                </div>
+              ) : (
+                <span>{bet.odds?.toFixed(2)}x</span>
+              )}
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-500">State</label>
@@ -396,7 +432,14 @@ export default function BetDetailPage() {
             }`}>
               {bet.profit_loss !== null && bet.profit_loss !== undefined
                 ? `$${bet.profit_loss.toFixed(2)}`
-                : 'Pending'}
+                : hasVoidedLegs && bet.state === 'pending' ? (
+                  <div className="space-y-1">
+                    <div className="text-gray-400">Pending</div>
+                    <div className="text-xs text-gray-500">
+                      Effective payout: ${(bet.stake * effectiveOdds).toFixed(2)}
+                    </div>
+                  </div>
+                ) : 'Pending'}
             </div>
           </div>
           <div>
@@ -452,16 +495,52 @@ export default function BetDetailPage() {
 
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Legs</h2>
+        {hasVoidedLegs && (
+          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold text-amber-900 mb-1">
+                  {voidedCount} Leg{voidedCount > 1 ? 's' : ''} Voided
+                </h4>
+                <p className="text-sm text-amber-700">
+                  This bet has {voidedCount} voided leg{voidedCount > 1 ? 's' : ''}. Effective odds have been recalculated to exclude voided legs.
+                </p>
+                <div className="mt-2 text-sm text-amber-800">
+                  <span className="font-medium">Original odds:</span> {bet.odds?.toFixed(2)}x → <span className="font-medium">Effective odds:</span> {effectiveOdds.toFixed(2)}x
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="space-y-4">
           {bet.legs?.map((leg, index) => (
-            <div key={leg.id} className="border border-gray-200 rounded-md p-4">
+            <div 
+              key={leg.id} 
+              className={`border rounded-md p-4 ${
+                leg.result_state === 'void' 
+                  ? 'bg-gray-50 border-gray-300 opacity-75' 
+                  : 'border-gray-200'
+              }`}
+            >
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
-                  <h3 className="font-medium text-lg">Leg {index + 1}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-lg">Leg {index + 1}</h3>
+                    {leg.result_state === 'void' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-200 text-gray-700 border border-gray-300">
+                        ⚠️ VOID
+                      </span>
+                    )}
+                  </div>
                   
                   {/* Teams */}
                   {(leg.home_team_id || leg.away_team_id) && (
-                    <div className="text-base font-semibold text-gray-900 mt-2">
+                    <div className={`text-base font-semibold mt-2 ${
+                      leg.result_state === 'void' ? 'text-gray-400' : 'text-gray-900'
+                    }`}>
                       {(() => {
                         const homeName = leg.home_team_id ? getReferenceName(leg.home_team_id) : '';
                         const awayName = leg.away_team_id ? getReferenceName(leg.away_team_id) : '';
@@ -470,7 +549,7 @@ export default function BetDetailPage() {
                           return (
                             <>
                               {homeName && <span>{homeName}</span>}
-                              {homeName && awayName && <span className="mx-2 text-gray-500">vs</span>}
+                              {homeName && awayName && <span className={`mx-2 ${leg.result_state === 'void' ? 'text-gray-400' : 'text-gray-500'}`}>vs</span>}
                               {awayName && <span>{awayName}</span>}
                             </>
                           );
@@ -490,7 +569,9 @@ export default function BetDetailPage() {
 
                   {/* League */}
                   {leg.league_id && getReferenceName(leg.league_id) && (
-                    <div className="text-sm text-gray-600 mt-1">
+                    <div className={`text-sm mt-1 ${
+                      leg.result_state === 'void' ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
                       {getReferenceName(leg.league_id)}
                     </div>
                   )}
@@ -533,18 +614,25 @@ export default function BetDetailPage() {
                     </div>
                   )}
 
-                  <div className="text-sm text-gray-500 mt-2">Odds: {leg.odd.toFixed(2)}x</div>
+                  <div className="text-sm mt-2">
+                    <span className={leg.result_state === 'void' ? 'text-gray-400 line-through' : 'text-gray-500'}>
+                      Odds: {leg.odd.toFixed(2)}x
+                    </span>
+                    {leg.result_state === 'void' && (
+                      <span className="ml-2 text-xs text-gray-500 italic">(excluded from calculation)</span>
+                    )}
+                  </div>
                   {leg.notes && (
-                    <div className="text-sm text-gray-600 mt-2">{leg.notes}</div>
+                    <div className={`text-sm mt-2 ${leg.result_state === 'void' ? 'text-gray-400' : 'text-gray-600'}`}>{leg.notes}</div>
                   )}
                 </div>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   leg.result_state === 'won' ? 'bg-green-100 text-green-800' :
                   leg.result_state === 'lost' ? 'bg-red-100 text-red-800' :
-                  leg.result_state === 'void' ? 'bg-gray-100 text-gray-800' :
+                  leg.result_state === 'void' ? 'bg-gray-200 text-gray-700 border border-gray-300' :
                   'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {leg.result_state}
+                  {leg.result_state === 'void' ? 'VOID' : leg.result_state}
                 </span>
               </div>
               
