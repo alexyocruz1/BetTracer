@@ -1,6 +1,6 @@
 'use client';
 
-import { MainBet, AnalyticsByLeague, AnalyticsByBetType, AnalyticsByCategory, AnalyticsByResponsible, AnalyticsByLegs, OddsAnalysis, ReferenceItem } from '@/types';
+import { MainBet, AnalyticsByLeague, AnalyticsByBetType, AnalyticsByCategory, AnalyticsByLegs, OddsAnalysis, TeamPerformance, StreakAnalysis, ReferenceItem } from '@/types';
 import { useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/lib/api/client';
 
@@ -13,9 +13,10 @@ interface BetSpecificStats {
   league?: AnalyticsByLeague;
   betType?: AnalyticsByBetType;
   category?: AnalyticsByCategory;
-  responsible?: AnalyticsByResponsible;
   legCount?: AnalyticsByLegs;
   stakeRange?: OddsAnalysis;
+  teamPerformance?: TeamPerformance[];
+  streakAnalysis?: StreakAnalysis;
   referenceItems: Map<string, ReferenceItem>;
 }
 
@@ -33,11 +34,14 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         const categoryIds = new Set<string>();
         const responsibleIds = new Set<string>();
 
+        const teamIds = new Set<string>();
+        
         bet.legs?.forEach(leg => {
           if (leg.league_id) leagueIds.add(leg.league_id);
           if (leg.bet_type_id) betTypeIds.add(leg.bet_type_id);
           if (leg.category_id) categoryIds.add(leg.category_id);
-          if (leg.responsible_id) responsibleIds.add(leg.responsible_id);
+          if (leg.home_team_id) teamIds.add(leg.home_team_id);
+          if (leg.away_team_id) teamIds.add(leg.away_team_id);
         });
 
         // Calculate current bet characteristics
@@ -45,13 +49,14 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         const currentStake = bet.stake;
 
         // Fetch analytics for each category
-        const [leagueData, betTypeData, categoryData, responsibleData, legData, oddsData, referenceData] = await Promise.all([
+        const [leagueData, betTypeData, categoryData, legData, oddsData, teamData, streakData, referenceData] = await Promise.all([
           apiClient.get<{ data: AnalyticsByLeague[] }>('/api/analytics/by-league'),
           apiClient.get<{ data: AnalyticsByBetType[] }>('/api/analytics/by-bet-type'),
           apiClient.get<{ data: AnalyticsByCategory[] }>('/api/analytics/by-category'),
-          apiClient.get<{ data: AnalyticsByResponsible[] }>('/api/analytics/by-responsible'),
           apiClient.get<{ data: AnalyticsByLegs[] }>('/api/analytics/by-legs'),
           apiClient.get<{ data: OddsAnalysis[] }>('/api/analytics/odds-analysis'),
+          apiClient.get<{ data: TeamPerformance[] }>('/api/analytics/team-performance'),
+          apiClient.get<{ data: StreakAnalysis }>('/api/analytics/streak-analysis'),
           apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?limit=1000'),
         ]);
 
@@ -65,7 +70,6 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         const league = leagueData.data.data.find(l => leagueIds.has(l.league_id));
         const betType = betTypeData.data.data.find(bt => betTypeIds.has(bt.bet_type_id));
         const category = categoryData.data.data.find(c => categoryIds.has(c.category_id));
-        const responsible = responsibleData.data.data.find(r => responsibleIds.has(r.responsible_id));
         
         // Find leg count analytics for current bet's leg count
         const legCount = legData.data.data.find(l => l.num_legs === currentLegCount);
@@ -79,13 +83,20 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
           return currentStake >= min && (max === Infinity || currentStake <= max);
         });
 
+        // Find team performance for teams in this bet
+        const teamPerformance = teamData.data.data.filter(t => teamIds.has(t.team_id));
+        
+        // Get streak analysis
+        const streakAnalysis = streakData.data.data;
+
         setStats({
           league,
           betType,
           category,
-          responsible,
           legCount,
           stakeRange,
+          teamPerformance,
+          streakAnalysis,
           referenceItems,
         });
       } catch (error) {
@@ -172,7 +183,7 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
       {/* Specific Statistics Grid */}
       <div className="space-y-8 mb-14">
         {/* League Stats */}
-        {stats.league && (
+        {stats.league && stats.league.win_rate > 0 && (
           <div 
             className="rounded-3xl p-12 border-2"
             style={{
@@ -204,7 +215,7 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         )}
 
         {/* Bet Type Stats */}
-        {stats.betType && (
+        {stats.betType && stats.betType.win_rate > 0 && (
           <div 
             className="rounded-3xl p-12 border-2"
             style={{
@@ -236,7 +247,7 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         )}
 
         {/* Category Stats */}
-        {stats.category && (
+        {stats.category && stats.category.win_rate > 0 && (
           <div 
             className="rounded-3xl p-12 border-2"
             style={{
@@ -267,8 +278,8 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
           </div>
         )}
 
-        {/* Responsible Stats */}
-        {stats.responsible && (
+        {/* Team Performance Stats */}
+        {stats.teamPerformance && stats.teamPerformance.length > 0 && (
           <div 
             className="rounded-3xl p-12 border-2"
             style={{
@@ -279,28 +290,78 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
             }}
           >
             <div className="text-center mb-8">
-              <div className="text-4xl font-bold text-gray-300 mb-2">Tipster Performance</div>
-              <div className="text-2xl text-gray-400">{getReferenceName(stats.responsible.responsible_id)}</div>
+              <div className="text-4xl font-bold text-gray-300 mb-2">Team Performance</div>
+              <div className="text-2xl text-gray-400">{getReferenceName(stats.teamPerformance[0].team_id)}</div>
             </div>
             <div className="grid grid-cols-2 gap-8">
               <div className="text-center">
                 <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
                 <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
-                  {(stats.responsible.win_rate * 100).toFixed(1)}%
+                  {(stats.teamPerformance[0].total.win_rate * 100).toFixed(1)}%
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
+                <div className="text-3xl text-gray-400 mb-2">Total Legs</div>
                 <div className="text-6xl font-bold text-white">
-                  {stats.responsible.bet_count}
+                  {stats.teamPerformance[0].total.total_legs}
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* Streak Analysis */}
+        {stats.streakAnalysis && (() => {
+          // Calculate recent performance (wins vs losses in recent bets)
+          const recentBets = stats.streakAnalysis.recent_bets || [];
+          const recentWins = recentBets.filter(bet => bet.state === 'won').length;
+          const recentLosses = recentBets.filter(bet => bet.state === 'lost').length;
+          const hasMoreWinsThanLosses = recentWins >= recentLosses;
+          
+          // Only show if current streak is winning OR recent performance is positive
+          const shouldShowStreak = stats.streakAnalysis.current_streak.type === 'win' || hasMoreWinsThanLosses;
+          
+          return shouldShowStreak ? (
+            <div 
+              className="rounded-3xl p-12 border-2"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              }}
+            >
+              <div className="text-center mb-8">
+                <div className="text-4xl font-bold text-gray-300 mb-2">Current Streak</div>
+                <div className="text-2xl text-gray-400">
+                  {stats.streakAnalysis.current_streak.type === 'win' ? '🔥 Winning' : '❄️ Losing'} Streak
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-8">
+                <div className="text-center">
+                  <div className="text-3xl text-gray-400 mb-2">Current</div>
+                  <div 
+                    className="text-6xl font-bold"
+                    style={{ 
+                      color: stats.streakAnalysis.current_streak.type === 'win' ? '#4ade80' : '#f87171'
+                    }}
+                  >
+                    {stats.streakAnalysis.current_streak.length}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl text-gray-400 mb-2">Best Win Streak</div>
+                  <div className="text-6xl font-bold" style={{ color: '#fbbf24' }}>
+                    {stats.streakAnalysis.longest_win_streak.length}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null;
+        })()}
+
         {/* Leg Count Stats */}
-        {stats.legCount && (
+        {stats.legCount && stats.legCount.win_rate > 0 && (
           <div 
             className="rounded-3xl p-12 border-2"
             style={{
@@ -332,7 +393,7 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         )}
 
         {/* Stake Range Stats */}
-        {stats.stakeRange && (
+        {stats.stakeRange && stats.stakeRange.win_rate > 0 && (
           <div 
             className="rounded-3xl p-12 border-2"
             style={{
@@ -365,22 +426,42 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
       </div>
 
       {/* Summary Message */}
-      {!stats.league && !stats.betType && !stats.category && !stats.responsible && !stats.legCount && !stats.stakeRange && (
-        <div 
-          className="rounded-3xl p-12 mb-14 border-2 text-center"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-          }}
-        >
-          <div className="text-4xl font-bold text-gray-300 mb-4">No Specific Stats Available</div>
-          <div className="text-2xl text-gray-400">
-            This bet doesn't have enough data for specific performance metrics
+      {(() => {
+        // Check if streak should be shown
+        const shouldShowStreak = stats.streakAnalysis && (
+          stats.streakAnalysis.current_streak.type === 'win' || 
+          (stats.streakAnalysis.recent_bets || []).filter(bet => bet.state === 'won').length >= 
+          (stats.streakAnalysis.recent_bets || []).filter(bet => bet.state === 'lost').length
+        );
+        
+        // Check if we have any stats to show
+        const hasAnyStats = (
+          (stats.league && stats.league.win_rate > 0) ||
+          (stats.betType && stats.betType.win_rate > 0) ||
+          (stats.category && stats.category.win_rate > 0) ||
+          (stats.legCount && stats.legCount.win_rate > 0) ||
+          (stats.stakeRange && stats.stakeRange.win_rate > 0) ||
+          (stats.teamPerformance && stats.teamPerformance.length > 0) ||
+          shouldShowStreak
+        );
+        
+        return !hasAnyStats ? (
+          <div 
+            className="rounded-3xl p-12 mb-14 border-2 text-center"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            <div className="text-4xl font-bold text-gray-300 mb-4">No Stats Available</div>
+            <div className="text-2xl text-gray-400">
+              Not enough data for performance metrics
+            </div>
           </div>
-        </div>
-      )}
+        ) : null;
+      })()}
 
       {/* Footer */}
       <div className="mt-20 pt-12 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
