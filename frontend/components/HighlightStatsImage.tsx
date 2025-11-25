@@ -1,6 +1,6 @@
 'use client';
 
-import { MainBet, AnalyticsSummary } from '@/types';
+import { MainBet, AnalyticsByLeague, AnalyticsByBetType, AnalyticsByCategory, AnalyticsByResponsible, AnalyticsByLegs, OddsAnalysis, ReferenceItem } from '@/types';
 import { useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/lib/api/client';
 
@@ -9,29 +9,97 @@ interface HighlightStatsImageProps {
   onReady?: () => void;
 }
 
+interface BetSpecificStats {
+  league?: AnalyticsByLeague;
+  betType?: AnalyticsByBetType;
+  category?: AnalyticsByCategory;
+  responsible?: AnalyticsByResponsible;
+  legCount?: AnalyticsByLegs;
+  stakeRange?: OddsAnalysis;
+  referenceItems: Map<string, ReferenceItem>;
+}
+
 export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [stats, setStats] = useState<BetSpecificStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
+    const fetchBetSpecificAnalytics = async () => {
       try {
-        const { data } = await apiClient.get<{ data: AnalyticsSummary }>('/api/analytics/summary');
-        setAnalytics(data.data);
+        // Get unique IDs from bet legs
+        const leagueIds = new Set<string>();
+        const betTypeIds = new Set<string>();
+        const categoryIds = new Set<string>();
+        const responsibleIds = new Set<string>();
+
+        bet.legs?.forEach(leg => {
+          if (leg.league_id) leagueIds.add(leg.league_id);
+          if (leg.bet_type_id) betTypeIds.add(leg.bet_type_id);
+          if (leg.category_id) categoryIds.add(leg.category_id);
+          if (leg.responsible_id) responsibleIds.add(leg.responsible_id);
+        });
+
+        // Calculate current bet characteristics
+        const currentLegCount = bet.legs?.length || 0;
+        const currentStake = bet.stake;
+
+        // Fetch analytics for each category
+        const [leagueData, betTypeData, categoryData, responsibleData, legData, oddsData, referenceData] = await Promise.all([
+          apiClient.get<{ data: AnalyticsByLeague[] }>('/api/analytics/by-league'),
+          apiClient.get<{ data: AnalyticsByBetType[] }>('/api/analytics/by-bet-type'),
+          apiClient.get<{ data: AnalyticsByCategory[] }>('/api/analytics/by-category'),
+          apiClient.get<{ data: AnalyticsByResponsible[] }>('/api/analytics/by-responsible'),
+          apiClient.get<{ data: AnalyticsByLegs[] }>('/api/analytics/by-legs'),
+          apiClient.get<{ data: OddsAnalysis[] }>('/api/analytics/odds-analysis'),
+          apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?limit=1000'),
+        ]);
+
+        // Create reference items map
+        const referenceItems = new Map<string, ReferenceItem>();
+        referenceData.data.data.forEach(item => {
+          referenceItems.set(item.id, item);
+        });
+
+        // Find matching analytics for this bet's characteristics
+        const league = leagueData.data.data.find(l => leagueIds.has(l.league_id));
+        const betType = betTypeData.data.data.find(bt => betTypeIds.has(bt.bet_type_id));
+        const category = categoryData.data.data.find(c => categoryIds.has(c.category_id));
+        const responsible = responsibleData.data.data.find(r => responsibleIds.has(r.responsible_id));
+        
+        // Find leg count analytics for current bet's leg count
+        const legCount = legData.data.data.find(l => l.num_legs === currentLegCount);
+        
+        // Find stake range analytics for current bet's stake
+        const stakeRange = oddsData.data.data.find(o => {
+          // Find the range that contains the current stake
+          const [min, max] = o.range.includes('+') 
+            ? [parseFloat(o.range.replace('+', '')), Infinity]
+            : o.range.split('-').map(parseFloat);
+          return currentStake >= min && (max === Infinity || currentStake <= max);
+        });
+
+        setStats({
+          league,
+          betType,
+          category,
+          responsible,
+          legCount,
+          stakeRange,
+          referenceItems,
+        });
       } catch (error) {
-        console.error('Failed to fetch analytics:', error);
+        console.error('Failed to fetch bet-specific analytics:', error);
       } finally {
         setLoading(false);
         if (onReady) {
-          // Small delay to ensure rendering is complete
           setTimeout(onReady, 100);
         }
       }
     };
 
-    fetchAnalytics();
-  }, [onReady]);
+    fetchBetSpecificAnalytics();
+  }, [bet, onReady]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -59,7 +127,12 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
     }
   };
 
-  if (loading || !analytics) {
+  const getReferenceName = (id?: string): string => {
+    if (!id || !stats) return 'Unknown';
+    return stats.referenceItems.get(id)?.name || 'Unknown';
+  };
+
+  if (loading || !stats) {
     return (
       <div
         ref={containerRef}
@@ -91,82 +164,210 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
       {/* Header */}
       <div className="text-center mb-20">
         <div className="mb-8">
-          <div className="text-7xl text-white font-bold mb-3">My Betting Stats</div>
-          <div className="text-3xl text-gray-300">Overall Performance</div>
+          <div className="text-7xl text-white font-bold mb-3">Stats</div>
+          <div className="text-3xl text-gray-300">Performance Breakdown</div>
         </div>
       </div>
 
-      {/* Main Statistics Grid */}
-      <div className="grid grid-cols-2 gap-8 mb-14">
-        {/* Total Profit */}
-        <div 
-          className="rounded-3xl p-12 border-2 text-center"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-          }}
-        >
-          <div className="text-4xl font-bold mb-6 text-gray-300">Total Profit</div>
+      {/* Specific Statistics Grid */}
+      <div className="space-y-8 mb-14">
+        {/* League Stats */}
+        {stats.league && (
           <div 
-            className="text-8xl font-black mb-4"
-            style={{ 
-              color: analytics.total_profit >= 0 ? '#4ade80' : '#f87171'
+            className="rounded-3xl p-12 border-2"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
             }}
           >
-            ${analytics.total_profit >= 0 ? '+' : ''}{analytics.total_profit.toFixed(2)}
+            <div className="text-center mb-8">
+              <div className="text-4xl font-bold text-gray-300 mb-2">League Performance</div>
+              <div className="text-2xl text-gray-400">{getReferenceName(stats.league.league_id)}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
+                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+                  {(stats.league.win_rate * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
+                <div className="text-6xl font-bold text-white">
+                  {stats.league.bet_count}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="text-2xl text-gray-400">
-            ${analytics.total_stake.toFixed(2)} staked
-          </div>
-        </div>
+        )}
 
-        {/* Win Rate */}
-        <div 
-          className="rounded-3xl p-12 border-2 text-center"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-          }}
-        >
-          <div className="text-4xl font-bold mb-6 text-gray-300">Win Rate</div>
-          <div className="text-8xl font-black mb-4" style={{ color: '#60a5fa' }}>
-            {(analytics.win_rate * 100).toFixed(1)}%
-          </div>
-          <div className="text-2xl text-gray-400">
-            {analytics.won_bets}W / {analytics.lost_bets}L
-            {analytics.pending_bets > 0 && ` / ${analytics.pending_bets}P`}
-          </div>
-        </div>
-
-        {/* ROI */}
-        <div 
-          className="rounded-3xl p-12 border-2 text-center"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-          }}
-        >
-          <div className="text-4xl font-bold mb-6 text-gray-300">ROI</div>
+        {/* Bet Type Stats */}
+        {stats.betType && (
           <div 
-            className="text-8xl font-black mb-4"
-            style={{ 
-              color: analytics.roi >= 0 ? '#4ade80' : '#f87171'
+            className="rounded-3xl p-12 border-2"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
             }}
           >
-            {analytics.roi >= 0 ? '+' : ''}{(analytics.roi * 100).toFixed(1)}%
+            <div className="text-center mb-8">
+              <div className="text-4xl font-bold text-gray-300 mb-2">Bet Type Performance</div>
+              <div className="text-2xl text-gray-400">{getReferenceName(stats.betType.bet_type_id)}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
+                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+                  {(stats.betType.win_rate * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
+                <div className="text-6xl font-bold text-white">
+                  {stats.betType.bet_count}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="text-2xl text-gray-400">Return on Investment</div>
-        </div>
+        )}
 
-        {/* Total Bets */}
+        {/* Category Stats */}
+        {stats.category && (
+          <div 
+            className="rounded-3xl p-12 border-2"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            <div className="text-center mb-8">
+              <div className="text-4xl font-bold text-gray-300 mb-2">Category Performance</div>
+              <div className="text-2xl text-gray-400">{getReferenceName(stats.category.category_id)}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
+                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+                  {(stats.category.win_rate * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
+                <div className="text-6xl font-bold text-white">
+                  {stats.category.bet_count}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Responsible Stats */}
+        {stats.responsible && (
+          <div 
+            className="rounded-3xl p-12 border-2"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            <div className="text-center mb-8">
+              <div className="text-4xl font-bold text-gray-300 mb-2">Tipster Performance</div>
+              <div className="text-2xl text-gray-400">{getReferenceName(stats.responsible.responsible_id)}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
+                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+                  {(stats.responsible.win_rate * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
+                <div className="text-6xl font-bold text-white">
+                  {stats.responsible.bet_count}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Leg Count Stats */}
+        {stats.legCount && (
+          <div 
+            className="rounded-3xl p-12 border-2"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            <div className="text-center mb-8">
+              <div className="text-4xl font-bold text-gray-300 mb-2">Leg Count Performance</div>
+              <div className="text-2xl text-gray-400">{stats.legCount.num_legs} Leg Bets</div>
+            </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
+                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+                  {(stats.legCount.win_rate * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
+                <div className="text-6xl font-bold text-white">
+                  {stats.legCount.bet_count}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stake Range Stats */}
+        {stats.stakeRange && (
+          <div 
+            className="rounded-3xl p-12 border-2"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            <div className="text-center mb-8">
+              <div className="text-4xl font-bold text-gray-300 mb-2">Stake Range Performance</div>
+              <div className="text-2xl text-gray-400">${stats.stakeRange.range} Stakes</div>
+            </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
+                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+                  {(stats.stakeRange.win_rate * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
+                <div className="text-6xl font-bold text-white">
+                  {stats.stakeRange.total_bets}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Summary Message */}
+      {!stats.league && !stats.betType && !stats.category && !stats.responsible && !stats.legCount && !stats.stakeRange && (
         <div 
-          className="rounded-3xl p-12 border-2 text-center"
+          className="rounded-3xl p-12 mb-14 border-2 text-center"
           style={{
             background: 'rgba(255, 255, 255, 0.1)',
             backdropFilter: 'blur(10px)',
@@ -174,57 +375,12 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
           }}
         >
-          <div className="text-4xl font-bold mb-6 text-gray-300">Total Bets</div>
-          <div className="text-8xl font-black mb-4 text-white">
-            {analytics.total_bets}
-          </div>
-          <div className="text-2xl text-gray-400">Bets Placed</div>
-        </div>
-      </div>
-
-      {/* Performance Summary */}
-      <div 
-        className="rounded-3xl p-12 mb-14 border-2"
-        style={{
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          borderColor: 'rgba(255, 255, 255, 0.2)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-        }}
-      >
-        <div className="text-center">
-          <div className="text-5xl font-bold text-gray-300 mb-8">Performance Summary</div>
-          
-          {/* Key metrics in a row */}
-          <div className="grid grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="text-3xl text-gray-400 mb-3">Average Stake</div>
-              <div className="text-5xl font-bold text-white">
-                ${analytics.total_bets > 0 ? (analytics.total_stake / analytics.total_bets).toFixed(2) : '0.00'}
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-3xl text-gray-400 mb-3">Profit per Bet</div>
-              <div 
-                className="text-5xl font-bold"
-                style={{ 
-                  color: analytics.total_profit >= 0 ? '#4ade80' : '#f87171'
-                }}
-              >
-                ${analytics.total_bets > 0 ? (analytics.total_profit / analytics.total_bets).toFixed(2) : '0.00'}
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-3xl text-gray-400 mb-3">Success Rate</div>
-              <div className="text-5xl font-bold" style={{ color: '#fbbf24' }}>
-                {analytics.total_bets > 0 ? ((analytics.won_bets / (analytics.won_bets + analytics.lost_bets)) * 100).toFixed(1) : '0.0'}%
-              </div>
-            </div>
+          <div className="text-4xl font-bold text-gray-300 mb-4">No Specific Stats Available</div>
+          <div className="text-2xl text-gray-400">
+            This bet doesn't have enough data for specific performance metrics
           </div>
         </div>
-      </div>
+      )}
 
       {/* Footer */}
       <div className="mt-20 pt-12 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
