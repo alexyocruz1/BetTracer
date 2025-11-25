@@ -6,6 +6,7 @@ import { apiClient } from '@/lib/api/client';
 import { MainBet, ReferenceItem, MLPredictRequest } from '@/types';
 import { toPng } from 'html-to-image';
 import BetslipImage from '@/components/BetslipImage';
+import HighlightStatsImage from '@/components/HighlightStatsImage';
 import { useMLPrediction } from '@/hooks/useMLPrediction';
 import MLInsights, { LegSummary } from '@/components/bets/MLInsights';
 
@@ -20,6 +21,10 @@ export default function BetDetailPage() {
   const [showBetslipPreview, setShowBetslipPreview] = useState(false);
   const [betslipReady, setBetslipReady] = useState(false);
   const betslipRef = useRef<HTMLDivElement>(null);
+  const [generatingStats, setGeneratingStats] = useState(false);
+  const [showStatsPreview, setShowStatsPreview] = useState(false);
+  const [statsReady, setStatsReady] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
   const [referenceItems, setReferenceItems] = useState<Map<string, ReferenceItem>>(new Map());
   const {
     predict: runMLPrediction,
@@ -317,6 +322,56 @@ export default function BetDetailPage() {
     }
   };
 
+  const generateStatsImage = async () => {
+    if (!bet || generatingStats) return;
+
+    setGeneratingStats(true);
+    setStatsReady(false);
+    setShowStatsPreview(true);
+  };
+
+  const handleStatsReady = () => {
+    setStatsReady(true);
+    setGeneratingStats(false);
+  };
+
+  const downloadStats = async () => {
+    if (!statsRef.current || !bet || !statsReady) {
+      if (!statsReady) {
+        alert('Please wait for the statistics image to finish loading.');
+      }
+      return;
+    }
+
+    try {
+      setGeneratingStats(true);
+      
+      // Use html-to-image which handles CSS better than html2canvas
+      const dataUrl = await toPng(statsRef.current, {
+        pixelRatio: 2, // 2x scale for high quality (2160px wide, perfect for TikTok)
+        width: 1080,
+        height: statsRef.current.scrollHeight,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+        },
+      });
+
+      const link = document.createElement('a');
+      link.download = `stats-${bet.id}-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = dataUrl;
+      link.click();
+
+      setShowStatsPreview(false);
+      setStatsReady(false);
+    } catch (error) {
+      console.error('Failed to generate statistics image:', error);
+      alert('Failed to generate statistics image. Please try again.');
+    } finally {
+      setGeneratingStats(false);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;
   }
@@ -363,14 +418,55 @@ export default function BetDetailPage() {
         </div>
       )}
 
-      {/* Generate Betslip Button */}
-      <div className="mb-6">
+      {/* Statistics Preview Modal */}
+      {showStatsPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-white rounded-lg w-full max-w-[1200px] max-h-[90vh] flex flex-col">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10 flex-shrink-0">
+              <h2 className="text-xl font-bold text-gray-900">Statistics Preview</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={downloadStats}
+                  disabled={generatingStats || !statsReady}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {generatingStats ? 'Generating...' : !statsReady ? 'Loading...' : 'Download Image'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowStatsPreview(false);
+                    setGeneratingStats(false);
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="p-4 overflow-auto flex-1" style={{ overflowX: 'hidden' }}>
+              <div ref={statsRef} className="flex justify-center">
+                <HighlightStatsImage bet={bet} onReady={handleStatsReady} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generate Buttons */}
+      <div className="mb-6 flex gap-4">
         <button
           onClick={generateBetslipImage}
           disabled={generatingBetslip}
           className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
         >
           {generatingBetslip ? 'Generating...' : '📸 Generate Betslip for TikTok'}
+        </button>
+        <button
+          onClick={generateStatsImage}
+          disabled={generatingStats}
+          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 disabled:opacity-50"
+        >
+          {generatingStats ? 'Generating...' : '📊 Generate Statistics for TikTok'}
         </button>
       </div>
       <div className="mb-6">
