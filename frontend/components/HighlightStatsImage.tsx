@@ -62,7 +62,8 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
   const displayOdds = effectiveOdds || bet.odds || 0;
   const potentialWin = bet.stake * displayOdds;
   const hasProfitLoss = bet.profit_loss !== null && bet.profit_loss !== undefined;
-  const roi = hasProfitLoss ? (bet.profit_loss / bet.stake) * 100 : null;
+  const profitLossValue = hasProfitLoss ? bet.profit_loss! : null;
+  const roi = profitLossValue !== null ? (profitLossValue / bet.stake) * 100 : null;
 
   return (
     <div
@@ -142,21 +143,21 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
             <div 
               className="text-9xl font-black mb-6"
               style={{ 
-                color: hasProfitLoss
-                  ? (bet.profit_loss! >= 0 ? '#4ade80' : '#f87171')
+                color: hasProfitLoss && profitLossValue !== null
+                  ? (profitLossValue >= 0 ? '#4ade80' : '#f87171')
                   : '#60a5fa'
               }}
             >
-              {hasProfitLoss 
-                ? `$${bet.profit_loss! >= 0 ? '+' : ''}${bet.profit_loss!.toFixed(2)}`
+              {hasProfitLoss && profitLossValue !== null
+                ? `$${profitLossValue >= 0 ? '+' : ''}${profitLossValue.toFixed(2)}`
                 : `$${potentialWin.toFixed(2)}`
               }
             </div>
-            {hasProfitLoss && roi !== null && (
+            {hasProfitLoss && roi !== null && profitLossValue !== null && (
               <div 
                 className="text-6xl font-bold mt-4"
                 style={{ 
-                  color: bet.profit_loss! >= 0 ? '#4ade80' : '#f87171'
+                  color: profitLossValue >= 0 ? '#4ade80' : '#f87171'
                 }}
               >
                 {roi >= 0 ? '+' : ''}{roi.toFixed(1)}% ROI
