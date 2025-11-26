@@ -402,7 +402,7 @@ export default function BetDetailPage() {
           transform: 'scale(1)',
           transformOrigin: 'top left',
           // Force desktop-like rendering
-          zoom: 1,
+          zoom: '1',
           minWidth: '1080px',
           maxWidth: '1080px',
         },
@@ -583,7 +583,7 @@ export default function BetDetailPage() {
                       minWidth: '1080px',
                       transform: 'scale(1)',
                       transformOrigin: 'top center',
-                      zoom: 1,
+                      zoom: '1',
                       // Conditional centering
                       display: fitToScreen ? 'flex' : 'block',
                       justifyContent: fitToScreen ? 'center' : 'flex-start',

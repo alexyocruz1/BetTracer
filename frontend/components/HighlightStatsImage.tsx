@@ -174,7 +174,7 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         lineHeight: '1.5',
         // Force desktop-like rendering regardless of viewport
         position: 'relative',
-        zoom: 1,
+        zoom: '1',
         transform: 'scale(1)',
         transformOrigin: 'top left',
         // Ensure consistent rendering
