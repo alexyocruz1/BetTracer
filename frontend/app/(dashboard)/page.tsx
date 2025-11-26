@@ -147,7 +147,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg"
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -169,7 +169,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg"
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -186,7 +186,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg"
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -203,7 +203,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg"
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
