@@ -190,7 +190,7 @@ export default function BetsPage() {
       <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Bets</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400"
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             View and manage your bets
             {totalBets > 0 && (
               <span className="block sm:inline sm:ml-2 text-gray-500 mt-1 sm:mt-0">
