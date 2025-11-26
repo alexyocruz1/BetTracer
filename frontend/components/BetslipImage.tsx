@@ -80,7 +80,7 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
   return (
     <div
       ref={containerRef}
-      className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white"
+      className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white image-generation-container"
       style={{
         width: '1080px',
         minHeight: '1920px',
@@ -88,6 +88,8 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
         fontFamily: 'system-ui, -apple-system, sans-serif',
         boxSizing: 'border-box',
         overflow: 'visible',
+        fontSize: '16px', // Fixed base font size
+        lineHeight: '1.5', // Fixed line height
       }}
     >
       {/* Header */}

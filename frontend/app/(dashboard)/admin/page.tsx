@@ -258,7 +258,7 @@ export default function AdminPage() {
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Admin Panel</h1>
         <p className="mt-2 text-sm text-gray-600">
           Manage reference items: leagues, teams, bet types, categories, and responsibles
         </p>
@@ -271,7 +271,7 @@ export default function AdminPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0 ${
+              className={`py-4 px-3 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0 min-h-[44px] flex items-center ${
                 activeTab === tab.id
                   ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -285,8 +285,8 @@ export default function AdminPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Add New Item Form */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Add New {tabs.find((t) => t.id === activeTab)?.label.slice(0, -1)}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4" key={activeTab}>

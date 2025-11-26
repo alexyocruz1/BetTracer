@@ -25,6 +25,8 @@ export default function BetDetailPage() {
   const [showStatsPreview, setShowStatsPreview] = useState(false);
   const [statsReady, setStatsReady] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(1);
+  const [fitToScreen, setFitToScreen] = useState(false);
   const [referenceItems, setReferenceItems] = useState<Map<string, ReferenceItem>>(new Map());
   const {
     predict: runMLPrediction,
@@ -214,6 +216,36 @@ export default function BetDetailPage() {
     bet?.legs?.map((leg) => `${leg.id}:${leg.odd}`).join('|'),
   ]);
 
+  // Calculate preview scale based on window size and fit mode
+  useEffect(() => {
+    const calculateScale = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      if (fitToScreen) {
+        // Calculate scale to fit entire image in viewport
+        const availableHeight = height - 200; // Account for header and padding
+        const availableWidth = width - 32; // Account for padding
+        const scaleByHeight = availableHeight / 1920;
+        const scaleByWidth = availableWidth / 1080;
+        return Math.min(scaleByHeight, scaleByWidth, 0.8); // Max 80% to ensure some margin
+      } else {
+        // Default comfortable viewing scales (larger for better readability)
+        if (width < 640) return 0.4; // Mobile - increased from 0.25
+        if (width < 1024) return 0.7; // Tablet - increased from 0.4
+        return 0.9; // Desktop - increased from 0.6
+      }
+    };
+
+    const updateScale = () => {
+      setPreviewScale(calculateScale());
+    };
+
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [fitToScreen]);
+
   const updateState = async (state: 'won' | 'lost' | 'void') => {
     if (!bet || updating) return; // Prevent double-clicks and concurrent updates
 
@@ -296,6 +328,9 @@ export default function BetDetailPage() {
     try {
       setGeneratingBetslip(true);
       
+      // Add delay to ensure all fonts and styles are loaded
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Use html-to-image which handles CSS better than html2canvas
       const dataUrl = await toPng(betslipRef.current, {
         pixelRatio: 2, // 2x scale for high quality (2160px wide, perfect for TikTok)
@@ -305,6 +340,15 @@ export default function BetDetailPage() {
           transform: 'scale(1)',
           transformOrigin: 'top left',
         },
+        // Force consistent rendering across devices
+        cacheBust: true,
+        skipAutoScale: true,
+        canvasWidth: 2160, // Fixed canvas size
+        canvasHeight: betslipRef.current.scrollHeight * 2,
+        // Ensure consistent font loading
+        skipFonts: false,
+        // Add quality settings
+        quality: 1.0,
       });
 
       const link = document.createElement('a');
@@ -346,6 +390,9 @@ export default function BetDetailPage() {
     try {
       setGeneratingStats(true);
       
+      // Add delay to ensure all fonts and styles are loaded
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Use html-to-image which handles CSS better than html2canvas
       const dataUrl = await toPng(statsRef.current, {
         pixelRatio: 2, // 2x scale for high quality (2160px wide, perfect for TikTok)
@@ -354,6 +401,28 @@ export default function BetDetailPage() {
         style: {
           transform: 'scale(1)',
           transformOrigin: 'top left',
+          // Force desktop-like rendering
+          zoom: 1,
+          minWidth: '1080px',
+          maxWidth: '1080px',
+        },
+        // Force consistent rendering across devices
+        cacheBust: true,
+        skipAutoScale: true,
+        canvasWidth: 2160, // Fixed canvas size
+        canvasHeight: statsRef.current.scrollHeight * 2,
+        // Ensure consistent font loading
+        skipFonts: false,
+        // Add quality settings
+        quality: 1.0,
+        // Force specific viewport for rendering
+        filter: (node) => {
+          // Ensure all elements render at desktop scale
+          if (node.style) {
+            node.style.zoom = '1';
+            node.style.transform = node.style.transform || 'scale(1)';
+          }
+          return true;
         },
       });
 
@@ -386,32 +455,70 @@ export default function BetDetailPage() {
     <div className="px-4 py-6 sm:px-0">
       {/* Betslip Preview Modal */}
       {showBetslipPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-hidden">
-          <div className="bg-white rounded-lg w-full max-w-[1200px] max-h-[90vh] flex flex-col">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10 flex-shrink-0">
-              <h2 className="text-xl font-bold text-gray-900">Betslip Preview</h2>
-              <div className="flex gap-2">
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+          <div className="bg-white rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:h-auto flex flex-col">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 flex flex-col gap-3 z-10 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Betslip Preview</h2>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={downloadBetslip}
+                    disabled={generatingBetslip || !betslipReady}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 min-h-[44px] text-sm sm:text-base"
+                  >
+                    {generatingBetslip ? 'Generating...' : !betslipReady ? 'Loading...' : 'Download Image'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowBetslipPreview(false);
+                      setGeneratingBetslip(false);
+                    }}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 min-h-[44px] text-sm sm:text-base"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={downloadBetslip}
-                  disabled={generatingBetslip || !betslipReady}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                  onClick={() => setFitToScreen(!fitToScreen)}
+                  className={`px-3 py-1 rounded-md text-sm font-medium min-h-[36px] transition-colors ${
+                    fitToScreen 
+                      ? 'bg-primary-100 text-primary-700 border border-primary-300' 
+                      : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                  }`}
                 >
-                  {generatingBetslip ? 'Generating...' : !betslipReady ? 'Loading...' : 'Download Image'}
+                  {fitToScreen ? '📐 Fit to Screen: ON' : '🔍 Fit to Screen: OFF'}
                 </button>
-                <button
-                  onClick={() => {
-                    setShowBetslipPreview(false);
-                    setGeneratingBetslip(false);
-                  }}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-                >
-                  Close
-                </button>
+                <span className="text-xs text-gray-500">
+                  {fitToScreen ? 'Full image visible' : 'Scroll to see full image'}
+                </span>
               </div>
             </div>
-            <div className="p-4 overflow-auto flex-1" style={{ overflowX: 'hidden' }}>
-              <div ref={betslipRef} className="flex justify-center">
-                <BetslipImage bet={bet} onReady={handleBetslipReady} />
+            <div className="flex-1 overflow-auto p-2 sm:p-4">
+              <div 
+                className={fitToScreen ? "flex justify-center items-start min-h-full" : ""}
+                style={{
+                  minWidth: fitToScreen ? 'auto' : `${1080 * previewScale}px`,
+                  width: '100%',
+                }}
+              >
+                <div 
+                  ref={betslipRef} 
+                  style={{
+                    // Scale down for preview while keeping generation quality
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: fitToScreen ? 'top center' : 'top left',
+                    marginBottom: `${-1920 * (1 - previewScale)}px`,
+                    transition: 'transform 0.3s ease, margin-bottom 0.3s ease',
+                    // Conditional centering
+                    display: fitToScreen ? 'flex' : 'block',
+                    justifyContent: fitToScreen ? 'center' : 'flex-start',
+                    width: fitToScreen ? 'fit-content' : '1080px',
+                  }}
+                >
+                  <BetslipImage bet={bet} onReady={handleBetslipReady} />
+                </div>
               </div>
             </div>
           </div>
@@ -420,51 +527,101 @@ export default function BetDetailPage() {
 
       {/* Statistics Preview Modal */}
       {showStatsPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-hidden">
-          <div className="bg-white rounded-lg w-full max-w-[1200px] max-h-[90vh] flex flex-col">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10 flex-shrink-0">
-              <h2 className="text-xl font-bold text-gray-900">Statistics Preview</h2>
-              <div className="flex gap-2">
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+          <div className="bg-white rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:h-auto flex flex-col">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 flex flex-col gap-3 z-10 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Statistics Preview</h2>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={downloadStats}
+                    disabled={generatingStats || !statsReady}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 min-h-[44px] text-sm sm:text-base"
+                  >
+                    {generatingStats ? 'Generating...' : !statsReady ? 'Loading...' : 'Download Image'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowStatsPreview(false);
+                      setGeneratingStats(false);
+                    }}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 min-h-[44px] text-sm sm:text-base"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={downloadStats}
-                  disabled={generatingStats || !statsReady}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                  onClick={() => setFitToScreen(!fitToScreen)}
+                  className={`px-3 py-1 rounded-md text-sm font-medium min-h-[36px] transition-colors ${
+                    fitToScreen 
+                      ? 'bg-primary-100 text-primary-700 border border-primary-300' 
+                      : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                  }`}
                 >
-                  {generatingStats ? 'Generating...' : !statsReady ? 'Loading...' : 'Download Image'}
+                  {fitToScreen ? '📐 Fit to Screen: ON' : '🔍 Fit to Screen: OFF'}
                 </button>
-                <button
-                  onClick={() => {
-                    setShowStatsPreview(false);
-                    setGeneratingStats(false);
+                <span className="text-xs text-gray-500">
+                  {fitToScreen ? 'Full image visible' : 'Scroll to see full image'}
+                </span>
+              </div>
+            </div>
+              <div className="flex-1 overflow-auto p-2 sm:p-4">
+                <div 
+                  className={fitToScreen ? "flex justify-center items-start min-h-full" : ""}
+                  style={{
+                    minWidth: fitToScreen ? 'auto' : `${1080 * previewScale}px`,
+                    width: '100%',
                   }}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
                 >
-                  Close
-                </button>
+                  <div 
+                    ref={statsRef} 
+                    style={{
+                      // Force desktop-like rendering context for generation
+                      width: '1080px',
+                      minWidth: '1080px',
+                      transform: 'scale(1)',
+                      transformOrigin: 'top center',
+                      zoom: 1,
+                      // Conditional centering
+                      display: fitToScreen ? 'flex' : 'block',
+                      justifyContent: fitToScreen ? 'center' : 'flex-start',
+                    }}
+                  >
+                    <div
+                      style={{
+                        // Scale down for preview while keeping generation quality
+                        transform: `scale(${previewScale})`,
+                        transformOrigin: fitToScreen ? 'top center' : 'top left',
+                        marginBottom: `${-1920 * (1 - previewScale)}px`,
+                        transition: 'transform 0.3s ease, margin-bottom 0.3s ease',
+                        // Conditional sizing
+                        width: fitToScreen ? 'fit-content' : '1080px',
+                      }}
+                    >
+                      <HighlightStatsImage bet={bet} onReady={handleStatsReady} />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="p-4 overflow-auto flex-1" style={{ overflowX: 'hidden' }}>
-              <div ref={statsRef} className="flex justify-center">
-                <HighlightStatsImage bet={bet} onReady={handleStatsReady} />
-              </div>
-            </div>
           </div>
         </div>
       )}
 
       {/* Generate Buttons */}
-      <div className="mb-6 flex gap-4">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <button
           onClick={generateBetslipImage}
           disabled={generatingBetslip}
-          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
+          className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 min-h-[44px]"
         >
           {generatingBetslip ? 'Generating...' : '📸 Generate Betslip for TikTok'}
         </button>
         <button
           onClick={generateStatsImage}
           disabled={generatingStats}
-          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 disabled:opacity-50"
+          className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 disabled:opacity-50 min-h-[44px]"
         >
           {generatingStats ? 'Generating...' : '📊 Generate Statistics for TikTok'}
         </button>
@@ -472,15 +629,15 @@ export default function BetDetailPage() {
       <div className="mb-6">
         <button
           onClick={() => router.back()}
-          className="text-primary-600 hover:text-primary-800 mb-4"
+          className="text-primary-600 hover:text-primary-800 mb-4 min-h-[44px] flex items-center"
         >
           ← Back to Bets
         </button>
-        <h1 className="text-3xl font-bold text-gray-900">Bet Details</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Bet Details</h1>
       </div>
 
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium text-gray-500">Stake</label>
             <div className="text-lg font-semibold">${bet.stake}</div>
@@ -551,25 +708,25 @@ export default function BetDetailPage() {
         </div>
 
         {bet.state === 'pending' && (
-          <div className="mt-6 flex space-x-4">
+          <div className="mt-6 flex flex-col sm:flex-row gap-4">
             <button
               onClick={() => updateState('won')}
               disabled={updating}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 min-h-[44px] flex items-center justify-center"
             >
               Mark as Won
             </button>
             <button
               onClick={() => updateState('lost')}
               disabled={updating}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 min-h-[44px] flex items-center justify-center"
             >
               Mark as Lost
             </button>
             <button
               onClick={() => updateState('void')}
               disabled={updating}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 min-h-[44px] flex items-center justify-center"
             >
               Mark as Void
             </button>
@@ -733,25 +890,25 @@ export default function BetDetailPage() {
               </div>
               
               {/* Leg state controls */}
-              <div className="mt-3 flex space-x-2">
+              <div className="mt-3 flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={() => updateLegState(leg.id, 'won')}
                   disabled={updatingLegs.has(leg.id) || leg.result_state === 'won'}
-                  className="px-3 py-1 text-xs bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 text-xs bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px] flex items-center justify-center"
                 >
                   {updatingLegs.has(leg.id) ? 'Updating...' : 'Mark Won'}
                 </button>
                 <button
                   onClick={() => updateLegState(leg.id, 'lost')}
                   disabled={updatingLegs.has(leg.id) || leg.result_state === 'lost'}
-                  className="px-3 py-1 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px] flex items-center justify-center"
                 >
                   {updatingLegs.has(leg.id) ? 'Updating...' : 'Mark Lost'}
                 </button>
                 <button
                   onClick={() => updateLegState(leg.id, 'void')}
                   disabled={updatingLegs.has(leg.id) || leg.result_state === 'void'}
-                  className="px-3 py-1 text-xs bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 text-xs bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px] flex items-center justify-center"
                 >
                   {updatingLegs.has(leg.id) ? 'Updating...' : 'Mark Void'}
                 </button>

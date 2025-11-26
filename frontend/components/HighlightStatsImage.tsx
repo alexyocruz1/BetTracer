@@ -162,7 +162,7 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
   return (
     <div
       ref={containerRef}
-      className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white"
+      className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white image-generation-container"
       style={{
         width: '1080px',
         minHeight: '1920px',
@@ -170,43 +170,95 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         fontFamily: 'system-ui, -apple-system, sans-serif',
         boxSizing: 'border-box',
         overflow: 'visible',
+        fontSize: '16px',
+        lineHeight: '1.5',
+        // Force desktop-like rendering regardless of viewport
+        position: 'relative',
+        zoom: 1,
+        transform: 'scale(1)',
+        transformOrigin: 'top left',
+        // Ensure consistent rendering
+        contain: 'layout style paint',
+        isolation: 'isolate',
       }}
     >
       {/* Header */}
-      <div className="text-center mb-20">
-        <div className="mb-8">
-          <div className="text-7xl text-white font-bold mb-3">Stats</div>
-          <div className="text-3xl text-gray-300">Performance Breakdown</div>
+      <div style={{ textAlign: 'center', marginBottom: '80px' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ 
+            fontSize: '72px', 
+            color: 'white', 
+            fontWeight: 'bold', 
+            marginBottom: '12px',
+            lineHeight: '1.1'
+          }}>Stats</div>
+          <div style={{ 
+            fontSize: '30px', 
+            color: '#d1d5db',
+            lineHeight: '1.2'
+          }}>Performance Breakdown</div>
         </div>
       </div>
 
       {/* Specific Statistics Grid */}
-      <div className="space-y-8 mb-14">
+      <div style={{ marginBottom: '56px' }}>
         {/* League Stats */}
         {stats.league && stats.league.win_rate > 0 && (
           <div 
-            className="rounded-3xl p-12 border-2"
             style={{
+              borderRadius: '24px',
+              padding: '48px',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              marginBottom: '32px',
             }}
           >
-            <div className="text-center mb-8">
-              <div className="text-4xl font-bold text-gray-300 mb-2">League Performance</div>
-              <div className="text-2xl text-gray-400">{getReferenceName(stats.league.league_id)}</div>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ 
+                fontSize: '36px', 
+                fontWeight: 'bold', 
+                color: '#d1d5db', 
+                marginBottom: '8px',
+                lineHeight: '1.2'
+              }}>League Performance</div>
+              <div style={{ 
+                fontSize: '24px', 
+                color: '#9ca3af',
+                lineHeight: '1.3'
+              }}>{getReferenceName(stats.league.league_id)}</div>
             </div>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
-                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+            <div style={{ display: 'flex', gap: '32px' }}>
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Win Rate</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: '#60a5fa',
+                  lineHeight: '1.1'
+                }}>
                   {(stats.league.win_rate * 100).toFixed(1)}%
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
-                <div className="text-6xl font-bold text-white">
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Total Bets</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: 'white',
+                  lineHeight: '1.1'
+                }}>
                   {stats.league.bet_count}
                 </div>
               </div>
@@ -217,28 +269,60 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         {/* Bet Type Stats */}
         {stats.betType && stats.betType.win_rate > 0 && (
           <div 
-            className="rounded-3xl p-12 border-2"
             style={{
+              borderRadius: '24px',
+              padding: '48px',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              marginBottom: '32px',
             }}
           >
-            <div className="text-center mb-8">
-              <div className="text-4xl font-bold text-gray-300 mb-2">Bet Type Performance</div>
-              <div className="text-2xl text-gray-400">{getReferenceName(stats.betType.bet_type_id)}</div>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ 
+                fontSize: '36px', 
+                fontWeight: 'bold', 
+                color: '#d1d5db', 
+                marginBottom: '8px',
+                lineHeight: '1.2'
+              }}>Bet Type Performance</div>
+              <div style={{ 
+                fontSize: '24px', 
+                color: '#9ca3af',
+                lineHeight: '1.3'
+              }}>{getReferenceName(stats.betType.bet_type_id)}</div>
             </div>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
-                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+            <div style={{ display: 'flex', gap: '32px' }}>
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Win Rate</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: '#60a5fa',
+                  lineHeight: '1.1'
+                }}>
                   {(stats.betType.win_rate * 100).toFixed(1)}%
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
-                <div className="text-6xl font-bold text-white">
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Total Bets</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: 'white',
+                  lineHeight: '1.1'
+                }}>
                   {stats.betType.bet_count}
                 </div>
               </div>
@@ -249,28 +333,60 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         {/* Category Stats */}
         {stats.category && stats.category.win_rate > 0 && (
           <div 
-            className="rounded-3xl p-12 border-2"
             style={{
+              borderRadius: '24px',
+              padding: '48px',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              marginBottom: '32px',
             }}
           >
-            <div className="text-center mb-8">
-              <div className="text-4xl font-bold text-gray-300 mb-2">Category Performance</div>
-              <div className="text-2xl text-gray-400">{getReferenceName(stats.category.category_id)}</div>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ 
+                fontSize: '36px', 
+                fontWeight: 'bold', 
+                color: '#d1d5db', 
+                marginBottom: '8px',
+                lineHeight: '1.2'
+              }}>Category Performance</div>
+              <div style={{ 
+                fontSize: '24px', 
+                color: '#9ca3af',
+                lineHeight: '1.3'
+              }}>{getReferenceName(stats.category.category_id)}</div>
             </div>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
-                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+            <div style={{ display: 'flex', gap: '32px' }}>
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Win Rate</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: '#60a5fa',
+                  lineHeight: '1.1'
+                }}>
                   {(stats.category.win_rate * 100).toFixed(1)}%
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
-                <div className="text-6xl font-bold text-white">
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Total Bets</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: 'white',
+                  lineHeight: '1.1'
+                }}>
                   {stats.category.bet_count}
                 </div>
               </div>
@@ -281,28 +397,60 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         {/* Team Performance Stats */}
         {stats.teamPerformance && stats.teamPerformance.length > 0 && (
           <div 
-            className="rounded-3xl p-12 border-2"
             style={{
+              borderRadius: '24px',
+              padding: '48px',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              marginBottom: '32px',
             }}
           >
-            <div className="text-center mb-8">
-              <div className="text-4xl font-bold text-gray-300 mb-2">Team Performance</div>
-              <div className="text-2xl text-gray-400">{getReferenceName(stats.teamPerformance[0].team_id)}</div>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ 
+                fontSize: '36px', 
+                fontWeight: 'bold', 
+                color: '#d1d5db', 
+                marginBottom: '8px',
+                lineHeight: '1.2'
+              }}>Team Performance</div>
+              <div style={{ 
+                fontSize: '24px', 
+                color: '#9ca3af',
+                lineHeight: '1.3'
+              }}>{getReferenceName(stats.teamPerformance[0].team_id)}</div>
             </div>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
-                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+            <div style={{ display: 'flex', gap: '32px' }}>
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Win Rate</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: '#60a5fa',
+                  lineHeight: '1.1'
+                }}>
                   {(stats.teamPerformance[0].total.win_rate * 100).toFixed(1)}%
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Total Legs</div>
-                <div className="text-6xl font-bold text-white">
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Total Legs</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: 'white',
+                  lineHeight: '1.1'
+                }}>
                   {stats.teamPerformance[0].total.total_legs}
                 </div>
               </div>
@@ -323,35 +471,64 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
           
           return shouldShowStreak ? (
             <div 
-              className="rounded-3xl p-12 border-2"
               style={{
+                borderRadius: '24px',
+                padding: '48px',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
                 background: 'rgba(255, 255, 255, 0.1)',
                 backdropFilter: 'blur(10px)',
-                borderColor: 'rgba(255, 255, 255, 0.2)',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                marginBottom: '32px',
               }}
             >
-              <div className="text-center mb-8">
-                <div className="text-4xl font-bold text-gray-300 mb-2">Current Streak</div>
-                <div className="text-2xl text-gray-400">
+              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                <div style={{ 
+                  fontSize: '36px', 
+                  fontWeight: 'bold', 
+                  color: '#d1d5db', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Current Streak</div>
+                <div style={{ 
+                  fontSize: '24px', 
+                  color: '#9ca3af',
+                  lineHeight: '1.3'
+                }}>
                   {stats.streakAnalysis.current_streak.type === 'win' ? '🔥 Winning' : '❄️ Losing'} Streak
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-8">
-                <div className="text-center">
-                  <div className="text-3xl text-gray-400 mb-2">Current</div>
+              <div style={{ display: 'flex', gap: '32px' }}>
+                <div style={{ textAlign: 'center', flex: '1' }}>
+                  <div style={{ 
+                    fontSize: '30px', 
+                    color: '#9ca3af', 
+                    marginBottom: '8px',
+                    lineHeight: '1.2'
+                  }}>Current</div>
                   <div 
-                    className="text-6xl font-bold"
                     style={{ 
+                      fontSize: '60px', 
+                      fontWeight: 'bold',
+                      lineHeight: '1.1',
                       color: stats.streakAnalysis.current_streak.type === 'win' ? '#4ade80' : '#f87171'
                     }}
                   >
                     {stats.streakAnalysis.current_streak.length}
                   </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-3xl text-gray-400 mb-2">Best Win Streak</div>
-                  <div className="text-6xl font-bold" style={{ color: '#fbbf24' }}>
+                <div style={{ textAlign: 'center', flex: '1' }}>
+                  <div style={{ 
+                    fontSize: '30px', 
+                    color: '#9ca3af', 
+                    marginBottom: '8px',
+                    lineHeight: '1.2'
+                  }}>Best Win Streak</div>
+                  <div style={{ 
+                    fontSize: '60px', 
+                    fontWeight: 'bold', 
+                    color: '#fbbf24',
+                    lineHeight: '1.1'
+                  }}>
                     {stats.streakAnalysis.longest_win_streak.length}
                   </div>
                 </div>
@@ -363,28 +540,60 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         {/* Leg Count Stats */}
         {stats.legCount && stats.legCount.win_rate > 0 && (
           <div 
-            className="rounded-3xl p-12 border-2"
             style={{
+              borderRadius: '24px',
+              padding: '48px',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              marginBottom: '32px',
             }}
           >
-            <div className="text-center mb-8">
-              <div className="text-4xl font-bold text-gray-300 mb-2">Leg Count Performance</div>
-              <div className="text-2xl text-gray-400">{stats.legCount.num_legs} Leg Bets</div>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ 
+                fontSize: '36px', 
+                fontWeight: 'bold', 
+                color: '#d1d5db', 
+                marginBottom: '8px',
+                lineHeight: '1.2'
+              }}>Leg Count Performance</div>
+              <div style={{ 
+                fontSize: '24px', 
+                color: '#9ca3af',
+                lineHeight: '1.3'
+              }}>{stats.legCount.num_legs} Leg Bets</div>
             </div>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
-                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+            <div style={{ display: 'flex', gap: '32px' }}>
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Win Rate</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: '#60a5fa',
+                  lineHeight: '1.1'
+                }}>
                   {(stats.legCount.win_rate * 100).toFixed(1)}%
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
-                <div className="text-6xl font-bold text-white">
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Total Bets</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: 'white',
+                  lineHeight: '1.1'
+                }}>
                   {stats.legCount.bet_count}
                 </div>
               </div>
@@ -395,28 +604,60 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         {/* Stake Range Stats */}
         {stats.stakeRange && stats.stakeRange.win_rate > 0 && (
           <div 
-            className="rounded-3xl p-12 border-2"
             style={{
+              borderRadius: '24px',
+              padding: '48px',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              marginBottom: '32px',
             }}
           >
-            <div className="text-center mb-8">
-              <div className="text-4xl font-bold text-gray-300 mb-2">Stake Range Performance</div>
-              <div className="text-2xl text-gray-400">${stats.stakeRange.range} Stakes</div>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <div style={{ 
+                fontSize: '36px', 
+                fontWeight: 'bold', 
+                color: '#d1d5db', 
+                marginBottom: '8px',
+                lineHeight: '1.2'
+              }}>Stake Range Performance</div>
+              <div style={{ 
+                fontSize: '24px', 
+                color: '#9ca3af',
+                lineHeight: '1.3'
+              }}>${stats.stakeRange.range} Stakes</div>
             </div>
-            <div className="grid grid-cols-2 gap-8">
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Win Rate</div>
-                <div className="text-6xl font-bold" style={{ color: '#60a5fa' }}>
+            <div style={{ display: 'flex', gap: '32px' }}>
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Win Rate</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: '#60a5fa',
+                  lineHeight: '1.1'
+                }}>
                   {(stats.stakeRange.win_rate * 100).toFixed(1)}%
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl text-gray-400 mb-2">Total Bets</div>
-                <div className="text-6xl font-bold text-white">
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  fontSize: '30px', 
+                  color: '#9ca3af', 
+                  marginBottom: '8px',
+                  lineHeight: '1.2'
+                }}>Total Bets</div>
+                <div style={{ 
+                  fontSize: '60px', 
+                  fontWeight: 'bold', 
+                  color: 'white',
+                  lineHeight: '1.1'
+                }}>
                   {stats.stakeRange.total_bets}
                 </div>
               </div>
@@ -447,16 +688,29 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         
         return !hasAnyStats ? (
           <div 
-            className="rounded-3xl p-12 mb-14 border-2 text-center"
             style={{
+              borderRadius: '24px',
+              padding: '48px',
+              marginBottom: '56px',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
+              textAlign: 'center',
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
             }}
           >
-            <div className="text-4xl font-bold text-gray-300 mb-4">No Stats Available</div>
-            <div className="text-2xl text-gray-400">
+            <div style={{ 
+              fontSize: '36px', 
+              fontWeight: 'bold', 
+              color: '#d1d5db', 
+              marginBottom: '16px',
+              lineHeight: '1.2'
+            }}>No Stats Available</div>
+            <div style={{ 
+              fontSize: '24px', 
+              color: '#9ca3af',
+              lineHeight: '1.3'
+            }}>
               Not enough data for performance metrics
             </div>
           </div>
@@ -464,14 +718,26 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
       })()}
 
       {/* Footer */}
-      <div className="mt-20 pt-12 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
-        <div className="text-center">
-          <div className="text-4xl text-gray-400 font-semibold mb-4">Generated by</div>
+      <div style={{ 
+        marginTop: '80px', 
+        paddingTop: '48px', 
+        borderTop: '1px solid rgba(255, 255, 255, 0.15)' 
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            fontSize: '36px', 
+            color: '#9ca3af', 
+            fontWeight: '600', 
+            marginBottom: '16px',
+            lineHeight: '1.2'
+          }}>Generated by</div>
           <div 
-            className="text-6xl font-bold"
             style={{
+              fontSize: '60px',
+              fontWeight: 'bold',
               color: '#60a5fa',
               textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
+              lineHeight: '1.1'
             }}
           >
             BetTracer

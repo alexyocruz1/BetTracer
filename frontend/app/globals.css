@@ -72,3 +72,40 @@ input[type="reset"] {
   }
 }
 
+/* Hide number input spinners on all browsers */
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none; /* Chrome, Safari, Edge */
+  margin: 0;
+}
+
+/* Force consistent image generation across devices */
+.image-generation-container {
+  /* Override any responsive classes during image generation */
+  --tw-scale-x: 1 !important;
+  --tw-scale-y: 1 !important;
+  --tw-translate-x: 0 !important;
+  --tw-translate-y: 0 !important;
+  /* Ensure consistent font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Force hardware acceleration for consistent rendering */
+  transform: translateZ(0);
+  /* Prevent any layout shifts */
+  contain: layout style paint;
+  /* Force desktop-like rendering */
+  zoom: 1 !important;
+  min-width: 1080px !important;
+  max-width: 1080px !important;
+  /* Prevent viewport-based scaling */
+  position: relative !important;
+  /* Ensure consistent box model */
+  box-sizing: border-box !important;
+  /* Force consistent line heights */
+  line-height: 1.5 !important;
+}
+

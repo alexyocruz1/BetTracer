@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 import { AnalyticsSummary, AnalyticsByLeague, AnalyticsByResponsible, AnalyticsByBetType, AnalyticsByCategory, TimeSeriesData, LegAnalytics, OddsAnalysis, TeamPerformance, BestWorstPerformers, StreakAnalysis, ResponsibleDetailedAnalytics, AnalyticsByLegs, TemporalAnalytics, StakeAnalysis, CombinationAnalytics, RiskMetrics, PeriodComparison, EVAnalysis, RecoveryAnalysis, BankrollAnalysis, FrequencyAnalysis } from '@/types';
+import { useTheme } from '@/contexts/theme-context';
 import {
   LineChart,
   Line,
@@ -18,6 +19,7 @@ import {
 import MLScenarioSimulator from '@/components/analytics/MLScenarioSimulator';
 
 export default function AnalyticsPage() {
+  const { theme } = useTheme();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [byLeague, setByLeague] = useState<AnalyticsByLeague[]>([]);
   const [byResponsible, setByResponsible] = useState<AnalyticsByResponsible[]>([]);
@@ -300,6 +302,7 @@ export default function AnalyticsPage() {
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
+              aria-label="Start Date"
             />
           </div>
           <div>
@@ -309,6 +312,7 @@ export default function AnalyticsPage() {
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
+              aria-label="End Date"
             />
           </div>
           <div>
@@ -317,6 +321,7 @@ export default function AnalyticsPage() {
               value={granularity}
               onChange={(e) => setGranularity(e.target.value as 'daily' | 'weekly' | 'monthly' | 'all-time')}
               className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
+              aria-label="Time Period"
             >
               <option value="all-time">All Time</option>
               <option value="daily">Daily</option>
@@ -385,7 +390,7 @@ export default function AnalyticsPage() {
           {/* Bar Chart for Profit by League */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit by League</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byLeague}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
@@ -411,7 +416,7 @@ export default function AnalyticsPage() {
           {/* ROI Chart */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">ROI by League</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byLeague}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
@@ -489,7 +494,7 @@ export default function AnalyticsPage() {
           {/* Bar Chart for ROI by Legs */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">ROI by Number of Legs</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byLegs}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
@@ -518,7 +523,7 @@ export default function AnalyticsPage() {
           {/* Bar Chart for Win Rate by Legs */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Win Rate by Number of Legs</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byLegs}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
@@ -659,7 +664,7 @@ export default function AnalyticsPage() {
           {/* Bar Chart for ROI by Responsible */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">ROI by Responsible</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byResponsible}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
@@ -686,7 +691,7 @@ export default function AnalyticsPage() {
           {/* Bar Chart for Win Rate by Responsible */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Win Rate by Responsible</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byResponsible}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
@@ -713,7 +718,7 @@ export default function AnalyticsPage() {
           {/* Bar Chart for Profit by Responsible */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit by Responsible</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byResponsible}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
@@ -963,7 +968,7 @@ export default function AnalyticsPage() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {responsible.performance_by_leg_count.map((legStat) => (
+                        {responsible.performance_by_leg_count.map((legStat: { num_legs: number; bet_count: number; win_rate: number; total_profit: number; roi: number; total_stake: number }) => (
                           <tr key={`${responsible.responsible_id}-${legStat.num_legs}`}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">
                               {legStat.num_legs}
@@ -1115,7 +1120,7 @@ export default function AnalyticsPage() {
           {/* Bar Chart for Profit by Bet Type */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit by Bet Type</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byBetType}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
@@ -1194,7 +1199,7 @@ export default function AnalyticsPage() {
           {/* Bar Chart for Profit by Category */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit by Category (Top 20)</h3>
-            <ResponsiveContainer width="100%" height={400}>
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={byCategory.slice(0, 20).sort((a, b) => b.total_profit - a.total_profit)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis
@@ -1327,7 +1332,7 @@ export default function AnalyticsPage() {
           <h2 className="text-xl font-bold text-gray-900 mb-6">Odds Analysis</h2>
           
           <div className="mb-6">
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={oddsAnalysis}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="range" tick={{ fontSize: 12 }} />
@@ -1605,7 +1610,7 @@ export default function AnalyticsPage() {
           {/* Cumulative Profit Chart */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">Cumulative Profit</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <LineChart
                 data={timeSeries
                   .map((item) => ({
@@ -1790,7 +1795,7 @@ export default function AnalyticsPage() {
           </p>
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">ROI by Stake Range</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={stakeAnalysis}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="stake_range" tick={{ fontSize: 12 }} />
@@ -1847,7 +1852,7 @@ export default function AnalyticsPage() {
           {temporal.by_day_of_week.length > 0 && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-700 mb-4">Performance by Day of Week</h3>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={temporal.by_day_of_week}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} />
@@ -1998,7 +2003,7 @@ export default function AnalyticsPage() {
           {bankroll.bankroll_history.length > 0 && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-700 mb-4">Bankroll History</h3>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={bankroll.bankroll_history}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="date" tick={{ fontSize: 12 }} />
@@ -2035,7 +2040,7 @@ export default function AnalyticsPage() {
           {frequency.bets_per_day.length > 0 && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-700 mb-4">Bets Per Day</h3>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={frequency.bets_per_day.slice(-30)}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />

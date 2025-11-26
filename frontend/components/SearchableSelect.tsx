@@ -112,7 +112,7 @@ export default function SearchableSelect({
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2.5 pr-8 text-base sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2.5 pr-8 text-base sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent min-h-[44px]"
           required={required && !value}
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-2">
@@ -120,7 +120,7 @@ export default function SearchableSelect({
             <button
               type="button"
               onClick={handleClear}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 mr-1"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 mr-1 min-h-[32px] min-w-[32px] flex items-center justify-center"
               aria-label="Clear selection"
             >
               <svg

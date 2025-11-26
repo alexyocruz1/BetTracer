@@ -262,6 +262,22 @@ export interface ResponsibleDetailedAnalytics {
         win_rate: number;
         bet_count: number;
     }>;
+    performance_by_leg_count: Array<{
+        num_legs: number;
+        bet_count: number;
+        win_rate: number;
+        total_profit: number;
+        roi: number;
+        total_stake: number;
+    }>;
+    best_leg_count: {
+        num_legs: number;
+        bet_count: number;
+        win_rate: number;
+        total_profit: number;
+        roi: number;
+        total_stake: number;
+    } | null;
 }
 export interface MLPredictRequest {
     legs: MLPredictLeg[];

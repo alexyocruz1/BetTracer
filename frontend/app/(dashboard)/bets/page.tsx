@@ -187,13 +187,13 @@ export default function BetsPage() {
 
   return (
     <div className="px-4 py-6 sm:px-0">
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Bets</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Bets</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400"
             View and manage your bets
             {totalBets > 0 && (
-              <span className="ml-2 text-gray-500">
+              <span className="block sm:inline sm:ml-2 text-gray-500 mt-1 sm:mt-0">
                 (Showing {((currentPage - 1) * limit) + 1}-{Math.min(currentPage * limit, totalBets)} of {totalBets})
               </span>
             )}
@@ -201,17 +201,17 @@ export default function BetsPage() {
         </div>
         <Link
           href="/bets/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700"
+          className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 min-h-[44px] w-full sm:w-auto"
         >
           New Bet
         </Link>
       </div>
 
       {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-4 mb-6">
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
             <input
               type="date"
               value={startDate}
@@ -219,11 +219,11 @@ export default function BetsPage() {
                 setStartDate(e.target.value);
                 handleFilterChange();
               }}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent min-h-[44px]"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
             <input
               type="date"
               value={endDate}
@@ -231,18 +231,18 @@ export default function BetsPage() {
                 setEndDate(e.target.value);
                 handleFilterChange();
               }}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent min-h-[44px]"
             />
           </div>
-          <div className="flex-1 min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State</label>
             <select
               value={stateFilter}
               onChange={(e) => {
                 setStateFilter(e.target.value);
                 handleFilterChange();
               }}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent min-h-[44px]"
             >
               <option value="">All States</option>
               <option value="pending">Pending</option>
@@ -252,17 +252,19 @@ export default function BetsPage() {
             </select>
           </div>
           {(startDate || endDate || stateFilter) && (
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Clear Filters
-            </button>
+            <div className="flex items-end">
+              <button
+                onClick={clearFilters}
+                className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 min-h-[44px]"
+              >
+                Clear Filters
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {bets.map((bet) => {
           const responsibles = getResponsiblesForBet(bet);
           const profitLoss = bet.profit_loss !== null && bet.profit_loss !== undefined ? bet.profit_loss : null;
@@ -273,8 +275,8 @@ export default function BetsPage() {
             switch (bet.state) {
               case 'won':
                 return {
-                  bg: 'bg-green-50 border-green-200',
-                  badge: 'bg-green-100 text-green-800',
+                  bg: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800',
+                  badge: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
                   icon: (
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -283,8 +285,8 @@ export default function BetsPage() {
                 };
               case 'lost':
                 return {
-                  bg: 'bg-red-50 border-red-200',
-                  badge: 'bg-red-100 text-red-800',
+                  bg: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
+                  badge: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
                   icon: (
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -293,8 +295,8 @@ export default function BetsPage() {
                 };
               case 'void':
                 return {
-                  bg: 'bg-gray-50 border-gray-200',
-                  badge: 'bg-gray-100 text-gray-800',
+                  bg: 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700',
+                  badge: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300',
                   icon: (
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -303,8 +305,8 @@ export default function BetsPage() {
                 };
               default:
                 return {
-                  bg: 'bg-yellow-50 border-yellow-200',
-                  badge: 'bg-yellow-100 text-yellow-800',
+                  bg: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800',
+                  badge: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300',
                   icon: (
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
@@ -320,7 +322,7 @@ export default function BetsPage() {
             <Link
               key={bet.id}
               href={`/bets/${bet.id}`}
-              className={`block bg-white rounded-lg border-2 ${stateConfig.bg} shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.01] overflow-hidden`}
+              className={`block bg-white dark:bg-gray-800 rounded-lg border-2 ${stateConfig.bg} shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.01] overflow-hidden`}
             >
               <div className="p-5">
                 {/* Header Row */}
@@ -335,7 +337,7 @@ export default function BetsPage() {
                           {bet.state.toUpperCase()}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {new Date(bet.date).toLocaleDateString('en-US', { 
                           month: 'short', 
                           day: 'numeric', 
@@ -357,18 +359,18 @@ export default function BetsPage() {
                 </div>
 
                 {/* Main Stats Grid */}
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="bg-white/60 rounded-lg p-3 border border-gray-200">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Stake</div>
-                    <div className="text-lg font-bold text-gray-900">${bet.stake.toFixed(2)}</div>
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
+                  <div className="bg-white/60 dark:bg-gray-700/60 rounded-lg p-2 sm:p-3 border border-gray-200 dark:border-gray-600">
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Stake</div>
+                    <div className="text-sm sm:text-lg font-bold text-gray-900 dark:text-gray-100">${bet.stake.toFixed(2)}</div>
                   </div>
-                  <div className="bg-white/60 rounded-lg p-3 border border-gray-200">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Odds</div>
-                    <div className="text-lg font-bold text-primary-600">{bet.odds?.toFixed(2)}x</div>
+                  <div className="bg-white/60 dark:bg-gray-700/60 rounded-lg p-2 sm:p-3 border border-gray-200 dark:border-gray-600">
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Odds</div>
+                    <div className="text-sm sm:text-lg font-bold text-primary-600 dark:text-primary-400">{bet.odds?.toFixed(2)}x</div>
                   </div>
-                  <div className="bg-white/60 rounded-lg p-3 border border-gray-200">
+                  <div className="bg-white/60 dark:bg-gray-700/60 rounded-lg p-2 sm:p-3 border border-gray-200 dark:border-gray-600">
                     <div className="text-xs font-medium text-gray-500 mb-1">Legs</div>
-                    <div className="text-lg font-bold text-gray-900">{bet.legs?.length || 0}</div>
+                    <div className="text-sm sm:text-lg font-bold text-gray-900">{bet.legs?.length || 0}</div>
                   </div>
                 </div>
 

@@ -69,24 +69,28 @@ export function MLScenarioSimulator() {
         </button>
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
-        <div className="md:col-span-1">
+      <div className="mt-4 grid gap-4 sm:grid-cols-1 lg:grid-cols-3">
+        <div className="lg:col-span-1">
           <label className="block text-xs font-medium text-gray-600">
             Stake (bankroll units)
           </label>
           <input
-            type="number"
-            min={1}
-            step={1}
-            value={stake}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={stake.toString()}
             onChange={(e) => {
-              setStake(Number(e.target.value) || 0);
-              reset();
+              const value = e.target.value;
+              if (value === '' || /^\d+$/.test(value)) {
+                setStake(Number(value) || 0);
+                reset();
+              }
             }}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            placeholder="50"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm min-h-[44px]"
           />
         </div>
-        <div className="md:col-span-2">
+        <div className="lg:col-span-2">
           <label className="block text-xs font-medium text-gray-600">
             Legs (decimal odds)
           </label>
@@ -94,18 +98,24 @@ export function MLScenarioSimulator() {
             {legs.map((leg, index) => (
               <div key={index} className="flex items-center gap-2">
                 <input
-                  type="number"
-                  min={1}
-                  step={0.01}
-                  value={leg.odd}
-                  onChange={(e) => updateLeg(index, Number(e.target.value) || 0)}
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*\.?[0-9]*"
+                  value={leg.odd.toString()}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      updateLeg(index, Number(value) || 0);
+                    }
+                  }}
+                  placeholder="2.00"
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm min-h-[44px]"
                 />
                 {legs.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeLeg(index)}
-                    className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 min-h-[44px] flex items-center justify-center"
                   >
                     Remove
                   </button>
@@ -116,7 +126,7 @@ export function MLScenarioSimulator() {
           <button
             type="button"
             onClick={addLeg}
-            className="mt-2 text-xs font-semibold text-primary-600 hover:text-primary-700"
+            className="mt-2 text-xs font-semibold text-primary-600 hover:text-primary-700 min-h-[44px] flex items-center"
           >
             + Add another leg
           </button>

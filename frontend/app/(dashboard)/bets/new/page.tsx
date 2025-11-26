@@ -296,7 +296,7 @@ export default function NewBetPage() {
 
   return (
     <div className="px-4 py-6 sm:px-0">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">New Bet</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">New Bet</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700">Date</label>
@@ -328,20 +328,26 @@ export default function NewBetPage() {
                 setFormData({ ...formData, date: localDate.toISOString() });
               }
             }}
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm min-h-[44px]"
             required
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Stake *</label>
           <input
-            type="number"
-            step="0.01"
-            min="0.01"
+            type="text"
             inputMode="decimal"
-            value={formData.stake}
-            onChange={(e) => setFormData({ ...formData, stake: parseFloat(e.target.value) || 0 })}
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
+            pattern="[0-9]*\.?[0-9]*"
+            value={formData.stake.toString()}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty string or valid decimal numbers
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setFormData({ ...formData, stake: parseFloat(value) || 0 });
+              }
+            }}
+            placeholder="10.00"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900 min-h-[44px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             required
           />
         </div>
@@ -351,14 +357,13 @@ export default function NewBetPage() {
             <div>
               <label className="block text-xs text-gray-500 mb-1">Decimal</label>
               <input
-                type="number"
-                step="0.01"
-                min="1"
+                type="text"
                 inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
                 value={mainBetDecimalOdds}
                 onChange={(e) => updateMainBetDecimalOdds(e.target.value)}
                 placeholder="2.50"
-                className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
+                className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900 min-h-[44px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
             <div>
@@ -383,7 +388,7 @@ export default function NewBetPage() {
             value={formData.notes || ''}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value || undefined })}
             rows={3}
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm min-h-[44px]"
             placeholder="Add any notes about this bet..."
           />
         </div>
@@ -412,7 +417,7 @@ export default function NewBetPage() {
                   <button
                     type="button"
                     onClick={() => removeLeg(index)}
-                    className="text-red-600 hover:text-red-800"
+                    className="text-red-600 hover:text-red-800 min-h-[44px] px-2"
                   >
                     Remove
                   </button>
@@ -515,14 +520,13 @@ export default function NewBetPage() {
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Decimal</label>
                   <input
-                    type="number"
-                    step="0.01"
-                        min="1"
+                    type="text"
                         inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
                         value={leg.odd.toFixed(2)}
                         onChange={(e) => updateLegOdds(index, e.target.value, 'decimal')}
                         placeholder="2.50"
-                        className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
+                        className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900 min-h-[44px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         required
                       />
                     </div>
@@ -534,7 +538,7 @@ export default function NewBetPage() {
                         value={decimalToAmerican(leg.odd) ? formatAmericanOdds(decimalToAmerican(leg.odd)!) : ''}
                         onChange={(e) => updateLegOdds(index, e.target.value, 'american')}
                         placeholder="+150 or -200"
-                        className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
+                        className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900 min-h-[44px]"
                       />
                     </div>
                   </div>
@@ -553,7 +557,7 @@ export default function NewBetPage() {
                       setFormData({ ...formData, legs: newLegs });
                     }}
                     rows={2}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm"
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm min-h-[44px]"
                     placeholder="Add notes about this leg..."
                   />
                 </div>
@@ -563,7 +567,7 @@ export default function NewBetPage() {
           <button
             type="button"
             onClick={addLeg}
-            className="mt-4 text-primary-600 hover:text-primary-800"
+            className="mt-4 text-primary-600 hover:text-primary-800 min-h-[44px] px-2 flex items-center"
           >
             + Add Leg
           </button>

@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center px-2 py-2 text-xl font-bold text-primary-600 dark:text-primary-400">
+              <Link href="/" className="flex items-center px-2 py-2 text-lg sm:text-xl font-bold text-primary-600 dark:text-primary-400">
                 BetTracer
               </Link>
               {/* Desktop Navigation */}
@@ -150,10 +150,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </button>
               {/* Desktop user info */}
               <div className="hidden sm:flex sm:items-center">
-                <span className="text-gray-700 dark:text-gray-300 mr-4 text-sm truncate max-w-[200px]">{user.email}</span>
+                <span className="text-gray-700 dark:text-gray-300 mr-2 lg:mr-4 text-xs sm:text-sm truncate max-w-[120px] lg:max-w-[200px]">{user.email}</span>
                 <button
                   onClick={() => signOut()}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2 lg:px-3 py-2 rounded-md text-xs sm:text-sm font-medium min-h-[44px]"
                 >
                   Sign out
                 </button>

@@ -5,8 +5,10 @@ import { apiClient } from '@/lib/api/client';
 import { AnalyticsSummary, MainBet, StreakAnalysis, BestWorstPerformers, TimeSeriesData } from '@/types';
 import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useTheme } from '@/contexts/theme-context';
 
 export default function DashboardPage() {
+  const { theme } = useTheme();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [recentBets, setRecentBets] = useState<MainBet[]>([]);
   const [streakAnalysis, setStreakAnalysis] = useState<StreakAnalysis | null>(null);
@@ -128,16 +130,16 @@ export default function DashboardPage() {
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               Quick overview of your betting performance. For detailed analytics and breakdowns, visit the Analytics page.
             </p>
           </div>
           <Link
             href="/analytics"
-            className="text-sm font-medium text-primary-600 hover:text-primary-500"
+            className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 min-h-[44px] flex items-center justify-center sm:justify-start"
           >
             View Analytics →
           </Link>
@@ -145,7 +147,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg"
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -157,9 +159,9 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-sm font-medium text-gray-500">Total Profit</div>
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Profit</div>
               {summary.cumulative_profit !== summary.total_profit && (
-                <div className="text-xs text-gray-400 mt-1">
+                <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   Cumulative: ${summary.cumulative_profit.toFixed(2)}
                 </div>
               )}
@@ -167,15 +169,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg"
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="text-2xl font-bold text-gray-900">{(summary.win_rate * 100).toFixed(1)}%</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{(summary.win_rate * 100).toFixed(1)}%</div>
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-sm font-medium text-gray-500">Win Rate</div>
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Win Rate</div>
               <div className="text-xs text-gray-400 mt-1">
                 {summary.won_bets}W / {summary.lost_bets}L
                 {summary.pending_bets > 0 && ` / ${summary.pending_bets}P`}
@@ -184,7 +186,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg"
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -196,20 +198,20 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-sm font-medium text-gray-500">ROI</div>
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">ROI</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg"
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="text-2xl font-bold text-gray-900">{summary.total_bets}</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{summary.total_bets}</div>
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-sm font-medium text-gray-500">Total Bets</div>
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Bets</div>
               <div className="text-xs text-gray-400 mt-1">
                 ${summary.total_stake.toFixed(2)} staked
               </div>
@@ -219,13 +221,13 @@ export default function DashboardPage() {
       </div>
 
       {summary.pending_bets > 0 && (
-        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <span className="text-yellow-600 font-semibold">{summary.pending_bets}</span>
+              <span className="text-yellow-600 dark:text-yellow-400 font-semibold">{summary.pending_bets}</span>
             </div>
             <div className="ml-3">
-              <p className="text-sm text-yellow-800">
+              <p className="text-sm text-yellow-800 dark:text-yellow-300">
                 You have {summary.pending_bets} pending bet{summary.pending_bets > 1 ? 's' : ''}. 
                 <Link href="/bets" className="ml-1 font-medium underline hover:text-yellow-900">
                   View all bets
@@ -245,11 +247,11 @@ export default function DashboardPage() {
               View Details →
             </Link>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className={`px-4 py-3 rounded-lg ${
               streakAnalysis.current_streak.type === 'win' ? 'bg-green-50' : 'bg-red-50'
             }`}>
-              <div className={`text-3xl font-bold ${
+              <div className={`text-2xl sm:text-3xl font-bold ${
                 streakAnalysis.current_streak.type === 'win' ? 'text-green-600' : 'text-red-600'
               }`}>
                 {streakAnalysis.current_streak.length}
@@ -259,11 +261,11 @@ export default function DashboardPage() {
               </div>
             </div>
             {streakAnalysis.recent_bets.length > 0 && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {streakAnalysis.recent_bets.slice(0, 5).map((bet, idx) => (
                   <div
                     key={idx}
-                    className={`px-3 py-2 rounded-full text-xs font-medium ${
+                    className={`px-3 py-2 rounded-full text-xs font-medium min-h-[32px] min-w-[32px] flex items-center justify-center ${
                       bet.state === 'won' ? 'bg-green-100 text-green-800' :
                       bet.state === 'lost' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
@@ -338,22 +340,28 @@ export default function DashboardPage() {
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={timeSeries}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
               <XAxis 
                 dataKey="date" 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: theme === 'dark' ? '#d1d5db' : '#374151' }}
                 tickFormatter={(value) => {
                   const date = new Date(value);
                   return `${date.getMonth() + 1}/${date.getDate()}`;
                 }}
               />
               <YAxis 
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fill: theme === 'dark' ? '#d1d5db' : '#374151' }}
                 tickFormatter={(value) => `$${value.toFixed(0)}`}
               />
               <Tooltip 
                 formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cumulative Profit']}
                 labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                contentStyle={{ 
+                  backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                  border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                  borderRadius: '6px',
+                  color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                }}
               />
               <Line 
                 type="monotone" 
@@ -369,7 +377,7 @@ export default function DashboardPage() {
 
       {/* Top/Bottom Performers */}
       {bestWorst && (
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
           {bestWorst.best_leagues.length > 0 && (
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-md font-semibold text-green-600 mb-3">Top League</h3>
@@ -399,22 +407,22 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-6 flex gap-4">
+      <div className="mt-6 flex flex-col sm:flex-row gap-4">
         <Link
           href="/bets/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700"
+          className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 min-h-[44px]"
         >
           Create New Bet
         </Link>
         <Link
           href="/bets"
-          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+          className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 min-h-[44px]"
         >
           View All Bets
         </Link>
         <Link
           href="/analytics"
-          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+          className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 min-h-[44px]"
         >
           View Analytics
         </Link>
