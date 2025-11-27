@@ -249,22 +249,29 @@ export default function NewBetPage() {
       
       if (format === 'decimal') {
         const parsed = parseFloat(value);
-        if (!isNaN(parsed) && isValidDecimal(parsed)) {
+        // Allow any positive number, even if it's being typed (like "1." or "2.5")
+        if (!isNaN(parsed) && parsed > 0) {
           decimal = parsed;
+        } else if (value === '' || value === '0' || value.endsWith('.')) {
+          // Allow empty, zero, or decimal point while typing
+          decimal = parseFloat(value) || 1; // Default to 1 if empty/invalid
         } else {
-          // If invalid, keep current value
+          // Keep current value if completely invalid
           return { ...leg };
         }
       } else {
         const cleanValue = value.replace('+', '');
         const american = parseFloat(cleanValue);
-        if (!isNaN(american) && isValidAmerican(american)) {
+        if (!isNaN(american)) {
           const converted = americanToDecimal(american);
-          if (converted) {
+          if (converted && converted > 0) {
             decimal = converted;
           } else {
             return { ...leg };
           }
+        } else if (value === '' || value === '+' || value === '-') {
+          // Allow partial input while typing
+          decimal = leg.odd; // Keep current value
         } else {
           return { ...leg };
         }

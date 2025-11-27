@@ -83,7 +83,7 @@ export function MLScenarioSimulator() {
               const value = e.target.value;
               if (value === '' || /^\d+$/.test(value)) {
                 setStake(Number(value) || 0);
-                reset();
+              reset();
               }
             }}
             placeholder="50"

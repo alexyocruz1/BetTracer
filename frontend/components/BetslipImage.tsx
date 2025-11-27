@@ -51,6 +51,101 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
     });
   };
 
+  // Calculate optimal layout based on number of legs
+  const getOptimalBetslipLayout = (legCount: number) => {
+    // Estimate space needed per leg (including padding and content) - increased estimates
+    const baseLegHeight = 180; // Base height per leg (increased from 120)
+    const legSpacing = 32; // Space between legs
+    const headerHeight = 250; // Header space (increased)
+    const summaryHeight = 200; // Summary section (increased)
+    const footerHeight = 150; // Footer space (increased)
+    const padding = 120; // Top/bottom padding
+    
+    // Calculate content height
+    const legsContentHeight = legCount * baseLegHeight + (legCount - 1) * legSpacing;
+    const totalContentHeight = headerHeight + legsContentHeight + summaryHeight + footerHeight + padding;
+    
+    // Determine layout based on content needs
+    if (legCount <= 3) {
+      // Few legs - generous spacing
+      return {
+        height: '1920px', // Standard TikTok
+        legPadding: '40px',
+        legSpacing: '32px',
+        fontSize: 'large'
+      };
+    } else if (legCount <= 6) {
+      // Medium legs - balanced spacing
+      const calculatedHeight = Math.max(1920, Math.min(2400, totalContentHeight));
+      return {
+        height: `${calculatedHeight}px`,
+        legPadding: '32px',
+        legSpacing: '24px',
+        fontSize: 'medium'
+      };
+    } else {
+      // Many legs - compact spacing
+      const calculatedHeight = Math.max(2000, Math.min(2880, totalContentHeight));
+      return {
+        height: `${calculatedHeight}px`,
+        legPadding: '24px',
+        legSpacing: '16px',
+        fontSize: 'small'
+      };
+    }
+  };
+
+  const legCount = bet.legs?.length || 0;
+  const layout = getOptimalBetslipLayout(legCount);
+
+  // Dynamic font sizes based on leg count
+  const getFontSizes = () => {
+    if (legCount <= 3) {
+      return {
+        headerDate: 'text-6xl',
+        headerID: 'text-xl',
+        status: 'text-3xl',
+        statLabel: 'text-3xl',
+        statValue: 'text-7xl',
+        legTitle: 'text-2xl',
+        legDetails: 'text-lg',
+        legOdds: 'text-4xl'
+      };
+    } else if (legCount <= 6) {
+      return {
+        headerDate: 'text-5xl',
+        headerID: 'text-lg',
+        status: 'text-2xl',
+        statLabel: 'text-2xl',
+        statValue: 'text-6xl',
+        legTitle: 'text-xl',
+        legDetails: 'text-base',
+        legOdds: 'text-3xl'
+      };
+    } else {
+      return {
+        headerDate: 'text-4xl',
+        headerID: 'text-base',
+        status: 'text-xl',
+        statLabel: 'text-xl',
+        statValue: 'text-5xl',
+        legTitle: 'text-lg',
+        legDetails: 'text-sm',
+        legOdds: 'text-2xl'
+      };
+    }
+  };
+
+  const fonts = getFontSizes();
+
+  // Debug logging
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    const estimatedContentHeight = legCount * 120 + (legCount - 1) * parseInt(layout.legSpacing) + 200 + 150 + 100 + 120;
+    console.log(`Betslip Layout: ${legCount} legs → ${layout.height} height`);
+    console.log(`Estimated content height: ${estimatedContentHeight}px`);
+    console.log(`Layout spacing: ${layout.legSpacing}, padding: ${layout.legPadding}`);
+  }
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: 'numeric',
@@ -83,26 +178,29 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
       className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white image-generation-container"
       style={{
         width: '1080px',
-        minHeight: '1920px',
-        padding: '80px 60px',
+        height: layout.height, // Dynamic height based on leg count
+        padding: '60px 40px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         boxSizing: 'border-box',
-        overflow: 'visible',
-        fontSize: '16px', // Fixed base font size
-        lineHeight: '1.5', // Fixed line height
+        overflow: 'hidden',
+        fontSize: '16px',
+        lineHeight: '1.5',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-start', // Natural flow
       }}
     >
       {/* Header */}
-      <div className="text-center mb-14">
+      <div className="text-center mb-10">
         <div className="mb-6">
-          <div className="text-6xl text-white font-bold mb-2">{formatDate(bet.date)}</div>
+          <div className={`${fonts.headerDate} text-white font-bold mb-2`}>{formatDate(bet.date)}</div>
           {bet.id && (
-            <div className="text-xl text-gray-400 font-mono">ID: {bet.id.slice(0, 8).toUpperCase()}</div>
+            <div className={`${fonts.headerID} text-gray-400 font-mono`}>ID: {bet.id.slice(0, 8).toUpperCase()}</div>
           )}
         </div>
         {bet.state && (
           <div 
-            className="inline-flex items-center gap-3 px-8 py-3 rounded-full text-3xl font-bold"
+            className={`inline-flex items-center gap-3 px-6 py-2 rounded-full ${fonts.status} font-bold`}
             style={{
               backgroundColor: `${getStateColor(bet.state)}20`,
               color: getStateColor(bet.state),
@@ -128,18 +226,18 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
       >
         <div className="flex justify-between items-start mb-10" style={{ gap: '60px' }}>
           <div className="flex-1" style={{ minWidth: '200px' }}>
-            <div className="text-3xl font-bold mb-4 text-gray-200">Total Odds</div>
-            <div className="text-7xl font-black" style={{ color: '#fbbf24' }}>
+            <div className={`${fonts.statLabel} font-bold mb-4 text-gray-200`}>Total Odds</div>
+            <div className={`${fonts.statValue} font-black`} style={{ color: '#fbbf24' }}>
               {bet.odds?.toFixed(2)}x
             </div>
           </div>
           <div className="flex-1 text-center" style={{ minWidth: '200px' }}>
-            <div className="text-3xl font-bold mb-4 text-gray-200">Stake</div>
-            <div className="text-7xl font-bold">${bet.stake.toFixed(2)}</div>
+            <div className={`${fonts.statLabel} font-bold mb-4 text-gray-200`}>Stake</div>
+            <div className={`${fonts.statValue} font-bold`}>${bet.stake.toFixed(2)}</div>
           </div>
           <div className="flex-1 text-right" style={{ minWidth: '200px' }}>
-            <div className="text-3xl font-bold mb-4 text-gray-200">Legs</div>
-            <div className="text-7xl font-bold">{bet.legs?.length || 0}</div>
+            <div className={`${fonts.statLabel} font-bold mb-4 text-gray-200`}>Legs</div>
+            <div className={`${fonts.statValue} font-bold`}>{bet.legs?.length || 0}</div>
           </div>
         </div>
         <div className="pt-8 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}>
@@ -185,12 +283,13 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
       </div>
 
       {/* Legs */}
-      <div className="space-y-8">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: layout.legSpacing, flex: '1', marginBottom: '40px' }}>
         {bet.legs?.map((leg, index) => (
           <div
             key={leg.id}
-            className="rounded-2xl p-10 border-2 relative"
+            className="rounded-2xl border-2 relative"
             style={{
+              padding: layout.legPadding,
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
               borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -226,10 +325,10 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
               <div className="flex-1">
                 {/* Teams */}
                 {(leg.home_team_id || leg.away_team_id) && (
-                  <div className="text-5xl mb-4 font-bold">
+                  <div className={`${fonts.legTitle} mb-4 font-bold`}>
                     <span className="text-white">{getReferenceName(leg.home_team_id)}</span>
                     {leg.home_team_id && leg.away_team_id && (
-                      <span className="mx-6 text-gray-300 font-semibold text-4xl">vs</span>
+                      <span className={`mx-6 text-gray-300 font-semibold ${fonts.legDetails}`}>vs</span>
                     )}
                     <span className="text-white">{getReferenceName(leg.away_team_id)}</span>
                   </div>
@@ -237,7 +336,7 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
 
                 {/* League */}
                 {leg.league_id && (
-                  <div className="text-3xl text-gray-300 mb-4 font-semibold">
+                  <div className={`${fonts.legDetails} text-gray-300 mb-4 font-semibold`}>
                     {getReferenceName(leg.league_id)}
                   </div>
                 )}
@@ -315,9 +414,9 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
 
               {/* Odds */}
               <div className="text-right ml-8 flex-shrink-0">
-                <div className="text-2xl text-gray-300 mb-3 font-semibold">Odds</div>
+                <div className={`${fonts.legDetails} text-gray-300 mb-3 font-semibold`}>Odds</div>
                 <div 
-                  className="text-6xl font-black"
+                  className={`${fonts.legOdds} font-black`}
                   style={{ 
                     color: '#fbbf24',
                     textShadow: '0 2px 8px rgba(251, 191, 36, 0.3)',
@@ -332,11 +431,11 @@ export default function BetslipImage({ bet, onReady }: BetslipImageProps) {
       </div>
 
       {/* Footer */}
-      <div className="mt-20 pt-12 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
-        <div className="text-center">
-          <div className="text-3xl text-gray-400 font-semibold mb-3">Generated by</div>
+      <div style={{ marginTop: 'auto', paddingTop: '32px', borderTop: '1px solid rgba(255, 255, 255, 0.15)' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className={`${fonts.legDetails} text-gray-400 font-semibold mb-3`}>Generated by</div>
           <div 
-            className="text-5xl font-bold"
+            className={`${fonts.statLabel} font-bold`}
             style={{
               color: '#60a5fa',
               textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',

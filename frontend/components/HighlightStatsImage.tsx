@@ -1,7 +1,7 @@
 'use client';
 
-import { MainBet, AnalyticsByLeague, AnalyticsByBetType, AnalyticsByCategory, AnalyticsByLegs, OddsAnalysis, TeamPerformance, StreakAnalysis, ReferenceItem } from '@/types';
-import { useEffect, useRef, useState } from 'react';
+import { MainBet, ReferenceItem } from '@/types';
+import { useEffect, useState, useRef } from 'react';
 import { apiClient } from '@/lib/api/client';
 
 interface HighlightStatsImageProps {
@@ -10,98 +10,173 @@ interface HighlightStatsImageProps {
 }
 
 interface BetSpecificStats {
-  league?: AnalyticsByLeague;
-  betType?: AnalyticsByBetType;
-  category?: AnalyticsByCategory;
-  legCount?: AnalyticsByLegs;
-  stakeRange?: OddsAnalysis;
-  teamPerformance?: TeamPerformance[];
-  streakAnalysis?: StreakAnalysis;
-  referenceItems: Map<string, ReferenceItem>;
+  leaguesStats?: Array<{ league_name: string; win_rate: number; bet_count: number; total_profit: number }>;
+  teamsStats?: Array<{ team_name: string; win_rate: number; total_legs: number; total_profit: number }>;
+  betTypesStats?: Array<{ bet_type_name: string; win_rate: number; bet_count: number; total_profit: number }>;
+  categoriesStats?: Array<{ category_name: string; win_rate: number; bet_count: number; total_profit: number }>;
+  dayOfWeekStats?: { day: string; total_bets: number; win_rate: number; total_profit: number };
+  weekendStats?: { total_bets: number; win_rate: number; total_profit: number };
+  legCountStats?: { win_rate: number; bet_count: number; total_profit: number };
+  stakeRangeStats?: { win_rate: number; bet_count: number; total_profit: number };
+  oddsRangeStats?: { range: string; win_rate: number; total_bets: number; total_profit: number };
 }
 
 export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImageProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [referenceItems, setReferenceItems] = useState<Map<string, ReferenceItem>>(new Map());
   const [stats, setStats] = useState<BetSpecificStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchBetSpecificAnalytics = async () => {
+    const fetchData = async () => {
       try {
-        // Get unique IDs from bet legs
-        const leagueIds = new Set<string>();
-        const betTypeIds = new Set<string>();
-        const categoryIds = new Set<string>();
-        const responsibleIds = new Set<string>();
-
-        const teamIds = new Set<string>();
-        
-        bet.legs?.forEach(leg => {
-          if (leg.league_id) leagueIds.add(leg.league_id);
-          if (leg.bet_type_id) betTypeIds.add(leg.bet_type_id);
-          if (leg.category_id) categoryIds.add(leg.category_id);
-          if (leg.home_team_id) teamIds.add(leg.home_team_id);
-          if (leg.away_team_id) teamIds.add(leg.away_team_id);
-        });
-
-        // Calculate current bet characteristics
-        const currentLegCount = bet.legs?.length || 0;
-        const currentStake = bet.stake;
-
-        // Fetch analytics for each category
-        const [leagueData, betTypeData, categoryData, legData, oddsData, teamData, streakData, referenceData] = await Promise.all([
-          apiClient.get<{ data: AnalyticsByLeague[] }>('/api/analytics/by-league'),
-          apiClient.get<{ data: AnalyticsByBetType[] }>('/api/analytics/by-bet-type'),
-          apiClient.get<{ data: AnalyticsByCategory[] }>('/api/analytics/by-category'),
-          apiClient.get<{ data: AnalyticsByLegs[] }>('/api/analytics/by-legs'),
-          apiClient.get<{ data: OddsAnalysis[] }>('/api/analytics/odds-analysis'),
-          apiClient.get<{ data: TeamPerformance[] }>('/api/analytics/team-performance'),
-          apiClient.get<{ data: StreakAnalysis }>('/api/analytics/streak-analysis'),
+        // Fetch reference items and analytics in parallel
+        const [
+          referenceItemsRes,
+          leaguesRes,
+          teamsRes,
+          betTypesRes,
+          categoriesRes,
+          byLegsRes,
+          stakeAnalysisRes,
+          oddsAnalysisRes,
+          temporalRes
+        ] = await Promise.all([
           apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?limit=1000'),
+          apiClient.get('/api/analytics/by-league'),
+          apiClient.get('/api/analytics/team-performance'),
+          apiClient.get('/api/analytics/by-bet-type'),
+          apiClient.get('/api/analytics/by-category'),
+          apiClient.get('/api/analytics/by-legs'),
+          apiClient.get('/api/analytics/stake-analysis'),
+          apiClient.get('/api/analytics/odds-analysis').catch(() => ({ data: { data: null } })),
+          apiClient.get('/api/analytics/temporal').catch(() => ({ data: { data: null } }))
         ]);
 
-        // Create reference items map
-        const referenceItems = new Map<string, ReferenceItem>();
-        referenceData.data.data.forEach(item => {
-          referenceItems.set(item.id, item);
+        // Build reference items map
+        const itemsMap = new Map<string, ReferenceItem>();
+        referenceItemsRes.data.data.forEach(item => {
+          itemsMap.set(item.id, item);
         });
+        setReferenceItems(itemsMap);
 
-        // Find matching analytics for this bet's characteristics
-        const league = leagueData.data.data.find(l => leagueIds.has(l.league_id));
-        const betType = betTypeData.data.data.find(bt => betTypeIds.has(bt.bet_type_id));
-        const category = categoryData.data.data.find(c => categoryIds.has(c.category_id));
-        
-        // Find leg count analytics for current bet's leg count
-        const legCount = legData.data.data.find(l => l.num_legs === currentLegCount);
-        
-        // Find stake range analytics for current bet's stake
-        const stakeRange = oddsData.data.data.find(o => {
-          // Find the range that contains the current stake
-          const [min, max] = o.range.includes('+') 
-            ? [parseFloat(o.range.replace('+', '')), Infinity]
-            : o.range.split('-').map(parseFloat);
-          return currentStake >= min && (max === Infinity || currentStake <= max);
-        });
+        // Extract bet-specific attributes
+        const legs = bet.legs || [];
+        const uniqueLeagueIds = Array.from(new Set(legs.map(leg => leg.league_id).filter(Boolean)));
+        const uniqueTeamIds = Array.from(new Set([
+          ...legs.map(leg => leg.home_team_id).filter(Boolean),
+          ...legs.map(leg => leg.away_team_id).filter(Boolean)
+        ]));
+        const uniqueBetTypeIds = Array.from(new Set(legs.map(leg => leg.bet_type_id).filter(Boolean)));
+        const uniqueCategoryIds = Array.from(new Set(legs.map(leg => leg.category_id).filter(Boolean)));
+        const numLegs = legs.length;
+        const stake = bet.stake || 0;
+        const odds = bet.odds || 0;
+        const betDate = new Date(bet.date);
+        const dayOfWeek = betDate.getDay();
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = dayNames[dayOfWeek];
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-        // Find team performance for teams in this bet
-        const teamPerformance = teamData.data.data.filter(t => teamIds.has(t.team_id));
+        // Filter leagues stats to only include leagues used in this bet
+        const leaguesStats = (leaguesRes.data.data || [])
+          .filter((league: any) => uniqueLeagueIds.includes(league.league_id))
+          .map((league: any) => ({
+            league_name: league.league_name || 'Unknown',
+            win_rate: league.win_rate || 0,
+            bet_count: league.bet_count || 0,
+            total_profit: league.total_profit || 0
+          }))
+          .filter((league: any) => league.win_rate > 0);
+
+        // Filter teams stats to only include teams used in this bet
+        const teamsStats = (teamsRes.data.data || [])
+          .filter((team: any) => uniqueTeamIds.includes(team.team_id))
+          .map((team: any) => ({
+            team_name: team.team_name || 'Unknown',
+            win_rate: team.total?.win_rate || 0,
+            total_legs: team.total?.total_legs || 0,
+            total_profit: team.total?.total_profit || 0
+          }))
+          .filter((team: any) => team.win_rate > 0 && team.total_legs > 0)
+          .sort((a: any, b: any) => b.total_legs - a.total_legs); // Sort by number of legs (most bets first)
+
+        // Filter bet types stats
+        const betTypesStats = (betTypesRes.data.data || [])
+          .filter((bt: any) => uniqueBetTypeIds.includes(bt.bet_type_id))
+          .map((bt: any) => ({
+            bet_type_name: bt.bet_type_name || 'Unknown',
+            win_rate: bt.win_rate || 0,
+            bet_count: bt.bet_count || 0,
+            total_profit: bt.total_profit || 0
+          }))
+          .filter((bt: any) => bt.win_rate > 0);
+
+        // Filter categories stats
+        const categoriesStats = (categoriesRes.data.data || [])
+          .filter((cat: any) => uniqueCategoryIds.includes(cat.category_id))
+          .map((cat: any) => ({
+            category_name: cat.category_name || 'Unknown',
+            win_rate: cat.win_rate || 0,
+            bet_count: cat.bet_count || 0,
+            total_profit: cat.total_profit || 0
+          }))
+          .filter((cat: any) => cat.win_rate > 0);
+
+        // Find leg count stats for this bet's number of legs
+        const legCountStats = (byLegsRes.data.data || []).find((leg: any) => leg.num_legs === numLegs);
         
-        // Get streak analysis
-        const streakAnalysis = streakData.data.data;
+        // Find stake range stats
+        const stakeRanges = stakeAnalysisRes.data.data || [];
+        let stakeRangeStats = null;
+        for (const range of stakeRanges) {
+          const [min, max] = range.stake_range?.split('-').map(Number) || [];
+          if (stake >= (min || 0) && stake <= (max || Infinity)) {
+            stakeRangeStats = range;
+            break;
+          }
+        }
+
+        // Find odds range stats
+        const oddsRanges = oddsAnalysisRes.data.data || [];
+        let oddsRangeStats = null;
+        if (odds > 0) {
+          for (const range of oddsRanges) {
+            if (odds >= range.min_odds && odds <= range.max_odds) {
+              oddsRangeStats = range;
+              break;
+            }
+          }
+        }
+
+        // Get day of week stats
+        const temporal = temporalRes.data.data;
+        const dayOfWeekStats = temporal?.by_day_of_week?.find((day: any) => day.day_number === dayOfWeek);
+        const weekendStats = isWeekend ? temporal?.weekend_vs_weekday?.weekend : temporal?.weekend_vs_weekday?.weekday;
 
         setStats({
-          league,
-          betType,
-          category,
-          legCount,
-          stakeRange,
-          teamPerformance,
-          streakAnalysis,
-          referenceItems,
+          leaguesStats,
+          teamsStats,
+          betTypesStats,
+          categoriesStats,
+          dayOfWeekStats: dayOfWeekStats ? {
+            day: dayName,
+            total_bets: dayOfWeekStats.total_bets || 0,
+            win_rate: dayOfWeekStats.win_rate || 0,
+            total_profit: dayOfWeekStats.total_profit || 0
+          } : undefined,
+          weekendStats: weekendStats ? weekendStats : undefined,
+          legCountStats: legCountStats ? legCountStats : undefined,
+          stakeRangeStats: stakeRangeStats ? stakeRangeStats : undefined,
+          oddsRangeStats: oddsRangeStats ? oddsRangeStats : undefined
         });
+
+        setLoading(false);
+        if (onReady) {
+          setTimeout(onReady, 100);
+        }
       } catch (error) {
-        console.error('Failed to fetch bet-specific analytics:', error);
-      } finally {
+        console.error('Failed to fetch stats:', error);
         setLoading(false);
         if (onReady) {
           setTimeout(onReady, 100);
@@ -109,39 +184,17 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
       }
     };
 
-    fetchBetSpecificAnalytics();
+    fetchData();
   }, [bet, onReady]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  const getStateColor = (state: string) => {
-    switch (state) {
-      case 'won': return '#4ade80';
-      case 'lost': return '#f87171';
-      case 'void': return '#94a3b8';
-      default: return '#fbbf24';
+  const formatPercentage = (value: number) => {
+    if (typeof value !== 'number' || isNaN(value) || value < 0 || value > 1) {
+      return '0.0%';
     }
+    return `${(value * 100).toFixed(1)}%`;
   };
 
-  const getStateEmoji = (state: string) => {
-    switch (state) {
-      case 'won': return '✅';
-      case 'lost': return '❌';
-      case 'void': return '⚪';
-      default: return '⏳';
-    }
-  };
-
-  const getReferenceName = (id?: string): string => {
-    if (!id || !stats) return 'Unknown';
-    return stats.referenceItems.get(id)?.name || 'Unknown';
-  };
+  const formatCurrency = (value: number) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   if (loading || !stats) {
     return (
@@ -150,7 +203,7 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex items-center justify-center"
         style={{
           width: '1080px',
-          minHeight: '1920px',
+          height: '1920px',
           fontFamily: 'system-ui, -apple-system, sans-serif',
         }}
       >
@@ -159,6 +212,230 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
     );
   }
 
+  // Collect all valid stats
+  const validStats: Array<{ type: string; element: JSX.Element }> = [];
+
+  // 1. League Performance (for leagues used in this bet) - show up to 2
+  stats.leaguesStats?.slice(0, 2).forEach((league, index) => {
+    validStats.push({
+      type: `league-${index}`,
+      element: (
+        <div key={`league-${index}`} className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">{league.league_name} Performance</div>
+              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(league.win_rate)}</div>
+              <div className="text-lg text-gray-400">{league.bet_count} bets</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: league.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(league.win_rate)}
+            </div>
+          </div>
+        </div>
+      )
+    });
+  });
+
+  // 2. Team Performance (for teams used in this bet) - show up to 2
+  stats.teamsStats?.slice(0, 2).forEach((team, index) => {
+    validStats.push({
+      type: `team-${index}`,
+      element: (
+        <div key={`team-${index}`} className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">{team.team_name} Performance</div>
+              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(team.win_rate)}</div>
+              <div className="text-lg text-gray-400">{team.total_legs} legs</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: team.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(team.win_rate)}
+            </div>
+          </div>
+        </div>
+      )
+    });
+  });
+
+  // 3. Bet Type Performance
+  stats.betTypesStats?.slice(0, 2).forEach((betType, index) => {
+    validStats.push({
+      type: `betType-${index}`,
+      element: (
+        <div key={`betType-${index}`} className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">{betType.bet_type_name} Performance</div>
+              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(betType.win_rate)}</div>
+              <div className="text-lg text-gray-400">{betType.bet_count} bets</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: betType.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(betType.win_rate)}
+            </div>
+          </div>
+        </div>
+      )
+    });
+  });
+
+  // 4. Category Performance
+  stats.categoriesStats?.slice(0, 1).forEach((category, index) => {
+    validStats.push({
+      type: `category-${index}`,
+      element: (
+        <div key={`category-${index}`} className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">{category.category_name} Performance</div>
+              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(category.win_rate)}</div>
+              <div className="text-lg text-gray-400">{category.bet_count} bets</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: category.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(category.win_rate)}
+            </div>
+          </div>
+        </div>
+      )
+    });
+  });
+
+  // 5. Day of Week Performance
+  if (stats.dayOfWeekStats) {
+    validStats.push({
+      type: 'dayOfWeek',
+      element: (
+        <div key="dayOfWeek" className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">{stats.dayOfWeekStats.day} Performance</div>
+              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.dayOfWeekStats.win_rate)}</div>
+              <div className="text-lg text-gray-400">{stats.dayOfWeekStats.total_bets} bets</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: stats.dayOfWeekStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(stats.dayOfWeekStats.win_rate)}
+            </div>
+          </div>
+        </div>
+      )
+    });
+  }
+
+  // 6. Weekend/Weekday Performance
+  if (stats.weekendStats) {
+    validStats.push({
+      type: 'weekend',
+      element: (
+        <div key="weekend" className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">
+                {(bet && (new Date(bet.date).getDay() === 0 || new Date(bet.date).getDay() === 6)) ? 'Weekend' : 'Weekday'} Performance
+              </div>
+              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.weekendStats.win_rate)}</div>
+              <div className="text-lg text-gray-400">{stats.weekendStats.total_bets} bets</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: stats.weekendStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(stats.weekendStats.win_rate)}
+            </div>
+          </div>
+        </div>
+      )
+    });
+  }
+
+  // 7. Leg Count Performance
+  if (stats.legCountStats) {
+    validStats.push({
+      type: 'legCount',
+      element: (
+        <div key="legCount" className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">{bet?.legs?.length || 0}-Leg Performance</div>
+              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.legCountStats.win_rate)}</div>
+              <div className="text-lg text-gray-400">{stats.legCountStats.bet_count} bets</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: stats.legCountStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(stats.legCountStats.win_rate)}
+            </div>
+          </div>
+        </div>
+      )
+    });
+  }
+
+  // 8. Stake Range Performance
+  if (stats.stakeRangeStats) {
+    validStats.push({
+      type: 'stakeRange',
+      element: (
+        <div key="stakeRange" className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">Stake Range Performance</div>
+              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.stakeRangeStats.win_rate)}</div>
+              <div className="text-lg text-gray-400">{stats.stakeRangeStats.bet_count} bets</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: stats.stakeRangeStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(stats.stakeRangeStats.win_rate)}
+            </div>
+          </div>
+        </div>
+      )
+    });
+  }
+
+  // 9. Odds Range Performance
+  if (stats.oddsRangeStats) {
+    validStats.push({
+      type: 'oddsRange',
+      element: (
+        <div key="oddsRange" className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">Odds Range Performance</div>
+              <div className="text-xl text-gray-300">{stats.oddsRangeStats.range}x • Win Rate: {formatPercentage(stats.oddsRangeStats.win_rate)}</div>
+              <div className="text-lg text-gray-400">{stats.oddsRangeStats.total_bets} bets</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: stats.oddsRangeStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(stats.oddsRangeStats.win_rate)}
+            </div>
+          </div>
+        </div>
+      )
+    });
+  }
+
+  // Show exactly the first 7 valid stats
+  const statsToShow = validStats.slice(0, 7).map(stat => stat.element);
+
   return (
     <div
       ref={containerRef}
@@ -166,578 +443,41 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
       style={{
         width: '1080px',
         minHeight: '1920px',
-        padding: '80px 60px',
+        padding: '60px 40px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         boxSizing: 'border-box',
         overflow: 'visible',
         fontSize: '16px',
         lineHeight: '1.5',
-        // Force desktop-like rendering regardless of viewport
-        position: 'relative',
-        zoom: '1',
-        transform: 'scale(1)',
-        transformOrigin: 'top left',
-        // Ensure consistent rendering
-        contain: 'layout style paint',
-        isolation: 'isolate',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
       }}
     >
       {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '80px' }}>
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{ 
-            fontSize: '72px', 
-            color: 'white', 
-            fontWeight: 'bold', 
-            marginBottom: '12px',
-            lineHeight: '1.1'
-          }}>Stats</div>
-          <div style={{ 
-            fontSize: '30px', 
-            color: '#d1d5db',
-            lineHeight: '1.2'
-          }}>Performance Breakdown</div>
-        </div>
+      <div className="text-center mb-10">
+        <div className="text-7xl text-white font-bold mb-4">Bet Stats</div>
+        <div className="text-4xl text-gray-300">Performance Statistics</div>
       </div>
 
-      {/* Specific Statistics Grid */}
-      <div style={{ marginBottom: '56px' }}>
-        {/* League Stats */}
-        {stats.league && stats.league.win_rate > 0 && (
-          <div 
-            style={{
-              borderRadius: '24px',
-              padding: '48px',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              marginBottom: '32px',
-            }}
-          >
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <div style={{ 
-                fontSize: '36px', 
-                fontWeight: 'bold', 
-                color: '#d1d5db', 
-                marginBottom: '8px',
-                lineHeight: '1.2'
-              }}>League Performance</div>
-              <div style={{ 
-                fontSize: '24px', 
-                color: '#9ca3af',
-                lineHeight: '1.3'
-              }}>{getReferenceName(stats.league.league_id)}</div>
-            </div>
-            <div style={{ display: 'flex', gap: '32px' }}>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Win Rate</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: '#60a5fa',
-                  lineHeight: '1.1'
-                }}>
-                  {(stats.league.win_rate * 100).toFixed(1)}%
-                </div>
-              </div>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Total Bets</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: 'white',
-                  lineHeight: '1.1'
-                }}>
-                  {stats.league.bet_count}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Bet Type Stats */}
-        {stats.betType && stats.betType.win_rate > 0 && (
-          <div 
-            style={{
-              borderRadius: '24px',
-              padding: '48px',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              marginBottom: '32px',
-            }}
-          >
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <div style={{ 
-                fontSize: '36px', 
-                fontWeight: 'bold', 
-                color: '#d1d5db', 
-                marginBottom: '8px',
-                lineHeight: '1.2'
-              }}>Bet Type Performance</div>
-              <div style={{ 
-                fontSize: '24px', 
-                color: '#9ca3af',
-                lineHeight: '1.3'
-              }}>{getReferenceName(stats.betType.bet_type_id)}</div>
-            </div>
-            <div style={{ display: 'flex', gap: '32px' }}>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Win Rate</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: '#60a5fa',
-                  lineHeight: '1.1'
-                }}>
-                  {(stats.betType.win_rate * 100).toFixed(1)}%
-                </div>
-              </div>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Total Bets</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: 'white',
-                  lineHeight: '1.1'
-                }}>
-                  {stats.betType.bet_count}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Category Stats */}
-        {stats.category && stats.category.win_rate > 0 && (
-          <div 
-            style={{
-              borderRadius: '24px',
-              padding: '48px',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              marginBottom: '32px',
-            }}
-          >
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <div style={{ 
-                fontSize: '36px', 
-                fontWeight: 'bold', 
-                color: '#d1d5db', 
-                marginBottom: '8px',
-                lineHeight: '1.2'
-              }}>Category Performance</div>
-              <div style={{ 
-                fontSize: '24px', 
-                color: '#9ca3af',
-                lineHeight: '1.3'
-              }}>{getReferenceName(stats.category.category_id)}</div>
-            </div>
-            <div style={{ display: 'flex', gap: '32px' }}>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Win Rate</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: '#60a5fa',
-                  lineHeight: '1.1'
-                }}>
-                  {(stats.category.win_rate * 100).toFixed(1)}%
-                </div>
-              </div>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Total Bets</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: 'white',
-                  lineHeight: '1.1'
-                }}>
-                  {stats.category.bet_count}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Team Performance Stats */}
-        {stats.teamPerformance && stats.teamPerformance.length > 0 && (
-          <div 
-            style={{
-              borderRadius: '24px',
-              padding: '48px',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              marginBottom: '32px',
-            }}
-          >
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <div style={{ 
-                fontSize: '36px', 
-                fontWeight: 'bold', 
-                color: '#d1d5db', 
-                marginBottom: '8px',
-                lineHeight: '1.2'
-              }}>Team Performance</div>
-              <div style={{ 
-                fontSize: '24px', 
-                color: '#9ca3af',
-                lineHeight: '1.3'
-              }}>{getReferenceName(stats.teamPerformance[0].team_id)}</div>
-            </div>
-            <div style={{ display: 'flex', gap: '32px' }}>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Win Rate</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: '#60a5fa',
-                  lineHeight: '1.1'
-                }}>
-                  {(stats.teamPerformance[0].total.win_rate * 100).toFixed(1)}%
-                </div>
-              </div>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Total Legs</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: 'white',
-                  lineHeight: '1.1'
-                }}>
-                  {stats.teamPerformance[0].total.total_legs}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Streak Analysis */}
-        {stats.streakAnalysis && (() => {
-          // Calculate recent performance (wins vs losses in recent bets)
-          const recentBets = stats.streakAnalysis.recent_bets || [];
-          const recentWins = recentBets.filter(bet => bet.state === 'won').length;
-          const recentLosses = recentBets.filter(bet => bet.state === 'lost').length;
-          const hasMoreWinsThanLosses = recentWins >= recentLosses;
-          
-          // Only show if current streak is winning OR recent performance is positive
-          const shouldShowStreak = stats.streakAnalysis.current_streak.type === 'win' || hasMoreWinsThanLosses;
-          
-          return shouldShowStreak ? (
-            <div 
-              style={{
-                borderRadius: '24px',
-                padding: '48px',
-                border: '2px solid rgba(255, 255, 255, 0.2)',
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                marginBottom: '32px',
-              }}
-            >
-              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                <div style={{ 
-                  fontSize: '36px', 
-                  fontWeight: 'bold', 
-                  color: '#d1d5db', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Current Streak</div>
-                <div style={{ 
-                  fontSize: '24px', 
-                  color: '#9ca3af',
-                  lineHeight: '1.3'
-                }}>
-                  {stats.streakAnalysis.current_streak.type === 'win' ? '🔥 Winning' : '❄️ Losing'} Streak
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '32px' }}>
-                <div style={{ textAlign: 'center', flex: '1' }}>
-                  <div style={{ 
-                    fontSize: '30px', 
-                    color: '#9ca3af', 
-                    marginBottom: '8px',
-                    lineHeight: '1.2'
-                  }}>Current</div>
-                  <div 
-                    style={{ 
-                      fontSize: '60px', 
-                      fontWeight: 'bold',
-                      lineHeight: '1.1',
-                      color: stats.streakAnalysis.current_streak.type === 'win' ? '#4ade80' : '#f87171'
-                    }}
-                  >
-                    {stats.streakAnalysis.current_streak.length}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'center', flex: '1' }}>
-                  <div style={{ 
-                    fontSize: '30px', 
-                    color: '#9ca3af', 
-                    marginBottom: '8px',
-                    lineHeight: '1.2'
-                  }}>Best Win Streak</div>
-                  <div style={{ 
-                    fontSize: '60px', 
-                    fontWeight: 'bold', 
-                    color: '#fbbf24',
-                    lineHeight: '1.1'
-                  }}>
-                    {stats.streakAnalysis.longest_win_streak.length}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null;
-        })()}
-
-        {/* Leg Count Stats */}
-        {stats.legCount && stats.legCount.win_rate > 0 && (
-          <div 
-            style={{
-              borderRadius: '24px',
-              padding: '48px',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              marginBottom: '32px',
-            }}
-          >
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <div style={{ 
-                fontSize: '36px', 
-                fontWeight: 'bold', 
-                color: '#d1d5db', 
-                marginBottom: '8px',
-                lineHeight: '1.2'
-              }}>Leg Count Performance</div>
-              <div style={{ 
-                fontSize: '24px', 
-                color: '#9ca3af',
-                lineHeight: '1.3'
-              }}>{stats.legCount.num_legs} Leg Bets</div>
-            </div>
-            <div style={{ display: 'flex', gap: '32px' }}>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Win Rate</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: '#60a5fa',
-                  lineHeight: '1.1'
-                }}>
-                  {(stats.legCount.win_rate * 100).toFixed(1)}%
-                </div>
-              </div>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Total Bets</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: 'white',
-                  lineHeight: '1.1'
-                }}>
-                  {stats.legCount.bet_count}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Stake Range Stats */}
-        {stats.stakeRange && stats.stakeRange.win_rate > 0 && (
-          <div 
-            style={{
-              borderRadius: '24px',
-              padding: '48px',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              marginBottom: '32px',
-            }}
-          >
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <div style={{ 
-                fontSize: '36px', 
-                fontWeight: 'bold', 
-                color: '#d1d5db', 
-                marginBottom: '8px',
-                lineHeight: '1.2'
-              }}>Stake Range Performance</div>
-              <div style={{ 
-                fontSize: '24px', 
-                color: '#9ca3af',
-                lineHeight: '1.3'
-              }}>${stats.stakeRange.range} Stakes</div>
-            </div>
-            <div style={{ display: 'flex', gap: '32px' }}>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Win Rate</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: '#60a5fa',
-                  lineHeight: '1.1'
-                }}>
-                  {(stats.stakeRange.win_rate * 100).toFixed(1)}%
-                </div>
-              </div>
-              <div style={{ textAlign: 'center', flex: '1' }}>
-                <div style={{ 
-                  fontSize: '30px', 
-                  color: '#9ca3af', 
-                  marginBottom: '8px',
-                  lineHeight: '1.2'
-                }}>Total Bets</div>
-                <div style={{ 
-                  fontSize: '60px', 
-                  fontWeight: 'bold', 
-                  color: 'white',
-                  lineHeight: '1.1'
-                }}>
-                  {stats.stakeRange.total_bets}
-                </div>
-              </div>
-            </div>
+      {/* Stats Grid */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', flex: '1', marginBottom: '40px' }}>
+        {statsToShow.length > 0 ? statsToShow : (
+          <div className="text-center text-3xl text-gray-400 py-20">
+            No statistics available for this bet
           </div>
         )}
       </div>
-
-      {/* Summary Message */}
-      {(() => {
-        // Check if streak should be shown
-        const shouldShowStreak = stats.streakAnalysis && (
-          stats.streakAnalysis.current_streak.type === 'win' || 
-          (stats.streakAnalysis.recent_bets || []).filter(bet => bet.state === 'won').length >= 
-          (stats.streakAnalysis.recent_bets || []).filter(bet => bet.state === 'lost').length
-        );
-        
-        // Check if we have any stats to show
-        const hasAnyStats = (
-          (stats.league && stats.league.win_rate > 0) ||
-          (stats.betType && stats.betType.win_rate > 0) ||
-          (stats.category && stats.category.win_rate > 0) ||
-          (stats.legCount && stats.legCount.win_rate > 0) ||
-          (stats.stakeRange && stats.stakeRange.win_rate > 0) ||
-          (stats.teamPerformance && stats.teamPerformance.length > 0) ||
-          shouldShowStreak
-        );
-        
-        return !hasAnyStats ? (
-          <div 
-            style={{
-              borderRadius: '24px',
-              padding: '48px',
-              marginBottom: '56px',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              textAlign: 'center',
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-            }}
-          >
-            <div style={{ 
-              fontSize: '36px', 
-              fontWeight: 'bold', 
-              color: '#d1d5db', 
-              marginBottom: '16px',
-              lineHeight: '1.2'
-            }}>No Stats Available</div>
-            <div style={{ 
-              fontSize: '24px', 
-              color: '#9ca3af',
-              lineHeight: '1.3'
-            }}>
-              Not enough data for performance metrics
-            </div>
-          </div>
-        ) : null;
-      })()}
 
       {/* Footer */}
-      <div style={{ 
-        marginTop: '80px', 
-        paddingTop: '48px', 
-        borderTop: '1px solid rgba(255, 255, 255, 0.15)' 
-      }}>
+      <div style={{ marginTop: 'auto', paddingTop: '32px', borderTop: '1px solid rgba(255, 255, 255, 0.15)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            fontSize: '36px', 
-            color: '#9ca3af', 
-            fontWeight: '600', 
-            marginBottom: '16px',
-            lineHeight: '1.2'
-          }}>Generated by</div>
+          <div className="text-3xl text-gray-400 font-semibold mb-3">Generated by</div>
           <div 
+            className="text-5xl font-bold"
             style={{
-              fontSize: '60px',
-              fontWeight: 'bold',
               color: '#60a5fa',
               textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
-              lineHeight: '1.1'
             }}
           >
             BetTracer
@@ -747,4 +487,3 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
     </div>
   );
 }
-

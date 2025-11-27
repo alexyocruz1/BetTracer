@@ -226,7 +226,16 @@ export default function BetDetailPage() {
         // Calculate scale to fit entire image in viewport
         const availableHeight = height - 200; // Account for header and padding
         const availableWidth = width - 32; // Account for padding
-        const scaleByHeight = availableHeight / 1920;
+        
+        // Get actual image height (try stats first, fallback to betslip, then default)
+        let imageHeight = 1920; // Default
+        if (statsRef.current?.scrollHeight) {
+          imageHeight = statsRef.current.scrollHeight;
+        } else if (betslipRef.current?.scrollHeight) {
+          imageHeight = betslipRef.current.scrollHeight;
+        }
+        
+        const scaleByHeight = availableHeight / imageHeight;
         const scaleByWidth = availableWidth / 1080;
         return Math.min(scaleByHeight, scaleByWidth, 0.8); // Max 80% to ensure some margin
       } else {
@@ -243,8 +252,14 @@ export default function BetDetailPage() {
 
     updateScale();
     window.addEventListener('resize', updateScale);
+    
+    // Recalculate when content changes (stats or betslip ready)
+    if (statsReady || betslipReady) {
+      setTimeout(updateScale, 100); // Small delay to ensure DOM is updated
+    }
+    
     return () => window.removeEventListener('resize', updateScale);
-  }, [fitToScreen]);
+  }, [fitToScreen, statsReady, betslipReady]);
 
   const updateState = async (state: 'won' | 'lost' | 'void') => {
     if (!bet || updating) return; // Prevent double-clicks and concurrent updates
@@ -335,7 +350,7 @@ export default function BetDetailPage() {
       const dataUrl = await toPng(betslipRef.current, {
         pixelRatio: 2, // 2x scale for high quality (2160px wide, perfect for TikTok)
         width: 1080,
-        height: betslipRef.current.scrollHeight,
+        height: betslipRef.current.scrollHeight, // Dynamic height based on leg count
         style: {
           transform: 'scale(1)',
           transformOrigin: 'top left',
@@ -351,8 +366,9 @@ export default function BetDetailPage() {
         quality: 1.0,
       });
 
+      // Download with TikTok-optimized filename
       const link = document.createElement('a');
-      link.download = `betslip-${bet.id}-${new Date().toISOString().split('T')[0]}.png`;
+      link.download = `betslip-tiktok-${bet.id}-${new Date().toISOString().split('T')[0]}.png`;
       link.href = dataUrl;
       link.click();
 
@@ -390,52 +406,101 @@ export default function BetDetailPage() {
     try {
       setGeneratingStats(true);
       
-      // Add delay to ensure all fonts and styles are loaded
+      // Add delay to ensure all fonts and styles are loaded (same as betslip)
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Use html-to-image which handles CSS better than html2canvas
-      const dataUrl = await toPng(statsRef.current, {
+      // Find the actual component container (image-generation-container) inside the wrapper
+      // Find the actual component container - navigate through wrapper structure
+      const wrapper = statsRef.current;
+      if (!wrapper) {
+        throw new Error('Stats ref is null');
+      }
+      
+      // Find the actual .image-generation-container component
+      // It's nested: wrapper div -> inner wrapper div -> HighlightStatsImage component
+      const innerWrapper = wrapper.firstElementChild as HTMLElement;
+      const componentWrapper = innerWrapper?.firstElementChild as HTMLElement;
+      const actualComponent = componentWrapper?.querySelector('.image-generation-container') as HTMLElement || componentWrapper;
+      
+      if (!actualComponent) {
+        throw new Error('Could not find statistics component. Check console for structure details.');
+      }
+      
+      // Save all transform styles to restore later
+      const stylesToRestore = {
+        wrapper: {
+          transform: wrapper.style.transform,
+          minWidth: wrapper.style.minWidth,
+          width: wrapper.style.width,
+          display: wrapper.style.display,
+          justifyContent: wrapper.style.justifyContent,
+        },
+        innerWrapper: innerWrapper ? {
+          transform: innerWrapper.style.transform,
+          marginBottom: innerWrapper.style.marginBottom,
+        } : null,
+      };
+      
+      // Remove all transforms/scales temporarily for accurate measurement
+      wrapper.style.transform = 'none';
+      wrapper.style.minWidth = '';
+      wrapper.style.width = '1080px';
+      wrapper.style.display = 'block';
+      wrapper.style.justifyContent = 'flex-start';
+      
+      if (innerWrapper) {
+        innerWrapper.style.transform = 'none';
+        innerWrapper.style.marginBottom = '0';
+      }
+      
+      // Wait for reflow
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Capture the actual component (exactly like old working version)
+      const dataUrl = await toPng(actualComponent, {
         pixelRatio: 2, // 2x scale for high quality (2160px wide, perfect for TikTok)
         width: 1080,
-        height: statsRef.current.scrollHeight,
+        height: actualComponent.scrollHeight, // Use actual component's scrollHeight
         style: {
           transform: 'scale(1)',
           transformOrigin: 'top left',
-          // Force desktop-like rendering
-          zoom: '1',
-          minWidth: '1080px',
-          maxWidth: '1080px',
         },
-        // Force consistent rendering across devices
         cacheBust: true,
         skipAutoScale: true,
         canvasWidth: 2160, // Fixed canvas size
-        canvasHeight: statsRef.current.scrollHeight * 2,
-        // Ensure consistent font loading
+        canvasHeight: actualComponent.scrollHeight * 2,
         skipFonts: false,
-        // Add quality settings
         quality: 1.0,
-        // Force specific viewport for rendering
-        filter: (node) => {
-          // Ensure all elements render at desktop scale
-          if (node.style) {
-            node.style.zoom = '1';
-            node.style.transform = node.style.transform || 'scale(1)';
-          }
-          return true;
-        },
       });
+      
+      // Restore all styles
+      wrapper.style.transform = stylesToRestore.wrapper.transform;
+      wrapper.style.minWidth = stylesToRestore.wrapper.minWidth;
+      wrapper.style.width = stylesToRestore.wrapper.width;
+      wrapper.style.display = stylesToRestore.wrapper.display;
+      wrapper.style.justifyContent = stylesToRestore.wrapper.justifyContent;
+      
+      if (innerWrapper && stylesToRestore.innerWrapper) {
+        innerWrapper.style.transform = stylesToRestore.innerWrapper.transform;
+        innerWrapper.style.marginBottom = stylesToRestore.innerWrapper.marginBottom;
+      }
 
+      // Download with TikTok-optimized filename
       const link = document.createElement('a');
-      link.download = `stats-${bet.id}-${new Date().toISOString().split('T')[0]}.png`;
+      link.download = `stats-tiktok-${bet.id}-${new Date().toISOString().split('T')[0]}.png`;
       link.href = dataUrl;
       link.click();
 
       setShowStatsPreview(false);
       setStatsReady(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to generate statistics image:', error);
-      alert('Failed to generate statistics image. Please try again.');
+      console.error('Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        wrapper: statsRef.current?.outerHTML?.substring(0, 200),
+      });
+      alert(`Failed to generate statistics image: ${error?.message || 'Unknown error'}. Please check console for details.`);
     } finally {
       setGeneratingStats(false);
     }
@@ -461,21 +526,21 @@ export default function BetDetailPage() {
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Betslip Preview</h2>
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    onClick={downloadBetslip}
-                    disabled={generatingBetslip || !betslipReady}
+                <button
+                  onClick={downloadBetslip}
+                  disabled={generatingBetslip || !betslipReady}
                     className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 min-h-[44px] text-sm sm:text-base"
-                  >
-                    {generatingBetslip ? 'Generating...' : !betslipReady ? 'Loading...' : 'Download Image'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowBetslipPreview(false);
-                      setGeneratingBetslip(false);
-                    }}
+                >
+                  {generatingBetslip ? 'Generating...' : !betslipReady ? 'Loading...' : 'Download Image'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBetslipPreview(false);
+                    setGeneratingBetslip(false);
+                  }}
                     className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 min-h-[44px] text-sm sm:text-base"
-                  >
-                    Close
+                >
+                  Close
                   </button>
                 </div>
               </div>
@@ -509,7 +574,7 @@ export default function BetDetailPage() {
                     // Scale down for preview while keeping generation quality
                     transform: `scale(${previewScale})`,
                     transformOrigin: fitToScreen ? 'top center' : 'top left',
-                    marginBottom: `${-1920 * (1 - previewScale)}px`,
+                    marginBottom: `${-(betslipRef.current?.scrollHeight || 1920) * (1 - previewScale)}px`,
                     transition: 'transform 0.3s ease, margin-bottom 0.3s ease',
                     // Conditional centering
                     display: fitToScreen ? 'flex' : 'block',
@@ -517,7 +582,7 @@ export default function BetDetailPage() {
                     width: fitToScreen ? 'fit-content' : '1080px',
                   }}
                 >
-                  <BetslipImage bet={bet} onReady={handleBetslipReady} />
+                <BetslipImage bet={bet} onReady={handleBetslipReady} />
                 </div>
               </div>
             </div>
@@ -594,7 +659,7 @@ export default function BetDetailPage() {
                         // Scale down for preview while keeping generation quality
                         transform: `scale(${previewScale})`,
                         transformOrigin: fitToScreen ? 'top center' : 'top left',
-                        marginBottom: `${-1920 * (1 - previewScale)}px`,
+                        marginBottom: `${-(statsRef.current?.scrollHeight || 1920) * (1 - previewScale)}px`,
                         transition: 'transform 0.3s ease, margin-bottom 0.3s ease',
                         // Conditional sizing
                         width: fitToScreen ? 'fit-content' : '1080px',
