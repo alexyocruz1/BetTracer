@@ -42,6 +42,21 @@ export default function NewBetPage() {
   // Local state for odds display (decimal/American)
   const [mainBetDecimalOdds, setMainBetDecimalOdds] = useState<string>('');
   const [mainBetAmericanOdds, setMainBetAmericanOdds] = useState<string>('');
+  // Local state for leg odds display so they can be edited freely like the main bet odds
+  const [legDecimalOdds, setLegDecimalOdds] = useState<string[]>(
+    () => ([
+      // Initialize from the initial formData legs
+      ...formData.legs.map((leg) => leg.odd ? leg.odd.toFixed(2) : ''),
+    ])
+  );
+  const [legAmericanOdds, setLegAmericanOdds] = useState<string[]>(
+    () => ([
+      ...formData.legs.map((leg) => {
+        const american = decimalToAmerican(leg.odd);
+        return american ? formatAmericanOdds(american) : '';
+      }),
+    ])
+  );
 
   useEffect(() => {
     fetchReferenceItems();
@@ -238,59 +253,67 @@ export default function NewBetPage() {
   };
 
   const updateLegOdds = (index: number, value: string, format: 'decimal' | 'american') => {
-    const newLegs = formData.legs.map((leg, i) => {
-      if (i !== index) {
-        // Return unchanged leg (create new object to avoid mutation)
-        return { ...leg };
-      }
-      
-      // Update the leg at this index
-      let decimal: number | undefined;
-      
-      if (format === 'decimal') {
-        const parsed = parseFloat(value);
-        // Allow any positive number, even if it's being typed (like "1." or "2.5")
-        if (!isNaN(parsed) && parsed > 0) {
-          decimal = parsed;
-        } else if (value === '' || value === '0' || value.endsWith('.')) {
-          // Allow empty, zero, or decimal point while typing
-          decimal = parseFloat(value) || 1; // Default to 1 if empty/invalid
-        } else {
-          // Keep current value if completely invalid
-          return { ...leg };
-        }
-      } else {
-        const cleanValue = value.replace('+', '');
-        const american = parseFloat(cleanValue);
-        if (!isNaN(american)) {
-          const converted = americanToDecimal(american);
-          if (converted && converted > 0) {
-            decimal = converted;
-          } else {
-            return { ...leg };
-          }
-        } else if (value === '' || value === '+' || value === '-') {
-          // Allow partial input while typing
-          decimal = leg.odd; // Keep current value
-        } else {
-          return { ...leg };
-        }
-      }
-      
-      // Create new leg object with updated odd
-      return {
-        ...leg,
-        odd: decimal,
-      };
-    });
+    if (format === 'decimal') {
+      // Always update the visible input so the user can type freely
+      setLegDecimalOdds((prev) => {
+        const next = [...prev];
+        next[index] = value;
+        return next;
+      });
 
-    setFormData({ ...formData, legs: newLegs });
+      const decimal = parseFloat(value);
+      if (!isNaN(decimal) && isValidDecimal(decimal)) {
+        // Update the underlying numeric odds only when the value is valid
+        const newLegs = formData.legs.map((leg, i) =>
+          i === index ? { ...leg, odd: decimal } : { ...leg }
+        );
+        setFormData({ ...formData, legs: newLegs });
+
+        const american = decimalToAmerican(decimal);
+        setLegAmericanOdds((prev) => {
+          const next = [...prev];
+          next[index] = american ? formatAmericanOdds(american) : '';
+          return next;
+        });
+      }
+    } else {
+      // American format
+      setLegAmericanOdds((prev) => {
+        const next = [...prev];
+        next[index] = value;
+        return next;
+      });
+
+      const cleanValue = value.replace('+', '');
+      const american = parseFloat(cleanValue);
+      if (!isNaN(american) && isValidAmerican(american)) {
+        const decimal = americanToDecimal(american);
+        if (decimal) {
+          const newLegs = formData.legs.map((leg, i) =>
+            i === index ? { ...leg, odd: decimal } : { ...leg }
+          );
+          setFormData({ ...formData, legs: newLegs });
+
+          setLegDecimalOdds((prev) => {
+            const next = [...prev];
+            next[index] = decimal.toFixed(2);
+            return next;
+          });
+        }
+      }
+    }
   };
 
   const addLeg = () => {
-    setFormData({
-      ...formData,
-      legs: [...formData.legs, { odd: 1, result_state: 'pending' }],
+    setFormData((prev) => ({
+      ...prev,
+      legs: [...prev.legs, { odd: 1, result_state: 'pending' }],
+    }));
+    // Keep local leg odds display in sync
+    setLegDecimalOdds((prev) => [...prev, '1.00']);
+    setLegAmericanOdds((prev) => {
+      const american = decimalToAmerican(1);
+      return [...prev, american ? formatAmericanOdds(american) : ''];
     });
   };
 
@@ -299,6 +322,8 @@ export default function NewBetPage() {
       ...formData,
       legs: formData.legs.filter((_, i) => i !== index),
     });
+    setLegDecimalOdds((prev) => prev.filter((_, i) => i !== index));
+    setLegAmericanOdds((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -530,7 +555,7 @@ export default function NewBetPage() {
                     type="text"
                         inputMode="decimal"
                         pattern="[0-9]*\.?[0-9]*"
-                        value={leg.odd.toFixed(2)}
+                        value={legDecimalOdds[index] ?? ''}
                         onChange={(e) => updateLegOdds(index, e.target.value, 'decimal')}
                         placeholder="2.50"
                         className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900 min-h-[44px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -542,7 +567,7 @@ export default function NewBetPage() {
                       <input
                         type="text"
                         inputMode="numeric"
-                        value={decimalToAmerican(leg.odd) ? formatAmericanOdds(decimalToAmerican(leg.odd)!) : ''}
+                        value={legAmericanOdds[index] ?? ''}
                         onChange={(e) => updateLegOdds(index, e.target.value, 'american')}
                         placeholder="+150 or -200"
                         className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900 min-h-[44px]"
