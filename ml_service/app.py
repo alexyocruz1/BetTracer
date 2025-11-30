@@ -72,7 +72,9 @@ async def startup_event():
 # Request/Response models
 class LegInput(BaseModel):
     league_id: Optional[str] = None
+    league_name: Optional[str] = None
     bet_type_id: Optional[str] = None
+    bet_type_name: Optional[str] = None
     category_id: Optional[str] = None
     responsible_id: Optional[str] = None
     odd: float
@@ -315,7 +317,10 @@ def check_risk_warnings(legs: List[LegInput], user_analytics: Optional[UserAnaly
                     losses = combo_perf.get("losses", 0)
                     total = wins + losses
                     if total >= 3 and losses > wins * 2:  # At least 3 bets, losing twice as often
-                        warnings.append(f"Poor track record on {combo_key} combination ({wins}W-{losses}L)")
+                        # Use names if available, otherwise fall back to IDs
+                        league_name = leg.league_name or leg.league_id
+                        bet_type_name = leg.bet_type_name or leg.bet_type_id
+                        warnings.append(f"Poor track record on {league_name} × {bet_type_name} combination ({wins}W-{losses}L)")
     
     # Check league performance
     if user_analytics.league_win_rates:

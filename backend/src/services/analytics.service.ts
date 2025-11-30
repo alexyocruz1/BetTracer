@@ -78,12 +78,14 @@ export class AnalyticsService {
     const wonBets = bets?.filter((b) => b.state === 'won').length || 0;
     const lostBets = bets?.filter((b) => b.state === 'lost').length || 0;
     const pendingBets = bets?.filter((b) => b.state === 'pending').length || 0;
+    // Only count resolved bets (won/lost) for win rate calculation
+    const resolvedBets = wonBets + lostBets;
 
     const totalStake = bets?.reduce((sum, b) => sum + Number(b.stake || 0), 0) || 0;
     const totalProfit =
       bets?.reduce((sum, b) => sum + Number(b.profit_loss || 0), 0) || 0;
 
-    const winRate = totalBets > 0 ? wonBets / totalBets : 0;
+    const winRate = resolvedBets > 0 ? wonBets / resolvedBets : 0;
     const roi = totalStake > 0 ? totalProfit / totalStake : 0;
 
     const cumulativeProfit = bets?.reduce((sum, b) => {
@@ -175,12 +177,13 @@ export class AnalyticsService {
         result.league_name = league.name;
       }
 
-      // Calculate win rate for this league
+      // Calculate win rate for this league (exclude pending bets)
       const leagueBets = bets?.filter((b) =>
         b.legs?.some((l: any) => l.league_id === result.league_id)
       );
-      const wonLeagueBets = leagueBets?.filter((b) => b.state === 'won').length || 0;
-      result.win_rate = leagueBets?.length ? wonLeagueBets / leagueBets.length : 0;
+      const resolvedLeagueBets = leagueBets?.filter((b) => b.state === 'won' || b.state === 'lost') || [];
+      const wonLeagueBets = resolvedLeagueBets.filter((b) => b.state === 'won').length || 0;
+      result.win_rate = resolvedLeagueBets.length > 0 ? wonLeagueBets / resolvedLeagueBets.length : 0;
     }
 
     return results;
@@ -255,9 +258,10 @@ export class AnalyticsService {
       const responsibleBets = bets?.filter((b) =>
         b.legs?.some((l: any) => l.responsible_id === result.responsible_id)
       );
-      const wonResponsibleBets = responsibleBets?.filter((b) => b.state === 'won').length || 0;
-      result.win_rate = responsibleBets?.length
-        ? wonResponsibleBets / responsibleBets.length
+      const resolvedResponsibleBets = responsibleBets?.filter((b) => b.state === 'won' || b.state === 'lost') || [];
+      const wonResponsibleBets = resolvedResponsibleBets.filter((b) => b.state === 'won').length || 0;
+      result.win_rate = resolvedResponsibleBets.length > 0
+        ? wonResponsibleBets / resolvedResponsibleBets.length
         : 0;
     }
 
@@ -332,8 +336,9 @@ export class AnalyticsService {
       const betTypeBets = bets?.filter((b) =>
         b.legs?.some((l: any) => l.bet_type_id === result.bet_type_id)
       );
-      const wonBetTypeBets = betTypeBets?.filter((b) => b.state === 'won').length || 0;
-      result.win_rate = betTypeBets?.length ? wonBetTypeBets / betTypeBets.length : 0;
+      const resolvedBetTypeBets = betTypeBets?.filter((b) => b.state === 'won' || b.state === 'lost') || [];
+      const wonBetTypeBets = resolvedBetTypeBets.filter((b) => b.state === 'won').length || 0;
+      result.win_rate = resolvedBetTypeBets.length > 0 ? wonBetTypeBets / resolvedBetTypeBets.length : 0;
     }
 
     return results;
@@ -407,8 +412,9 @@ export class AnalyticsService {
       const categoryBets = bets?.filter((b) =>
         b.legs?.some((l: any) => l.category_id === result.category_id)
       );
-      const wonCategoryBets = categoryBets?.filter((b) => b.state === 'won').length || 0;
-      result.win_rate = categoryBets?.length ? wonCategoryBets / categoryBets.length : 0;
+      const resolvedCategoryBets = categoryBets?.filter((b) => b.state === 'won' || b.state === 'lost') || [];
+      const wonCategoryBets = resolvedCategoryBets.filter((b) => b.state === 'won').length || 0;
+      result.win_rate = resolvedCategoryBets.length > 0 ? wonCategoryBets / resolvedCategoryBets.length : 0;
     }
 
     return results;
@@ -672,14 +678,15 @@ export class AnalyticsService {
     for (const result of results) {
       result.roi = result.total_stake > 0 ? result.total_profit / result.total_stake : 0;
 
-      // Calculate win rate for this range
+      // Calculate win rate for this range (exclude pending bets)
       const rangeBets = bets?.filter((b) => {
         const odds = Number(b.odds);
         if (!odds) return false;
         return odds >= result.min_odds && odds < (result.max_odds === 999 ? Infinity : result.max_odds);
       });
-      const wonBets = rangeBets?.filter((b) => b.state === 'won').length || 0;
-      result.win_rate = rangeBets?.length ? wonBets / rangeBets.length : 0;
+      const resolvedRangeBets = rangeBets?.filter((b) => b.state === 'won' || b.state === 'lost') || [];
+      const wonBets = resolvedRangeBets.filter((b) => b.state === 'won').length || 0;
+      result.win_rate = resolvedRangeBets.length > 0 ? wonBets / resolvedRangeBets.length : 0;
     }
 
     return results.filter((r) => r.total_bets > 0);
@@ -728,13 +735,16 @@ export class AnalyticsService {
             });
           }
           const teamData = teamMap.get(leg.home_team_id)!;
-          teamData.as_home.total_legs++;
-          teamData.total.total_legs++;
-          if (leg.result_state === 'won') {
-            teamData.as_home.won_legs++;
-            teamData.total.won_legs++;
-            teamData.as_home.total_profit += profit;
-            teamData.total.total_profit += profit;
+          // Only count resolved legs (won/lost/void) for win rate calculation
+          if (leg.result_state !== 'pending') {
+            teamData.as_home.total_legs++;
+            teamData.total.total_legs++;
+            if (leg.result_state === 'won') {
+              teamData.as_home.won_legs++;
+              teamData.total.won_legs++;
+              teamData.as_home.total_profit += profit;
+              teamData.total.total_profit += profit;
+            }
           }
         }
 
@@ -750,13 +760,16 @@ export class AnalyticsService {
             });
           }
           const teamData = teamMap.get(leg.away_team_id)!;
-          teamData.as_away.total_legs++;
-          teamData.total.total_legs++;
-          if (leg.result_state === 'won') {
-            teamData.as_away.won_legs++;
-            teamData.total.won_legs++;
-            teamData.as_away.total_profit += profit;
-            teamData.total.total_profit += profit;
+          // Only count resolved legs (won/lost/void) for win rate calculation
+          if (leg.result_state !== 'pending') {
+            teamData.as_away.total_legs++;
+            teamData.total.total_legs++;
+            if (leg.result_state === 'won') {
+              teamData.as_away.won_legs++;
+              teamData.total.won_legs++;
+              teamData.as_away.total_profit += profit;
+              teamData.total.total_profit += profit;
+            }
           }
         }
       });
@@ -1238,11 +1251,12 @@ export class AnalyticsService {
         ? performanceByLegCount.reduce((best, current) => current.roi > best.roi ? current : best)
         : null;
 
-      // Calculate summary
+      // Calculate summary (exclude pending bets from win rate)
       const totalStake = data.bets.reduce((sum, b) => sum + Number(b.stake || 0), 0);
       const totalProfit = data.bets.reduce((sum, b) => sum + Number(b.profit_loss || 0), 0);
-      const wonBets = data.bets.filter((b) => b.state === 'won').length;
-      const winRate = data.bets.length > 0 ? wonBets / data.bets.length : 0;
+      const resolvedBets = data.bets.filter((b) => b.state === 'won' || b.state === 'lost');
+      const wonBets = resolvedBets.filter((b) => b.state === 'won').length;
+      const winRate = resolvedBets.length > 0 ? wonBets / resolvedBets.length : 0;
       const roi = totalStake > 0 ? totalProfit / totalStake : 0;
 
       // Get league names and find most profitable
@@ -1441,7 +1455,8 @@ export class AnalyticsService {
 
     for (const [numLegs, data] of Array.from(betsByLegs.entries()).sort((a, b) => a[0] - b[0])) {
       const betCount = data.bets.length;
-      const winRate = betCount > 0 ? data.wonBets / betCount : 0;
+      const resolvedBets = data.wonBets + data.lostBets;
+      const winRate = resolvedBets > 0 ? data.wonBets / resolvedBets : 0;
       const roi = data.totalStake > 0 ? data.totalProfit / data.totalStake : 0;
       const avgOdds = betCount > 0 ? data.totalOdds / betCount : 0;
 
@@ -1577,51 +1592,62 @@ export class AnalyticsService {
       }
     });
 
-    // Build day of week results
+    // Build day of week results (exclude pending bets from win rate)
     const byDayOfWeek = Array.from(dayMap.entries())
-      .map(([dayNum, data]) => ({
-        day: dayNames[dayNum],
-        day_number: dayNum,
-        total_bets: data.bets.length,
-        win_rate: data.bets.length > 0 ? data.won / data.bets.length : 0,
-        total_profit: data.profit,
-        roi: data.stake > 0 ? data.profit / data.stake : 0,
-        total_stake: data.stake,
-      }))
+      .map(([dayNum, data]) => {
+        const resolvedBets = data.bets.filter(b => b.state === 'won' || b.state === 'lost');
+        return {
+          day: dayNames[dayNum],
+          day_number: dayNum,
+          total_bets: data.bets.length,
+          win_rate: resolvedBets.length > 0 ? data.won / resolvedBets.length : 0,
+          total_profit: data.profit,
+          roi: data.stake > 0 ? data.profit / data.stake : 0,
+          total_stake: data.stake,
+        };
+      })
       .sort((a, b) => a.day_number - b.day_number);
 
-    // Build hour results
+    // Build hour results (exclude pending bets from win rate)
     const byHour = Array.from(hourMap.entries())
-      .map(([hour, data]) => ({
-        hour,
-        total_bets: data.bets.length,
-        win_rate: data.bets.length > 0 ? data.won / data.bets.length : 0,
-        total_profit: data.profit,
-        total_stake: data.stake,
-        roi: data.stake > 0 ? data.profit / data.stake : 0,
-      }))
+      .map(([hour, data]) => {
+        const resolvedBets = data.bets.filter(b => b.state === 'won' || b.state === 'lost');
+        return {
+          hour,
+          total_bets: data.bets.length,
+          win_rate: resolvedBets.length > 0 ? data.won / resolvedBets.length : 0,
+          total_profit: data.profit,
+          total_stake: data.stake,
+          roi: data.stake > 0 ? data.profit / data.stake : 0,
+        };
+      })
       .sort((a, b) => a.hour - b.hour);
 
-    // Build month results
+    // Build month results (exclude pending bets from win rate)
     const byMonth = Array.from(monthMap.values())
-      .map((data) => ({
-        month: data.month,
-        month_number: data.monthNum,
-        year: data.year,
-        total_bets: data.bets.length,
-        win_rate: data.bets.length > 0 ? data.won / data.bets.length : 0,
-        total_profit: data.profit,
-        roi: data.stake > 0 ? data.profit / data.stake : 0,
-        total_stake: data.stake,
-      }))
+      .map((data) => {
+        const resolvedBets = data.bets.filter(b => b.state === 'won' || b.state === 'lost');
+        return {
+          month: data.month,
+          month_number: data.monthNum,
+          year: data.year,
+          total_bets: data.bets.length,
+          win_rate: resolvedBets.length > 0 ? data.won / resolvedBets.length : 0,
+          total_profit: data.profit,
+          roi: data.stake > 0 ? data.profit / data.stake : 0,
+          total_stake: data.stake,
+        };
+      })
       .sort((a, b) => {
         if (a.year !== b.year) return a.year - b.year;
         return a.month_number - b.month_number;
       });
 
-    // Weekend vs weekday
-    const weekendWinRate = weekendBets.bets.length > 0 ? weekendBets.won / weekendBets.bets.length : 0;
-    const weekdayWinRate = weekdayBets.bets.length > 0 ? weekdayBets.won / weekdayBets.bets.length : 0;
+    // Weekend vs weekday (exclude pending bets from win rate)
+    const resolvedWeekendBets = weekendBets.bets.filter(b => b.state === 'won' || b.state === 'lost');
+    const resolvedWeekdayBets = weekdayBets.bets.filter(b => b.state === 'won' || b.state === 'lost');
+    const weekendWinRate = resolvedWeekendBets.length > 0 ? weekendBets.won / resolvedWeekendBets.length : 0;
+    const weekdayWinRate = resolvedWeekdayBets.length > 0 ? weekdayBets.won / resolvedWeekdayBets.length : 0;
 
     return {
       by_day_of_week: byDayOfWeek,
@@ -1881,40 +1907,49 @@ export class AnalyticsService {
       });
     });
 
-    // Build results
-    const leagueBetType = Array.from(leagueBetTypeMap.values()).map(data => ({
-      league_id: data.league_id,
-      league_name: refMap.get(data.league_id) || 'Unknown',
-      bet_type_id: data.bet_type_id,
-      bet_type_name: refMap.get(data.bet_type_id) || 'Unknown',
-      total_bets: data.bets.length,
-      win_rate: data.bets.length > 0 ? data.won / data.bets.length : 0,
-      total_profit: data.profit,
-      roi: data.stake > 0 ? data.profit / data.stake : 0,
-      total_stake: data.stake,
-    }));
+    // Build results (exclude pending bets from win rate calculation)
+    const leagueBetType = Array.from(leagueBetTypeMap.values()).map(data => {
+      const resolvedBets = data.bets.filter(b => b.state === 'won' || b.state === 'lost');
+      return {
+        league_id: data.league_id,
+        league_name: refMap.get(data.league_id) || 'Unknown',
+        bet_type_id: data.bet_type_id,
+        bet_type_name: refMap.get(data.bet_type_id) || 'Unknown',
+        total_bets: data.bets.length,
+        win_rate: resolvedBets.length > 0 ? data.won / resolvedBets.length : 0,
+        total_profit: data.profit,
+        roi: data.stake > 0 ? data.profit / data.stake : 0,
+        total_stake: data.stake,
+      };
+    });
 
-    const responsibleLeague = Array.from(responsibleLeagueMap.values()).map(data => ({
-      responsible_id: data.responsible_id,
-      responsible_name: refMap.get(data.responsible_id) || 'Unknown',
-      league_id: data.league_id,
-      league_name: refMap.get(data.league_id) || 'Unknown',
-      total_bets: data.bets.length,
-      win_rate: data.bets.length > 0 ? data.won / data.bets.length : 0,
-      total_profit: data.profit,
-      roi: data.stake > 0 ? data.profit / data.stake : 0,
-      total_stake: data.stake,
-    }));
+    const responsibleLeague = Array.from(responsibleLeagueMap.values()).map(data => {
+      const resolvedBets = data.bets.filter(b => b.state === 'won' || b.state === 'lost');
+      return {
+        responsible_id: data.responsible_id,
+        responsible_name: refMap.get(data.responsible_id) || 'Unknown',
+        league_id: data.league_id,
+        league_name: refMap.get(data.league_id) || 'Unknown',
+        total_bets: data.bets.length,
+        win_rate: resolvedBets.length > 0 ? data.won / resolvedBets.length : 0,
+        total_profit: data.profit,
+        roi: data.stake > 0 ? data.profit / data.stake : 0,
+        total_stake: data.stake,
+      };
+    });
 
-    const categoryLegs = Array.from(categoryLegsMap.values()).map(data => ({
-      category_id: data.category_id,
-      category_name: refMap.get(data.category_id) || 'Unknown',
-      num_legs: data.num_legs,
-      total_bets: data.bets.length,
-      win_rate: data.bets.length > 0 ? data.won / data.bets.length : 0,
-      total_profit: data.profit,
-      roi: data.stake > 0 ? data.profit / data.stake : 0,
-    }));
+    const categoryLegs = Array.from(categoryLegsMap.values()).map(data => {
+      const resolvedBets = data.bets.filter(b => b.state === 'won' || b.state === 'lost');
+      return {
+        category_id: data.category_id,
+        category_name: refMap.get(data.category_id) || 'Unknown',
+        num_legs: data.num_legs,
+        total_bets: data.bets.length,
+        win_rate: resolvedBets.length > 0 ? data.won / resolvedBets.length : 0,
+        total_profit: data.profit,
+        roi: data.stake > 0 ? data.profit / data.stake : 0,
+      };
+    });
 
     // Top combinations (simplified - can be enhanced)
     const topCombinations = [
@@ -2249,13 +2284,14 @@ export class AnalyticsService {
       });
     });
 
-    // Build EV by category
+    // Build EV by category (exclude pending bets from win rate)
     // Expected ROI = (odds * probability) - 1, where probability is the implied probability from odds
     // But we use actual win rate as the probability estimate
     const evByCategory = Array.from(categoryMap.entries()).map(([categoryId, data]) => {
       const betCount = data.bets.length;
       const avgOdds = betCount > 0 ? data.totalOdds / betCount : 0;
-      const actualWinRate = data.bets.filter(b => b.state === 'won').length / betCount;
+      const resolvedBets = data.bets.filter(b => b.state === 'won' || b.state === 'lost');
+      const actualWinRate = resolvedBets.length > 0 ? resolvedBets.filter(b => b.state === 'won').length / resolvedBets.length : 0;
       // Expected ROI using actual win rate as probability estimate
       // If avgOdds is 2.0 and win rate is 60%, expected ROI = (2.0 * 0.6) - 1 = 0.2 (20%)
       const expectedROI = (avgOdds * actualWinRate) - 1;
@@ -2273,11 +2309,12 @@ export class AnalyticsService {
       };
     });
 
-    // Build EV by bet type
+    // Build EV by bet type (exclude pending bets from win rate)
     const evByBetType = Array.from(betTypeMap.entries()).map(([betTypeId, data]) => {
       const betCount = data.bets.length;
       const avgOdds = betCount > 0 ? data.totalOdds / betCount : 0;
-      const actualWinRate = data.bets.filter(b => b.state === 'won').length / betCount;
+      const resolvedBets = data.bets.filter(b => b.state === 'won' || b.state === 'lost');
+      const actualWinRate = resolvedBets.length > 0 ? resolvedBets.filter(b => b.state === 'won').length / resolvedBets.length : 0;
       const expectedROI = (avgOdds * actualWinRate) - 1;
       const actualROI = data.stake > 0 ? data.profit / data.stake : 0;
 
@@ -2293,7 +2330,7 @@ export class AnalyticsService {
       };
     });
 
-    // Overall EV
+    // Overall EV (exclude pending bets from win rate)
     const allBets = bets || [];
     const totalStake = allBets.reduce((sum, b) => sum + Number(b.stake || 0), 0);
     const totalProfit = allBets.reduce((sum, b) => sum + Number(b.profit_loss || 0), 0);
@@ -2302,8 +2339,9 @@ export class AnalyticsService {
     const avgOdds = allBets.length > 0
       ? allBets.reduce((sum, b) => sum + this.calculateEffectiveOdds(b), 0) / allBets.length
       : 0;
-    const overallWinRate = allBets.length > 0
-      ? allBets.filter(b => b.state === 'won').length / allBets.length
+    const resolvedAllBets = allBets.filter(b => b.state === 'won' || b.state === 'lost');
+    const overallWinRate = resolvedAllBets.length > 0
+      ? resolvedAllBets.filter(b => b.state === 'won').length / resolvedAllBets.length
       : 0;
     // Expected ROI using overall win rate
     const expectedROI = (avgOdds * overallWinRate) - 1;
@@ -2326,14 +2364,16 @@ export class AnalyticsService {
         
         if (categoryId && categoryMap.has(categoryId)) {
           const catData = categoryMap.get(categoryId)!;
-          const catWinRate = catData.bets.filter(bet => bet.state === 'won').length / catData.bets.length;
+          const resolvedCatBets = catData.bets.filter(bet => bet.state === 'won' || bet.state === 'lost');
+          const catWinRate = resolvedCatBets.length > 0 ? resolvedCatBets.filter(bet => bet.state === 'won').length / resolvedCatBets.length : 0;
           const catAvgOdds = catData.bets.length > 0 
             ? catData.totalOdds / catData.bets.length
             : effectiveOdds;
           expectedROIForBet = (catAvgOdds * catWinRate) - 1;
         } else if (betTypeId && betTypeMap.has(betTypeId)) {
           const btData = betTypeMap.get(betTypeId)!;
-          const btWinRate = btData.bets.filter(bet => bet.state === 'won').length / btData.bets.length;
+          const resolvedBtBets = btData.bets.filter(bet => bet.state === 'won' || bet.state === 'lost');
+          const btWinRate = resolvedBtBets.length > 0 ? resolvedBtBets.filter(bet => bet.state === 'won').length / resolvedBtBets.length : 0;
           const btAvgOdds = btData.bets.length > 0 
             ? btData.totalOdds / btData.bets.length
             : effectiveOdds;
@@ -2502,8 +2542,9 @@ export class AnalyticsService {
       }
     });
 
-    const postLossWinRate = postLossBets.length > 0
-      ? postLossBets.filter(b => b.state === 'won').length / postLossBets.length
+    const resolvedPostLossBets = postLossBets.filter(b => b.state === 'won' || b.state === 'lost');
+    const postLossWinRate = resolvedPostLossBets.length > 0
+      ? resolvedPostLossBets.filter(b => b.state === 'won').length / resolvedPostLossBets.length
       : 0;
     const postLossAvgProfit = postLossBets.length > 0
       ? postLossBets.reduce((sum, b) => sum + Number(b.profit_loss || 0), 0) / postLossBets.length

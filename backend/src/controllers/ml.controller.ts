@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import axios from 'axios';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AnalyticsService } from '../services/analytics.service';
+import { ReferenceItemsService } from '../services/reference-items.service';
 import crypto from 'crypto';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
@@ -65,7 +66,10 @@ export function invalidateUserMLCache(userId: string): void {
 }
 
 export class MLController {
-  constructor(private analyticsService: AnalyticsService) {}
+  constructor(
+    private analyticsService: AnalyticsService,
+    private referenceItemsService: ReferenceItemsService
+  ) {}
 
   predict = async (req: AuthRequest, res: Response): Promise<Response> => {
     try {
@@ -217,9 +221,36 @@ export class MLController {
         // Continue without analytics - ML service will use defaults
       }
 
+      // Fetch reference items to populate league and bet type names
+      let referenceItemsMap: Map<string, string> = new Map();
+      try {
+        const [leaguesRes, betTypesRes] = await Promise.all([
+          this.referenceItemsService.getReferenceItems({ kind: 'league', limit: 1000, offset: 0 }),
+          this.referenceItemsService.getReferenceItems({ kind: 'bet_type', limit: 1000, offset: 0 }),
+        ]);
+        
+        leaguesRes.items.forEach(item => {
+          referenceItemsMap.set(item.id, item.name);
+        });
+        betTypesRes.items.forEach(item => {
+          referenceItemsMap.set(item.id, item.name);
+        });
+      } catch (refError) {
+        console.error('Error fetching reference items for ML:', refError);
+        // Continue without names - will fall back to IDs
+      }
+
+      // Enrich legs with league and bet type names
+      const enrichedLegs = (req.body.legs || []).map((leg: any) => ({
+        ...leg,
+        league_name: leg.league_id ? referenceItemsMap.get(leg.league_id) : undefined,
+        bet_type_name: leg.bet_type_id ? referenceItemsMap.get(leg.bet_type_id) : undefined,
+      }));
+
       // Prepare request body with analytics
       const requestBody = {
         ...req.body,
+        legs: enrichedLegs,
         user_id: userId,
         user_analytics: userAnalytics,
       };
