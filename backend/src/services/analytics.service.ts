@@ -1053,14 +1053,14 @@ export class AnalyticsService {
       responsible_name: string;
       bets: any[];
       legs: any[];
-      leagueMap: Map<string, { league_id: string; league_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
-      teamMap: Map<string, { team_id: string; team_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
-      betTypeMap: Map<string, { bet_type_id: string; bet_type_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
-      categoryMap: Map<string, { category_id: string; category_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
-      dayMap: Map<number, { day: string; day_number: number; profit: number; bet_count: number; stake: number; won: number; total: number }>;
-      hourMap: Map<number, { hour: number; profit: number; bet_count: number; stake: number; won: number; total: number }>;
-      monthMap: Map<string, { month: string; month_number: number; year: number; profit: number; bet_count: number; stake: number; won: number; total: number }>;
-      oddsRangeMap: Map<string, { range: string; min_odds: number; max_odds: number; profit: number; bet_count: number; stake: number; won: number; total: number }>;
+      leagueMap: Map<string, { league_id: string; league_name: string; profit: number; bet_count: number; stake: number; won: number; total: number; processedBets: Set<string> }>;
+      teamMap: Map<string, { team_id: string; team_name: string; profit: number; bet_count: number; stake: number; won: number; total: number; processedBets: Set<string> }>;
+      betTypeMap: Map<string, { bet_type_id: string; bet_type_name: string; profit: number; bet_count: number; stake: number; won: number; total: number; processedBets: Set<string> }>;
+      categoryMap: Map<string, { category_id: string; category_name: string; profit: number; bet_count: number; stake: number; won: number; total: number; processedBets: Set<string> }>;
+      dayMap: Map<number, { day: string; day_number: number; profit: number; bet_count: number; stake: number; won: number; total: number; processedBets: Set<string> }>;
+      hourMap: Map<number, { hour: number; profit: number; bet_count: number; stake: number; won: number; total: number; processedBets: Set<string> }>;
+      monthMap: Map<string, { month: string; month_number: number; year: number; profit: number; bet_count: number; stake: number; won: number; total: number; processedBets: Set<string> }>;
+      oddsRangeMap: Map<string, { range: string; min_odds: number; max_odds: number; profit: number; bet_count: number; stake: number; won: number; total: number; processedBets: Set<string> }>;
       legCountMap: Map<number, { bet_count: number; won: number; total_stake: number; total_profit: number }>;
       // Leg-level tracking (based on leg.result_state, not bet.state)
       legLeagueMap: Map<string, { league_id: string; league_name: string; leg_count: number; won_legs: number; total_resolved: number }>;
@@ -1108,7 +1108,7 @@ export class AnalyticsService {
         // Track leagues
         if (leg.league_id) {
           if (!responsibleData.leagueMap.has(leg.league_id)) {
-            responsibleData.leagueMap.set(leg.league_id, {
+            responsibleData.            leagueMap.set(leg.league_id, {
               league_id: leg.league_id,
               league_name: '',
               profit: 0,
@@ -1116,20 +1116,25 @@ export class AnalyticsService {
               stake: 0,
               won: 0,
               total: 0,
+              processedBets: new Set(),
             });
           }
           const leagueData = responsibleData.leagueMap.get(leg.league_id)!;
-          leagueData.bet_count += 1;
-          leagueData.stake += Number(bet.stake || 0);
-          leagueData.profit += Number(bet.profit_loss || 0);
-          if (bet.state === 'won') leagueData.won += 1;
-          leagueData.total += 1;
+          // Only count stake/profit/bet_count once per bet
+          if (!leagueData.processedBets.has(bet.id)) {
+            leagueData.stake += Number(bet.stake || 0);
+            leagueData.profit += Number(bet.profit_loss || 0);
+            leagueData.bet_count += 1; // Count unique bets
+            if (bet.state === 'won') leagueData.won += 1;
+            if (bet.state === 'won' || bet.state === 'lost') leagueData.total += 1;
+            leagueData.processedBets.add(bet.id);
+          }
         }
 
         // Track teams (home and away) with profit tracking
         if (leg.home_team_id) {
           if (!responsibleData.teamMap.has(leg.home_team_id)) {
-            responsibleData.teamMap.set(leg.home_team_id, {
+            responsibleData.            teamMap.set(leg.home_team_id, {
               team_id: leg.home_team_id,
               team_name: '',
               profit: 0,
@@ -1137,18 +1142,23 @@ export class AnalyticsService {
               stake: 0,
               won: 0,
               total: 0,
+              processedBets: new Set(),
             });
           }
           const teamData = responsibleData.teamMap.get(leg.home_team_id)!;
-          teamData.bet_count += 1;
-          teamData.stake += Number(bet.stake || 0);
-          teamData.profit += Number(bet.profit_loss || 0);
-          if (bet.state === 'won') teamData.won += 1;
-          teamData.total += 1;
+          // Only count stake/profit/bet_count once per bet
+          if (!teamData.processedBets.has(bet.id)) {
+            teamData.stake += Number(bet.stake || 0);
+            teamData.profit += Number(bet.profit_loss || 0);
+            teamData.bet_count += 1; // Count unique bets
+            if (bet.state === 'won') teamData.won += 1;
+            if (bet.state === 'won' || bet.state === 'lost') teamData.total += 1;
+            teamData.processedBets.add(bet.id);
+          }
         }
         if (leg.away_team_id) {
           if (!responsibleData.teamMap.has(leg.away_team_id)) {
-            responsibleData.teamMap.set(leg.away_team_id, {
+            responsibleData.            teamMap.set(leg.away_team_id, {
               team_id: leg.away_team_id,
               team_name: '',
               profit: 0,
@@ -1156,20 +1166,25 @@ export class AnalyticsService {
               stake: 0,
               won: 0,
               total: 0,
+              processedBets: new Set(),
             });
           }
           const teamData = responsibleData.teamMap.get(leg.away_team_id)!;
-          teamData.bet_count += 1;
-          teamData.stake += Number(bet.stake || 0);
-          teamData.profit += Number(bet.profit_loss || 0);
-          if (bet.state === 'won') teamData.won += 1;
-          teamData.total += 1;
+          // Only count stake/profit/bet_count once per bet
+          if (!teamData.processedBets.has(bet.id)) {
+            teamData.stake += Number(bet.stake || 0);
+            teamData.profit += Number(bet.profit_loss || 0);
+            teamData.bet_count += 1; // Count unique bets
+            if (bet.state === 'won') teamData.won += 1;
+            if (bet.state === 'won' || bet.state === 'lost') teamData.total += 1;
+            teamData.processedBets.add(bet.id);
+          }
         }
 
         // Track bet types
         if (leg.bet_type_id) {
           if (!responsibleData.betTypeMap.has(leg.bet_type_id)) {
-            responsibleData.betTypeMap.set(leg.bet_type_id, {
+            responsibleData.            betTypeMap.set(leg.bet_type_id, {
               bet_type_id: leg.bet_type_id,
               bet_type_name: '',
               profit: 0,
@@ -1177,20 +1192,25 @@ export class AnalyticsService {
               stake: 0,
               won: 0,
               total: 0,
+              processedBets: new Set(),
             });
           }
           const betTypeData = responsibleData.betTypeMap.get(leg.bet_type_id)!;
-          betTypeData.bet_count += 1;
-          betTypeData.stake += Number(bet.stake || 0);
-          betTypeData.profit += Number(bet.profit_loss || 0);
-          if (bet.state === 'won') betTypeData.won += 1;
-          betTypeData.total += 1;
+          // Only count stake/profit/bet_count once per bet
+          if (!betTypeData.processedBets.has(bet.id)) {
+            betTypeData.stake += Number(bet.stake || 0);
+            betTypeData.profit += Number(bet.profit_loss || 0);
+            betTypeData.bet_count += 1; // Count unique bets
+            if (bet.state === 'won') betTypeData.won += 1;
+            if (bet.state === 'won' || bet.state === 'lost') betTypeData.total += 1;
+            betTypeData.processedBets.add(bet.id);
+          }
         }
 
         // Track categories
         if (leg.category_id) {
           if (!responsibleData.categoryMap.has(leg.category_id)) {
-            responsibleData.categoryMap.set(leg.category_id, {
+            responsibleData.            categoryMap.set(leg.category_id, {
               category_id: leg.category_id,
               category_name: '',
               profit: 0,
@@ -1198,56 +1218,74 @@ export class AnalyticsService {
               stake: 0,
               won: 0,
               total: 0,
+              processedBets: new Set(),
             });
           }
           const categoryData = responsibleData.categoryMap.get(leg.category_id)!;
-          categoryData.bet_count += 1;
-          categoryData.stake += Number(bet.stake || 0);
-          categoryData.profit += Number(bet.profit_loss || 0);
-          if (bet.state === 'won') categoryData.won += 1;
-          categoryData.total += 1;
+          // Only count stake/profit/bet_count once per bet
+          if (!categoryData.processedBets.has(bet.id)) {
+            categoryData.stake += Number(bet.stake || 0);
+            categoryData.profit += Number(bet.profit_loss || 0);
+            categoryData.bet_count += 1; // Count unique bets
+            if (bet.state === 'won') categoryData.won += 1;
+            if (bet.state === 'won' || bet.state === 'lost') categoryData.total += 1;
+            categoryData.processedBets.add(bet.id);
+          }
         }
 
-        // Track day of week
+        // Track day of week (bet-level: uses bet.date and bet.state)
+        // Note: A bet is counted once per day, even if it has multiple legs on that day
+        // Bet-level uses bet.state (bet resolved), while leg-level uses leg.result_state (leg resolved)
+        // This can cause discrepancies: e.g., 6 bets resolved but only 5 legs resolved (one leg still pending)
         const betDate = new Date(bet.date);
         const dayOfWeek = betDate.getDay();
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         if (!responsibleData.dayMap.has(dayOfWeek)) {
-          responsibleData.dayMap.set(dayOfWeek, {
-            day: dayNames[dayOfWeek],
-            day_number: dayOfWeek,
-            profit: 0,
-            bet_count: 0,
-            stake: 0,
-            won: 0,
-            total: 0,
-          });
-        }
-        const dayData = responsibleData.dayMap.get(dayOfWeek)!;
-        dayData.bet_count += 1;
-        dayData.stake += Number(bet.stake || 0);
-        dayData.profit += Number(bet.profit_loss || 0);
-        if (bet.state === 'won') dayData.won += 1;
-        dayData.total += 1;
+          responsibleData.            dayMap.set(dayOfWeek, {
+              day: dayNames[dayOfWeek],
+              day_number: dayOfWeek,
+              profit: 0,
+              bet_count: 0,
+              stake: 0,
+              won: 0,
+              total: 0,
+              processedBets: new Set(),
+            });
+          }
+          const dayData = responsibleData.dayMap.get(dayOfWeek)!;
+          // Only count stake/profit/bet_count once per bet
+          if (!dayData.processedBets.has(bet.id)) {
+            dayData.stake += Number(bet.stake || 0);
+            dayData.profit += Number(bet.profit_loss || 0);
+            dayData.bet_count += 1; // Count unique bets
+            if (bet.state === 'won') dayData.won += 1;
+            if (bet.state === 'won' || bet.state === 'lost') dayData.total += 1;
+            dayData.processedBets.add(bet.id);
+          }
 
         // Track hour of day
         const hour = betDate.getHours();
         if (!responsibleData.hourMap.has(hour)) {
-          responsibleData.hourMap.set(hour, {
-            hour,
-            profit: 0,
-            bet_count: 0,
-            stake: 0,
-            won: 0,
-            total: 0,
-          });
-        }
-        const hourData = responsibleData.hourMap.get(hour)!;
-        hourData.bet_count += 1;
-        hourData.stake += Number(bet.stake || 0);
-        hourData.profit += Number(bet.profit_loss || 0);
-        if (bet.state === 'won') hourData.won += 1;
-        hourData.total += 1;
+          responsibleData.            hourMap.set(hour, {
+              hour,
+              profit: 0,
+              bet_count: 0,
+              stake: 0,
+              won: 0,
+              total: 0,
+              processedBets: new Set(),
+            });
+          }
+          const hourData = responsibleData.hourMap.get(hour)!;
+          // Only count stake/profit/bet_count once per bet
+          if (!hourData.processedBets.has(bet.id)) {
+            hourData.stake += Number(bet.stake || 0);
+            hourData.profit += Number(bet.profit_loss || 0);
+            hourData.bet_count += 1; // Count unique bets
+            if (bet.state === 'won') hourData.won += 1;
+            if (bet.state === 'won' || bet.state === 'lost') hourData.total += 1;
+            hourData.processedBets.add(bet.id);
+          }
 
         // Track month
         const month = betDate.getMonth();
@@ -1255,23 +1293,28 @@ export class AnalyticsService {
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         const monthKey = `${year}-${month}`;
         if (!responsibleData.monthMap.has(monthKey)) {
-          responsibleData.monthMap.set(monthKey, {
-            month: monthNames[month],
-            month_number: month + 1,
-            year,
-            profit: 0,
-            bet_count: 0,
-            stake: 0,
-            won: 0,
-            total: 0,
-          });
-        }
-        const monthData = responsibleData.monthMap.get(monthKey)!;
-        monthData.bet_count += 1;
-        monthData.stake += Number(bet.stake || 0);
-        monthData.profit += Number(bet.profit_loss || 0);
-        if (bet.state === 'won') monthData.won += 1;
-        monthData.total += 1;
+          responsibleData.            monthMap.set(monthKey, {
+              month: monthNames[month],
+              month_number: month + 1,
+              year,
+              profit: 0,
+              bet_count: 0,
+              stake: 0,
+              won: 0,
+              total: 0,
+              processedBets: new Set(),
+            });
+          }
+          const monthData = responsibleData.monthMap.get(monthKey)!;
+          // Only count stake/profit/bet_count once per bet
+          if (!monthData.processedBets.has(bet.id)) {
+            monthData.stake += Number(bet.stake || 0);
+            monthData.profit += Number(bet.profit_loss || 0);
+            monthData.bet_count += 1; // Count unique bets
+            if (bet.state === 'won') monthData.won += 1;
+            if (bet.state === 'won' || bet.state === 'lost') monthData.total += 1;
+            monthData.processedBets.add(bet.id);
+          }
 
         // Track odds ranges
         const effectiveOdds = this.calculateEffectiveOdds(bet);
@@ -1294,7 +1337,7 @@ export class AnalyticsService {
           if (rangeLabel) {
             if (!responsibleData.oddsRangeMap.has(rangeLabel)) {
               const range = oddsRanges.find(r => r.label === rangeLabel)!;
-              responsibleData.oddsRangeMap.set(rangeLabel, {
+              responsibleData.              oddsRangeMap.set(rangeLabel, {
                 range: rangeLabel,
                 min_odds: range.min,
                 max_odds: range.max === Infinity ? 999 : range.max,
@@ -1303,14 +1346,19 @@ export class AnalyticsService {
                 stake: 0,
                 won: 0,
                 total: 0,
+                processedBets: new Set(),
               });
             }
             const oddsData = responsibleData.oddsRangeMap.get(rangeLabel)!;
-            oddsData.bet_count += 1;
-            oddsData.stake += Number(bet.stake || 0);
-            oddsData.profit += Number(bet.profit_loss || 0);
-            if (bet.state === 'won') oddsData.won += 1;
-            oddsData.total += 1;
+            // Only count stake/profit/bet_count once per bet
+            if (!oddsData.processedBets.has(bet.id)) {
+              oddsData.stake += Number(bet.stake || 0);
+              oddsData.profit += Number(bet.profit_loss || 0);
+              oddsData.bet_count += 1; // Count unique bets
+              if (bet.state === 'won') oddsData.won += 1;
+              if (bet.state === 'won' || bet.state === 'lost') oddsData.total += 1;
+              oddsData.processedBets.add(bet.id);
+            }
           }
         }
 
@@ -1422,7 +1470,9 @@ export class AnalyticsService {
           }
         }
 
-        // Track leg-level days
+        // Track leg-level days (leg-level: uses bet.date and leg.result_state)
+        // Note: Each leg is counted separately, and only resolved legs (won/lost) count toward total_resolved
+        // This can differ from bet-level counts if a bet is marked as resolved but has pending legs
         const legBetDate = new Date(bet.date);
         const legDayOfWeek = legBetDate.getDay();
         const legDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -1436,13 +1486,14 @@ export class AnalyticsService {
           });
         }
         const legDayData = responsibleData.legDayMap.get(legDayOfWeek)!;
-        legDayData.leg_count += 1;
+        legDayData.leg_count += 1; // Count all legs (including pending/void)
         if (leg.result_state === 'won') {
           legDayData.won_legs += 1;
           legDayData.total_resolved += 1;
         } else if (leg.result_state === 'lost') {
           legDayData.total_resolved += 1;
         }
+        // Note: pending and void legs are excluded from total_resolved
       });
     });
 
