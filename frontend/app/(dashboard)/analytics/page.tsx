@@ -919,6 +919,11 @@ export default function AnalyticsPage() {
                         <div className="text-sm text-blue-700 mt-1">
                           ${responsible.most_profitable_league.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_league.total_profit.toFixed(2)} ({responsible.most_profitable_league.bet_count} bets)
                         </div>
+                        {responsible.most_profitable_league.total_resolved > 0 && (
+                          <div className="text-xs text-blue-600 mt-1">
+                            {responsible.most_profitable_league.wins}/{responsible.most_profitable_league.total_resolved} {(responsible.most_profitable_league.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
                     )}
                     {responsible.most_profitable_team && (
@@ -928,6 +933,11 @@ export default function AnalyticsPage() {
                         <div className="text-sm text-blue-700 mt-1">
                           ${responsible.most_profitable_team.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_team.total_profit.toFixed(2)} ({responsible.most_profitable_team.bet_count} bets)
                         </div>
+                        {responsible.most_profitable_team.total_resolved > 0 && (
+                          <div className="text-xs text-blue-600 mt-1">
+                            {responsible.most_profitable_team.wins}/{responsible.most_profitable_team.total_resolved} {(responsible.most_profitable_team.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
                     )}
                     {responsible.most_profitable_category && (
@@ -937,6 +947,11 @@ export default function AnalyticsPage() {
                         <div className="text-sm text-blue-700 mt-1">
                           ${responsible.most_profitable_category.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_category.total_profit.toFixed(2)} ({responsible.most_profitable_category.bet_count} bets)
                         </div>
+                        {responsible.most_profitable_category.total_resolved > 0 && (
+                          <div className="text-xs text-blue-600 mt-1">
+                            {responsible.most_profitable_category.wins}/{responsible.most_profitable_category.total_resolved} {(responsible.most_profitable_category.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
                     )}
                     {responsible.most_profitable_bet_type && (
@@ -946,6 +961,11 @@ export default function AnalyticsPage() {
                         <div className="text-sm text-blue-700 mt-1">
                           ${responsible.most_profitable_bet_type.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_bet_type.total_profit.toFixed(2)} ({responsible.most_profitable_bet_type.bet_count} bets)
                         </div>
+                        {responsible.most_profitable_bet_type.total_resolved > 0 && (
+                          <div className="text-xs text-blue-600 mt-1">
+                            {responsible.most_profitable_bet_type.wins}/{responsible.most_profitable_bet_type.total_resolved} {(responsible.most_profitable_bet_type.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
                     )}
                     {responsible.most_profitable_day && (
@@ -955,6 +975,11 @@ export default function AnalyticsPage() {
                         <div className="text-sm text-blue-700 mt-1">
                           ${responsible.most_profitable_day.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_day.total_profit.toFixed(2)} ({responsible.most_profitable_day.bet_count} bets)
                         </div>
+                        {responsible.most_profitable_day.total_resolved > 0 && (
+                          <div className="text-xs text-blue-600 mt-1">
+                            {responsible.most_profitable_day.wins}/{responsible.most_profitable_day.total_resolved} {(responsible.most_profitable_day.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -969,6 +994,11 @@ export default function AnalyticsPage() {
                         <div className="text-sm text-purple-600 font-medium mb-1">League</div>
                         <div className="text-base font-bold text-purple-900">{responsible.favorite_league.league_name}</div>
                         <div className="text-sm text-purple-700 mt-1">{responsible.favorite_league.bet_count} bets</div>
+                        {responsible.favorite_league.total_resolved > 0 && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            {responsible.favorite_league.wins}/{responsible.favorite_league.total_resolved} {(responsible.favorite_league.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
                     )}
                     {responsible.favorite_team && (
@@ -976,6 +1006,11 @@ export default function AnalyticsPage() {
                         <div className="text-sm text-purple-600 font-medium mb-1">Team</div>
                         <div className="text-base font-bold text-purple-900">{responsible.favorite_team.team_name}</div>
                         <div className="text-sm text-purple-700 mt-1">{responsible.favorite_team.bet_count} bets</div>
+                        {responsible.favorite_team.total_resolved > 0 && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            {responsible.favorite_team.wins}/{responsible.favorite_team.total_resolved} {(responsible.favorite_team.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
                     )}
                     {responsible.favorite_category && (
@@ -983,6 +1018,11 @@ export default function AnalyticsPage() {
                         <div className="text-sm text-purple-600 font-medium mb-1">Category</div>
                         <div className="text-base font-bold text-purple-900">{responsible.favorite_category.category_name}</div>
                         <div className="text-sm text-purple-700 mt-1">{responsible.favorite_category.bet_count} bets</div>
+                        {responsible.favorite_category.total_resolved > 0 && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            {responsible.favorite_category.wins}/{responsible.favorite_category.total_resolved} {(responsible.favorite_category.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
                     )}
                     {responsible.favorite_bet_type && (
@@ -990,6 +1030,11 @@ export default function AnalyticsPage() {
                         <div className="text-sm text-purple-600 font-medium mb-1">Bet Type</div>
                         <div className="text-base font-bold text-purple-900">{responsible.favorite_bet_type.bet_type_name}</div>
                         <div className="text-sm text-purple-700 mt-1">{responsible.favorite_bet_type.bet_count} bets</div>
+                        {responsible.favorite_bet_type.total_resolved > 0 && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            {responsible.favorite_bet_type.wins}/{responsible.favorite_bet_type.total_resolved} {(responsible.favorite_bet_type.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
                     )}
                     {responsible.favorite_day && (
@@ -997,6 +1042,11 @@ export default function AnalyticsPage() {
                         <div className="text-sm text-purple-600 font-medium mb-1">Day</div>
                         <div className="text-base font-bold text-purple-900">{responsible.favorite_day.day}</div>
                         <div className="text-sm text-purple-700 mt-1">{responsible.favorite_day.bet_count} bets</div>
+                        {responsible.favorite_day.total_resolved > 0 && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            {responsible.favorite_day.wins}/{responsible.favorite_day.total_resolved} {(responsible.favorite_day.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -282,55 +282,85 @@ export interface ResponsibleDetailedAnalytics {
     league_name: string;
     total_profit: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   most_profitable_team: {
     team_id: string;
     team_name: string;
     total_profit: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   most_profitable_category: {
     category_id: string;
     category_name: string;
     total_profit: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   most_profitable_bet_type: {
     bet_type_id: string;
     bet_type_name: string;
     total_profit: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   most_profitable_day: {
     day: string;
     day_number: number;
     total_profit: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   favorite_league: {
     league_id: string;
     league_name: string;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   favorite_team: {
     team_id: string;
     team_name: string;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   favorite_category: {
     category_id: string;
     category_name: string;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   favorite_bet_type: {
     bet_type_id: string;
     bet_type_name: string;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   favorite_day: {
     day: string;
     day_number: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   performance_by_league: Array<{
     league_id: string;
