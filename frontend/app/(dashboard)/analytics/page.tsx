@@ -1129,6 +1129,210 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
 
+                {/* Leg-Level Analytics - Best Win Rate */}
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-gray-700 mb-1">Leg-Level: Best Win Rate</h4>
+                  <p className="text-xs text-gray-500 mb-3">Based on individual leg results (won/lost), not bet outcomes</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {responsible.leg_best_win_rate_league && (
+                      <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                        <div className="text-sm text-emerald-600 font-medium mb-1">League</div>
+                        <div className="text-base font-bold text-emerald-900">{responsible.leg_best_win_rate_league.league_name}</div>
+                        <div className="text-sm text-emerald-700 mt-1">{responsible.leg_best_win_rate_league.leg_count} legs</div>
+                        {responsible.leg_best_win_rate_league.total_resolved > 0 && (
+                          <div className="text-xs text-emerald-600 mt-1">
+                            {responsible.leg_best_win_rate_league.wins}/{responsible.leg_best_win_rate_league.total_resolved} {(responsible.leg_best_win_rate_league.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_best_win_rate_team && (
+                      <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                        <div className="text-sm text-emerald-600 font-medium mb-1">Team</div>
+                        <div className="text-base font-bold text-emerald-900">{responsible.leg_best_win_rate_team.team_name}</div>
+                        <div className="text-sm text-emerald-700 mt-1">{responsible.leg_best_win_rate_team.leg_count} legs</div>
+                        {responsible.leg_best_win_rate_team.total_resolved > 0 && (
+                          <div className="text-xs text-emerald-600 mt-1">
+                            {responsible.leg_best_win_rate_team.wins}/{responsible.leg_best_win_rate_team.total_resolved} {(responsible.leg_best_win_rate_team.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_best_win_rate_category && (
+                      <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                        <div className="text-sm text-emerald-600 font-medium mb-1">Category</div>
+                        <div className="text-base font-bold text-emerald-900">{responsible.leg_best_win_rate_category.category_name}</div>
+                        <div className="text-sm text-emerald-700 mt-1">{responsible.leg_best_win_rate_category.leg_count} legs</div>
+                        {responsible.leg_best_win_rate_category.total_resolved > 0 && (
+                          <div className="text-xs text-emerald-600 mt-1">
+                            {responsible.leg_best_win_rate_category.wins}/{responsible.leg_best_win_rate_category.total_resolved} {(responsible.leg_best_win_rate_category.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_best_win_rate_bet_type && (
+                      <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                        <div className="text-sm text-emerald-600 font-medium mb-1">Bet Type</div>
+                        <div className="text-base font-bold text-emerald-900">{responsible.leg_best_win_rate_bet_type.bet_type_name}</div>
+                        <div className="text-sm text-emerald-700 mt-1">{responsible.leg_best_win_rate_bet_type.leg_count} legs</div>
+                        {responsible.leg_best_win_rate_bet_type.total_resolved > 0 && (
+                          <div className="text-xs text-emerald-600 mt-1">
+                            {responsible.leg_best_win_rate_bet_type.wins}/{responsible.leg_best_win_rate_bet_type.total_resolved} {(responsible.leg_best_win_rate_bet_type.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_best_win_rate_day && (
+                      <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                        <div className="text-sm text-emerald-600 font-medium mb-1">Day</div>
+                        <div className="text-base font-bold text-emerald-900">{responsible.leg_best_win_rate_day.day}</div>
+                        <div className="text-sm text-emerald-700 mt-1">{responsible.leg_best_win_rate_day.leg_count} legs</div>
+                        {responsible.leg_best_win_rate_day.total_resolved > 0 && (
+                          <div className="text-xs text-emerald-600 mt-1">
+                            {responsible.leg_best_win_rate_day.wins}/{responsible.leg_best_win_rate_day.total_resolved} {(responsible.leg_best_win_rate_day.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Leg-Level Analytics - Favorites */}
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-gray-700 mb-1">Leg-Level: Favorites</h4>
+                  <p className="text-xs text-gray-500 mb-3">Most selected at leg level</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {responsible.leg_favorite_league && (
+                      <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                        <div className="text-sm text-indigo-600 font-medium mb-1">League</div>
+                        <div className="text-base font-bold text-indigo-900">{responsible.leg_favorite_league.league_name}</div>
+                        <div className="text-sm text-indigo-700 mt-1">{responsible.leg_favorite_league.leg_count} legs</div>
+                        {responsible.leg_favorite_league.total_resolved > 0 && (
+                          <div className="text-xs text-indigo-600 mt-1">
+                            {responsible.leg_favorite_league.wins}/{responsible.leg_favorite_league.total_resolved} {(responsible.leg_favorite_league.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_favorite_team && (
+                      <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                        <div className="text-sm text-indigo-600 font-medium mb-1">Team</div>
+                        <div className="text-base font-bold text-indigo-900">{responsible.leg_favorite_team.team_name}</div>
+                        <div className="text-sm text-indigo-700 mt-1">{responsible.leg_favorite_team.leg_count} legs</div>
+                        {responsible.leg_favorite_team.total_resolved > 0 && (
+                          <div className="text-xs text-indigo-600 mt-1">
+                            {responsible.leg_favorite_team.wins}/{responsible.leg_favorite_team.total_resolved} {(responsible.leg_favorite_team.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_favorite_category && (
+                      <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                        <div className="text-sm text-indigo-600 font-medium mb-1">Category</div>
+                        <div className="text-base font-bold text-indigo-900">{responsible.leg_favorite_category.category_name}</div>
+                        <div className="text-sm text-indigo-700 mt-1">{responsible.leg_favorite_category.leg_count} legs</div>
+                        {responsible.leg_favorite_category.total_resolved > 0 && (
+                          <div className="text-xs text-indigo-600 mt-1">
+                            {responsible.leg_favorite_category.wins}/{responsible.leg_favorite_category.total_resolved} {(responsible.leg_favorite_category.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_favorite_bet_type && (
+                      <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                        <div className="text-sm text-indigo-600 font-medium mb-1">Bet Type</div>
+                        <div className="text-base font-bold text-indigo-900">{responsible.leg_favorite_bet_type.bet_type_name}</div>
+                        <div className="text-sm text-indigo-700 mt-1">{responsible.leg_favorite_bet_type.leg_count} legs</div>
+                        {responsible.leg_favorite_bet_type.total_resolved > 0 && (
+                          <div className="text-xs text-indigo-600 mt-1">
+                            {responsible.leg_favorite_bet_type.wins}/{responsible.leg_favorite_bet_type.total_resolved} {(responsible.leg_favorite_bet_type.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_favorite_day && (
+                      <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                        <div className="text-sm text-indigo-600 font-medium mb-1">Day</div>
+                        <div className="text-base font-bold text-indigo-900">{responsible.leg_favorite_day.day}</div>
+                        <div className="text-sm text-indigo-700 mt-1">{responsible.leg_favorite_day.leg_count} legs</div>
+                        {responsible.leg_favorite_day.total_resolved > 0 && (
+                          <div className="text-xs text-indigo-600 mt-1">
+                            {responsible.leg_favorite_day.wins}/{responsible.leg_favorite_day.total_resolved} {(responsible.leg_favorite_day.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Leg-Level Analytics - Worst Win Rate */}
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-gray-700 mb-1">Leg-Level: Worst Win Rate</h4>
+                  <p className="text-xs text-gray-500 mb-3">Lowest leg win rates to avoid</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {responsible.leg_worst_win_rate_league && (
+                      <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                        <div className="text-sm text-orange-600 font-medium mb-1">League</div>
+                        <div className="text-base font-bold text-orange-900">{responsible.leg_worst_win_rate_league.league_name}</div>
+                        <div className="text-sm text-orange-700 mt-1">{responsible.leg_worst_win_rate_league.leg_count} legs</div>
+                        {responsible.leg_worst_win_rate_league.total_resolved > 0 && (
+                          <div className="text-xs text-orange-600 mt-1">
+                            {responsible.leg_worst_win_rate_league.wins}/{responsible.leg_worst_win_rate_league.total_resolved} {(responsible.leg_worst_win_rate_league.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_worst_win_rate_team && (
+                      <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                        <div className="text-sm text-orange-600 font-medium mb-1">Team</div>
+                        <div className="text-base font-bold text-orange-900">{responsible.leg_worst_win_rate_team.team_name}</div>
+                        <div className="text-sm text-orange-700 mt-1">{responsible.leg_worst_win_rate_team.leg_count} legs</div>
+                        {responsible.leg_worst_win_rate_team.total_resolved > 0 && (
+                          <div className="text-xs text-orange-600 mt-1">
+                            {responsible.leg_worst_win_rate_team.wins}/{responsible.leg_worst_win_rate_team.total_resolved} {(responsible.leg_worst_win_rate_team.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_worst_win_rate_category && (
+                      <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                        <div className="text-sm text-orange-600 font-medium mb-1">Category</div>
+                        <div className="text-base font-bold text-orange-900">{responsible.leg_worst_win_rate_category.category_name}</div>
+                        <div className="text-sm text-orange-700 mt-1">{responsible.leg_worst_win_rate_category.leg_count} legs</div>
+                        {responsible.leg_worst_win_rate_category.total_resolved > 0 && (
+                          <div className="text-xs text-orange-600 mt-1">
+                            {responsible.leg_worst_win_rate_category.wins}/{responsible.leg_worst_win_rate_category.total_resolved} {(responsible.leg_worst_win_rate_category.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_worst_win_rate_bet_type && (
+                      <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                        <div className="text-sm text-orange-600 font-medium mb-1">Bet Type</div>
+                        <div className="text-base font-bold text-orange-900">{responsible.leg_worst_win_rate_bet_type.bet_type_name}</div>
+                        <div className="text-sm text-orange-700 mt-1">{responsible.leg_worst_win_rate_bet_type.leg_count} legs</div>
+                        {responsible.leg_worst_win_rate_bet_type.total_resolved > 0 && (
+                          <div className="text-xs text-orange-600 mt-1">
+                            {responsible.leg_worst_win_rate_bet_type.wins}/{responsible.leg_worst_win_rate_bet_type.total_resolved} {(responsible.leg_worst_win_rate_bet_type.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.leg_worst_win_rate_day && (
+                      <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                        <div className="text-sm text-orange-600 font-medium mb-1">Day</div>
+                        <div className="text-base font-bold text-orange-900">{responsible.leg_worst_win_rate_day.day}</div>
+                        <div className="text-sm text-orange-700 mt-1">{responsible.leg_worst_win_rate_day.leg_count} legs</div>
+                        {responsible.leg_worst_win_rate_day.total_resolved > 0 && (
+                          <div className="text-xs text-orange-600 mt-1">
+                            {responsible.leg_worst_win_rate_day.wins}/{responsible.leg_worst_win_rate_day.total_resolved} {(responsible.leg_worst_win_rate_day.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
               {responsible.performance_by_leg_count && responsible.performance_by_leg_count.length > 0 && (
                 <div className="mb-8">
                   <h4 className="text-md font-semibold text-gray-700 mb-3">Best Number of Legs</h4>

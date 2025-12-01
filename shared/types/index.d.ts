@@ -466,6 +466,126 @@ export interface ResponsibleDetailedAnalytics {
         total_profit: number;
         bet_count: number;
     } | null;
+    leg_best_win_rate_league: {
+        league_id: string;
+        league_name: string;
+        win_rate: number;
+        leg_count: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_worst_win_rate_league: {
+        league_id: string;
+        league_name: string;
+        win_rate: number;
+        leg_count: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_favorite_league: {
+        league_id: string;
+        league_name: string;
+        leg_count: number;
+        win_rate: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_best_win_rate_team: {
+        team_id: string;
+        team_name: string;
+        win_rate: number;
+        leg_count: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_worst_win_rate_team: {
+        team_id: string;
+        team_name: string;
+        win_rate: number;
+        leg_count: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_favorite_team: {
+        team_id: string;
+        team_name: string;
+        leg_count: number;
+        win_rate: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_best_win_rate_category: {
+        category_id: string;
+        category_name: string;
+        win_rate: number;
+        leg_count: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_worst_win_rate_category: {
+        category_id: string;
+        category_name: string;
+        win_rate: number;
+        leg_count: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_favorite_category: {
+        category_id: string;
+        category_name: string;
+        leg_count: number;
+        win_rate: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_best_win_rate_bet_type: {
+        bet_type_id: string;
+        bet_type_name: string;
+        win_rate: number;
+        leg_count: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_worst_win_rate_bet_type: {
+        bet_type_id: string;
+        bet_type_name: string;
+        win_rate: number;
+        leg_count: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_favorite_bet_type: {
+        bet_type_id: string;
+        bet_type_name: string;
+        leg_count: number;
+        win_rate: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_best_win_rate_day: {
+        day: string;
+        day_number: number;
+        win_rate: number;
+        leg_count: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_worst_win_rate_day: {
+        day: string;
+        day_number: number;
+        win_rate: number;
+        leg_count: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
+    leg_favorite_day: {
+        day: string;
+        day_number: number;
+        leg_count: number;
+        win_rate: number;
+        wins: number;
+        total_resolved: number;
+    } | null;
 }
 export interface MLPredictRequest {
     legs: MLPredictLeg[];

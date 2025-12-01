@@ -1062,6 +1062,12 @@ export class AnalyticsService {
       monthMap: Map<string, { month: string; month_number: number; year: number; profit: number; bet_count: number; stake: number; won: number; total: number }>;
       oddsRangeMap: Map<string, { range: string; min_odds: number; max_odds: number; profit: number; bet_count: number; stake: number; won: number; total: number }>;
       legCountMap: Map<number, { bet_count: number; won: number; total_stake: number; total_profit: number }>;
+      // Leg-level tracking (based on leg.result_state, not bet.state)
+      legLeagueMap: Map<string, { league_id: string; league_name: string; leg_count: number; won_legs: number; total_resolved: number }>;
+      legTeamMap: Map<string, { team_id: string; team_name: string; leg_count: number; won_legs: number; total_resolved: number }>;
+      legCategoryMap: Map<string, { category_id: string; category_name: string; leg_count: number; won_legs: number; total_resolved: number }>;
+      legBetTypeMap: Map<string, { bet_type_id: string; bet_type_name: string; leg_count: number; won_legs: number; total_resolved: number }>;
+      legDayMap: Map<number, { day: string; day_number: number; leg_count: number; won_legs: number; total_resolved: number }>;
     }>();
 
     // Process all bets and legs
@@ -1085,6 +1091,11 @@ export class AnalyticsService {
             monthMap: new Map(),
             oddsRangeMap: new Map(),
             legCountMap: new Map(),
+            legLeagueMap: new Map(),
+            legTeamMap: new Map(),
+            legCategoryMap: new Map(),
+            legBetTypeMap: new Map(),
+            legDayMap: new Map(),
           });
         }
 
@@ -1302,6 +1313,136 @@ export class AnalyticsService {
             oddsData.total += 1;
           }
         }
+
+        // ============================================================
+        // LEG-LEVEL TRACKING (based on leg.result_state, not bet.state)
+        // ============================================================
+        
+        // Track leg-level leagues
+        if (leg.league_id) {
+          if (!responsibleData.legLeagueMap.has(leg.league_id)) {
+            responsibleData.legLeagueMap.set(leg.league_id, {
+              league_id: leg.league_id,
+              league_name: '',
+              leg_count: 0,
+              won_legs: 0,
+              total_resolved: 0,
+            });
+          }
+          const legLeagueData = responsibleData.legLeagueMap.get(leg.league_id)!;
+          legLeagueData.leg_count += 1;
+          if (leg.result_state === 'won') {
+            legLeagueData.won_legs += 1;
+            legLeagueData.total_resolved += 1;
+          } else if (leg.result_state === 'lost') {
+            legLeagueData.total_resolved += 1;
+          }
+          // Note: pending and void legs are excluded from total_resolved
+        }
+
+        // Track leg-level teams
+        if (leg.home_team_id) {
+          if (!responsibleData.legTeamMap.has(leg.home_team_id)) {
+            responsibleData.legTeamMap.set(leg.home_team_id, {
+              team_id: leg.home_team_id,
+              team_name: '',
+              leg_count: 0,
+              won_legs: 0,
+              total_resolved: 0,
+            });
+          }
+          const legTeamData = responsibleData.legTeamMap.get(leg.home_team_id)!;
+          legTeamData.leg_count += 1;
+          if (leg.result_state === 'won') {
+            legTeamData.won_legs += 1;
+            legTeamData.total_resolved += 1;
+          } else if (leg.result_state === 'lost') {
+            legTeamData.total_resolved += 1;
+          }
+        }
+        if (leg.away_team_id) {
+          if (!responsibleData.legTeamMap.has(leg.away_team_id)) {
+            responsibleData.legTeamMap.set(leg.away_team_id, {
+              team_id: leg.away_team_id,
+              team_name: '',
+              leg_count: 0,
+              won_legs: 0,
+              total_resolved: 0,
+            });
+          }
+          const legTeamData = responsibleData.legTeamMap.get(leg.away_team_id)!;
+          legTeamData.leg_count += 1;
+          if (leg.result_state === 'won') {
+            legTeamData.won_legs += 1;
+            legTeamData.total_resolved += 1;
+          } else if (leg.result_state === 'lost') {
+            legTeamData.total_resolved += 1;
+          }
+        }
+
+        // Track leg-level categories
+        if (leg.category_id) {
+          if (!responsibleData.legCategoryMap.has(leg.category_id)) {
+            responsibleData.legCategoryMap.set(leg.category_id, {
+              category_id: leg.category_id,
+              category_name: '',
+              leg_count: 0,
+              won_legs: 0,
+              total_resolved: 0,
+            });
+          }
+          const legCategoryData = responsibleData.legCategoryMap.get(leg.category_id)!;
+          legCategoryData.leg_count += 1;
+          if (leg.result_state === 'won') {
+            legCategoryData.won_legs += 1;
+            legCategoryData.total_resolved += 1;
+          } else if (leg.result_state === 'lost') {
+            legCategoryData.total_resolved += 1;
+          }
+        }
+
+        // Track leg-level bet types
+        if (leg.bet_type_id) {
+          if (!responsibleData.legBetTypeMap.has(leg.bet_type_id)) {
+            responsibleData.legBetTypeMap.set(leg.bet_type_id, {
+              bet_type_id: leg.bet_type_id,
+              bet_type_name: '',
+              leg_count: 0,
+              won_legs: 0,
+              total_resolved: 0,
+            });
+          }
+          const legBetTypeData = responsibleData.legBetTypeMap.get(leg.bet_type_id)!;
+          legBetTypeData.leg_count += 1;
+          if (leg.result_state === 'won') {
+            legBetTypeData.won_legs += 1;
+            legBetTypeData.total_resolved += 1;
+          } else if (leg.result_state === 'lost') {
+            legBetTypeData.total_resolved += 1;
+          }
+        }
+
+        // Track leg-level days
+        const legBetDate = new Date(bet.date);
+        const legDayOfWeek = legBetDate.getDay();
+        const legDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        if (!responsibleData.legDayMap.has(legDayOfWeek)) {
+          responsibleData.legDayMap.set(legDayOfWeek, {
+            day: legDayNames[legDayOfWeek],
+            day_number: legDayOfWeek,
+            leg_count: 0,
+            won_legs: 0,
+            total_resolved: 0,
+          });
+        }
+        const legDayData = responsibleData.legDayMap.get(legDayOfWeek)!;
+        legDayData.leg_count += 1;
+        if (leg.result_state === 'won') {
+          legDayData.won_legs += 1;
+          legDayData.total_resolved += 1;
+        } else if (leg.result_state === 'lost') {
+          legDayData.total_resolved += 1;
+        }
       });
     });
 
@@ -1320,6 +1461,19 @@ export class AnalyticsService {
       }
       for (const categoryData of data.categoryMap.values()) {
         allReferenceIds.add(categoryData.category_id);
+      }
+      // Include leg-level IDs
+      for (const legLeagueData of data.legLeagueMap.values()) {
+        allReferenceIds.add(legLeagueData.league_id);
+      }
+      for (const legTeamData of data.legTeamMap.values()) {
+        allReferenceIds.add(legTeamData.team_id);
+      }
+      for (const legBetTypeData of data.legBetTypeMap.values()) {
+        allReferenceIds.add(legBetTypeData.bet_type_id);
+      }
+      for (const legCategoryData of data.legCategoryMap.values()) {
+        allReferenceIds.add(legCategoryData.category_id);
       }
     }
 
@@ -1597,6 +1751,146 @@ export class AnalyticsService {
           })
         : null;
 
+      // ============================================================
+      // LEG-LEVEL CALCULATIONS (based on leg.result_state)
+      // ============================================================
+      
+      // Get leg-level league data
+      const legLeagueDataArray = Array.from(data.legLeagueMap.values());
+      legLeagueDataArray.forEach(legLeagueData => {
+        legLeagueData.league_name = referenceItemsMap.get(legLeagueData.league_id) || '';
+      });
+
+      const bestLegWinRateLeague = legLeagueDataArray.length > 0
+        ? legLeagueDataArray.filter(l => l.total_resolved > 0).reduce((best, current) => {
+            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+            const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
+            return currentWR > bestWR ? current : best;
+          }, legLeagueDataArray[0])
+        : null;
+
+      const worstLegWinRateLeague = legLeagueDataArray.length > 0
+        ? legLeagueDataArray.filter(l => l.total_resolved > 0).reduce((worst, current) => {
+            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+            const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
+            return currentWR < worstWR ? current : worst;
+          }, legLeagueDataArray[0])
+        : null;
+
+      const favoriteLegLeague = legLeagueDataArray.length > 0
+        ? legLeagueDataArray.reduce((best, current) => 
+            current.leg_count > best.leg_count ? current : best
+          )
+        : null;
+
+      // Get leg-level team data
+      const legTeamDataArray = Array.from(data.legTeamMap.values());
+      legTeamDataArray.forEach(legTeamData => {
+        legTeamData.team_name = referenceItemsMap.get(legTeamData.team_id) || '';
+      });
+
+      const bestLegWinRateTeam = legTeamDataArray.length > 0
+        ? legTeamDataArray.filter(t => t.total_resolved > 0).reduce((best, current) => {
+            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+            const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
+            return currentWR > bestWR ? current : best;
+          }, legTeamDataArray[0])
+        : null;
+
+      const worstLegWinRateTeam = legTeamDataArray.length > 0
+        ? legTeamDataArray.filter(t => t.total_resolved > 0).reduce((worst, current) => {
+            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+            const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
+            return currentWR < worstWR ? current : worst;
+          }, legTeamDataArray[0])
+        : null;
+
+      const favoriteLegTeam = legTeamDataArray.length > 0
+        ? legTeamDataArray.reduce((best, current) => 
+            current.leg_count > best.leg_count ? current : best
+          )
+        : null;
+
+      // Get leg-level category data
+      const legCategoryDataArray = Array.from(data.legCategoryMap.values());
+      legCategoryDataArray.forEach(legCategoryData => {
+        legCategoryData.category_name = referenceItemsMap.get(legCategoryData.category_id) || '';
+      });
+
+      const bestLegWinRateCategory = legCategoryDataArray.length > 0
+        ? legCategoryDataArray.filter(c => c.total_resolved > 0).reduce((best, current) => {
+            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+            const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
+            return currentWR > bestWR ? current : best;
+          }, legCategoryDataArray[0])
+        : null;
+
+      const worstLegWinRateCategory = legCategoryDataArray.length > 0
+        ? legCategoryDataArray.filter(c => c.total_resolved > 0).reduce((worst, current) => {
+            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+            const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
+            return currentWR < worstWR ? current : worst;
+          }, legCategoryDataArray[0])
+        : null;
+
+      const favoriteLegCategory = legCategoryDataArray.length > 0
+        ? legCategoryDataArray.reduce((best, current) => 
+            current.leg_count > best.leg_count ? current : best
+          )
+        : null;
+
+      // Get leg-level bet type data
+      const legBetTypeDataArray = Array.from(data.legBetTypeMap.values());
+      legBetTypeDataArray.forEach(legBetTypeData => {
+        legBetTypeData.bet_type_name = referenceItemsMap.get(legBetTypeData.bet_type_id) || '';
+      });
+
+      const bestLegWinRateBetType = legBetTypeDataArray.length > 0
+        ? legBetTypeDataArray.filter(bt => bt.total_resolved > 0).reduce((best, current) => {
+            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+            const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
+            return currentWR > bestWR ? current : best;
+          }, legBetTypeDataArray[0])
+        : null;
+
+      const worstLegWinRateBetType = legBetTypeDataArray.length > 0
+        ? legBetTypeDataArray.filter(bt => bt.total_resolved > 0).reduce((worst, current) => {
+            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+            const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
+            return currentWR < worstWR ? current : worst;
+          }, legBetTypeDataArray[0])
+        : null;
+
+      const favoriteLegBetType = legBetTypeDataArray.length > 0
+        ? legBetTypeDataArray.reduce((best, current) => 
+            current.leg_count > best.leg_count ? current : best
+          )
+        : null;
+
+      // Get leg-level day data
+      const legDayDataArray = Array.from(data.legDayMap.values());
+      const bestLegWinRateDay = legDayDataArray.length > 0
+        ? legDayDataArray.filter(d => d.total_resolved > 0).reduce((best, current) => {
+            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+            const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
+            return currentWR > bestWR ? current : best;
+          }, legDayDataArray[0])
+        : null;
+
+      const worstLegWinRateDay = legDayDataArray.length > 0
+        ? legDayDataArray.filter(d => d.total_resolved > 0).reduce((worst, current) => {
+            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+            const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
+            return currentWR < worstWR ? current : worst;
+          }, legDayDataArray[0])
+        : null;
+
+      const favoriteLegDay = legDayDataArray.length > 0
+        ? legDayDataArray.reduce((best, current) => 
+            current.leg_count > best.leg_count ? current : best
+          )
+        : null;
+
       // Build performance arrays
       const performanceByLeague = leagueDataArray.map(league => ({
         league_id: league.league_id,
@@ -1853,6 +2147,127 @@ export class AnalyticsService {
           win_rate: worstOddsRange.total > 0 ? worstOddsRange.won / worstOddsRange.total : 0,
           total_profit: worstOddsRange.profit,
           bet_count: worstOddsRange.bet_count,
+        } : null,
+        // Leg-level analytics (based on leg.result_state)
+        leg_best_win_rate_league: bestLegWinRateLeague ? {
+          league_id: bestLegWinRateLeague.league_id,
+          league_name: bestLegWinRateLeague.league_name,
+          win_rate: bestLegWinRateLeague.total_resolved > 0 ? bestLegWinRateLeague.won_legs / bestLegWinRateLeague.total_resolved : 0,
+          leg_count: bestLegWinRateLeague.leg_count,
+          wins: bestLegWinRateLeague.won_legs,
+          total_resolved: bestLegWinRateLeague.total_resolved,
+        } : null,
+        leg_worst_win_rate_league: worstLegWinRateLeague ? {
+          league_id: worstLegWinRateLeague.league_id,
+          league_name: worstLegWinRateLeague.league_name,
+          win_rate: worstLegWinRateLeague.total_resolved > 0 ? worstLegWinRateLeague.won_legs / worstLegWinRateLeague.total_resolved : 0,
+          leg_count: worstLegWinRateLeague.leg_count,
+          wins: worstLegWinRateLeague.won_legs,
+          total_resolved: worstLegWinRateLeague.total_resolved,
+        } : null,
+        leg_favorite_league: favoriteLegLeague ? {
+          league_id: favoriteLegLeague.league_id,
+          league_name: favoriteLegLeague.league_name,
+          leg_count: favoriteLegLeague.leg_count,
+          win_rate: favoriteLegLeague.total_resolved > 0 ? favoriteLegLeague.won_legs / favoriteLegLeague.total_resolved : 0,
+          wins: favoriteLegLeague.won_legs,
+          total_resolved: favoriteLegLeague.total_resolved,
+        } : null,
+        leg_best_win_rate_team: bestLegWinRateTeam ? {
+          team_id: bestLegWinRateTeam.team_id,
+          team_name: bestLegWinRateTeam.team_name,
+          win_rate: bestLegWinRateTeam.total_resolved > 0 ? bestLegWinRateTeam.won_legs / bestLegWinRateTeam.total_resolved : 0,
+          leg_count: bestLegWinRateTeam.leg_count,
+          wins: bestLegWinRateTeam.won_legs,
+          total_resolved: bestLegWinRateTeam.total_resolved,
+        } : null,
+        leg_worst_win_rate_team: worstLegWinRateTeam ? {
+          team_id: worstLegWinRateTeam.team_id,
+          team_name: worstLegWinRateTeam.team_name,
+          win_rate: worstLegWinRateTeam.total_resolved > 0 ? worstLegWinRateTeam.won_legs / worstLegWinRateTeam.total_resolved : 0,
+          leg_count: worstLegWinRateTeam.leg_count,
+          wins: worstLegWinRateTeam.won_legs,
+          total_resolved: worstLegWinRateTeam.total_resolved,
+        } : null,
+        leg_favorite_team: favoriteLegTeam ? {
+          team_id: favoriteLegTeam.team_id,
+          team_name: favoriteLegTeam.team_name,
+          leg_count: favoriteLegTeam.leg_count,
+          win_rate: favoriteLegTeam.total_resolved > 0 ? favoriteLegTeam.won_legs / favoriteLegTeam.total_resolved : 0,
+          wins: favoriteLegTeam.won_legs,
+          total_resolved: favoriteLegTeam.total_resolved,
+        } : null,
+        leg_best_win_rate_category: bestLegWinRateCategory ? {
+          category_id: bestLegWinRateCategory.category_id,
+          category_name: bestLegWinRateCategory.category_name,
+          win_rate: bestLegWinRateCategory.total_resolved > 0 ? bestLegWinRateCategory.won_legs / bestLegWinRateCategory.total_resolved : 0,
+          leg_count: bestLegWinRateCategory.leg_count,
+          wins: bestLegWinRateCategory.won_legs,
+          total_resolved: bestLegWinRateCategory.total_resolved,
+        } : null,
+        leg_worst_win_rate_category: worstLegWinRateCategory ? {
+          category_id: worstLegWinRateCategory.category_id,
+          category_name: worstLegWinRateCategory.category_name,
+          win_rate: worstLegWinRateCategory.total_resolved > 0 ? worstLegWinRateCategory.won_legs / worstLegWinRateCategory.total_resolved : 0,
+          leg_count: worstLegWinRateCategory.leg_count,
+          wins: worstLegWinRateCategory.won_legs,
+          total_resolved: worstLegWinRateCategory.total_resolved,
+        } : null,
+        leg_favorite_category: favoriteLegCategory ? {
+          category_id: favoriteLegCategory.category_id,
+          category_name: favoriteLegCategory.category_name,
+          leg_count: favoriteLegCategory.leg_count,
+          win_rate: favoriteLegCategory.total_resolved > 0 ? favoriteLegCategory.won_legs / favoriteLegCategory.total_resolved : 0,
+          wins: favoriteLegCategory.won_legs,
+          total_resolved: favoriteLegCategory.total_resolved,
+        } : null,
+        leg_best_win_rate_bet_type: bestLegWinRateBetType ? {
+          bet_type_id: bestLegWinRateBetType.bet_type_id,
+          bet_type_name: bestLegWinRateBetType.bet_type_name,
+          win_rate: bestLegWinRateBetType.total_resolved > 0 ? bestLegWinRateBetType.won_legs / bestLegWinRateBetType.total_resolved : 0,
+          leg_count: bestLegWinRateBetType.leg_count,
+          wins: bestLegWinRateBetType.won_legs,
+          total_resolved: bestLegWinRateBetType.total_resolved,
+        } : null,
+        leg_worst_win_rate_bet_type: worstLegWinRateBetType ? {
+          bet_type_id: worstLegWinRateBetType.bet_type_id,
+          bet_type_name: worstLegWinRateBetType.bet_type_name,
+          win_rate: worstLegWinRateBetType.total_resolved > 0 ? worstLegWinRateBetType.won_legs / worstLegWinRateBetType.total_resolved : 0,
+          leg_count: worstLegWinRateBetType.leg_count,
+          wins: worstLegWinRateBetType.won_legs,
+          total_resolved: worstLegWinRateBetType.total_resolved,
+        } : null,
+        leg_favorite_bet_type: favoriteLegBetType ? {
+          bet_type_id: favoriteLegBetType.bet_type_id,
+          bet_type_name: favoriteLegBetType.bet_type_name,
+          leg_count: favoriteLegBetType.leg_count,
+          win_rate: favoriteLegBetType.total_resolved > 0 ? favoriteLegBetType.won_legs / favoriteLegBetType.total_resolved : 0,
+          wins: favoriteLegBetType.won_legs,
+          total_resolved: favoriteLegBetType.total_resolved,
+        } : null,
+        leg_best_win_rate_day: bestLegWinRateDay ? {
+          day: bestLegWinRateDay.day,
+          day_number: bestLegWinRateDay.day_number,
+          win_rate: bestLegWinRateDay.total_resolved > 0 ? bestLegWinRateDay.won_legs / bestLegWinRateDay.total_resolved : 0,
+          leg_count: bestLegWinRateDay.leg_count,
+          wins: bestLegWinRateDay.won_legs,
+          total_resolved: bestLegWinRateDay.total_resolved,
+        } : null,
+        leg_worst_win_rate_day: worstLegWinRateDay ? {
+          day: worstLegWinRateDay.day,
+          day_number: worstLegWinRateDay.day_number,
+          win_rate: worstLegWinRateDay.total_resolved > 0 ? worstLegWinRateDay.won_legs / worstLegWinRateDay.total_resolved : 0,
+          leg_count: worstLegWinRateDay.leg_count,
+          wins: worstLegWinRateDay.won_legs,
+          total_resolved: worstLegWinRateDay.total_resolved,
+        } : null,
+        leg_favorite_day: favoriteLegDay ? {
+          day: favoriteLegDay.day,
+          day_number: favoriteLegDay.day_number,
+          leg_count: favoriteLegDay.leg_count,
+          win_rate: favoriteLegDay.total_resolved > 0 ? favoriteLegDay.won_legs / favoriteLegDay.total_resolved : 0,
+          wins: favoriteLegDay.won_legs,
+          total_resolved: favoriteLegDay.total_resolved,
         } : null,
       });
     }
