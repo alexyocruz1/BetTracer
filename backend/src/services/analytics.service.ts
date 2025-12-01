@@ -1534,7 +1534,12 @@ export class AnalyticsService {
       })).sort((a, b) => a.num_legs - b.num_legs);
 
       const bestLegCount = performanceByLegCount.length > 0
-        ? performanceByLegCount.reduce((best, current) => current.roi > best.roi ? current : best)
+        ? performanceByLegCount.reduce((best, current) => {
+            // If ROI is equal, prefer the one with more bets (more data points)
+            if (current.roi > best.roi) return current;
+            if (current.roi === best.roi && current.bet_count > best.bet_count) return current;
+            return best;
+          })
         : null;
 
       // Calculate summary (exclude pending bets from win rate)
@@ -1553,9 +1558,12 @@ export class AnalyticsService {
 
       // Find most profitable league
       const mostProfitableLeague = leagueDataArray.length > 0
-        ? leagueDataArray.reduce((best, current) => 
-            current.profit > best.profit ? current : best
-          )
+        ? leagueDataArray.reduce((best, current) => {
+            // If profit is equal, prefer the one with more bets (more data points)
+            if (current.profit > best.profit) return current;
+            if (current.profit === best.profit && current.bet_count > best.bet_count) return current;
+            return best;
+          })
         : null;
 
       // Find favorite league (most bets)
@@ -1572,9 +1580,11 @@ export class AnalyticsService {
       });
 
       const mostProfitableTeam = teamDataArray.length > 0
-        ? teamDataArray.reduce((best, current) => 
-            current.profit > best.profit ? current : best
-          )
+        ? teamDataArray.reduce((best, current) => {
+            if (current.profit > best.profit) return current;
+            if (current.profit === best.profit && current.bet_count > best.bet_count) return current;
+            return best;
+          })
         : null;
 
       const favoriteTeam = teamDataArray.length > 0
@@ -1590,9 +1600,11 @@ export class AnalyticsService {
       });
 
       const mostProfitableBetType = betTypeDataArray.length > 0
-        ? betTypeDataArray.reduce((best, current) => 
-            current.profit > best.profit ? current : best
-          )
+        ? betTypeDataArray.reduce((best, current) => {
+            if (current.profit > best.profit) return current;
+            if (current.profit === best.profit && current.bet_count > best.bet_count) return current;
+            return best;
+          })
         : null;
 
       const favoriteBetType = betTypeDataArray.length > 0
@@ -1608,9 +1620,11 @@ export class AnalyticsService {
       });
 
       const mostProfitableCategory = categoryDataArray.length > 0
-        ? categoryDataArray.reduce((best, current) => 
-            current.profit > best.profit ? current : best
-          )
+        ? categoryDataArray.reduce((best, current) => {
+            if (current.profit > best.profit) return current;
+            if (current.profit === best.profit && current.bet_count > best.bet_count) return current;
+            return best;
+          })
         : null;
 
       const favoriteCategory = categoryDataArray.length > 0
@@ -1622,9 +1636,11 @@ export class AnalyticsService {
       // Get day data and find most profitable and favorite
       const dayDataArray = Array.from(data.dayMap.values());
       const mostProfitableDay = dayDataArray.length > 0
-        ? dayDataArray.reduce((best, current) => 
-            current.profit > best.profit ? current : best
-          )
+        ? dayDataArray.reduce((best, current) => {
+            if (current.profit > best.profit) return current;
+            if (current.profit === best.profit && current.bet_count > best.bet_count) return current;
+            return best;
+          })
         : null;
 
       const favoriteDay = dayDataArray.length > 0
@@ -1638,15 +1654,21 @@ export class AnalyticsService {
         ? leagueDataArray.filter(l => l.total > 0).reduce((best, current) => {
             const currentWR = current.total > 0 ? current.won / current.total : 0;
             const bestWR = best.total > 0 ? best.won / best.total : 0;
-            return currentWR > bestWR ? current : best;
+            // If win rates are equal, prefer the one with more resolved bets (more data points)
+            if (currentWR > bestWR) return current;
+            if (currentWR === bestWR && current.total > best.total) return current;
+            return best;
           }, leagueDataArray[0])
         : null;
 
       const worstWinRateLeague = leagueDataArray.length > 0
-        ? leagueDataArray.filter(l => l.total > 0).reduce((best, current) => {
+        ? leagueDataArray.filter(l => l.total > 0).reduce((worst, current) => {
             const currentWR = current.total > 0 ? current.won / current.total : 0;
-            const bestWR = best.total > 0 ? best.won / best.total : 0;
-            return currentWR < bestWR ? current : best;
+            const worstWR = worst.total > 0 ? worst.won / worst.total : 0;
+            // If win rates are equal, prefer the one with more resolved bets (more data points)
+            if (currentWR < worstWR) return current;
+            if (currentWR === worstWR && current.total > worst.total) return current;
+            return worst;
           }, leagueDataArray[0])
         : null;
 
@@ -1654,47 +1676,63 @@ export class AnalyticsService {
         ? leagueDataArray.filter(l => l.stake > 0).reduce((best, current) => {
             const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
             const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
-            return currentROI > bestROI ? current : best;
+            // If ROI is equal, prefer the one with more stake (more data points)
+            if (currentROI > bestROI) return current;
+            if (currentROI === bestROI && current.stake > best.stake) return current;
+            return best;
           }, leagueDataArray[0])
         : null;
 
       const worstROILeague = leagueDataArray.length > 0
-        ? leagueDataArray.filter(l => l.stake > 0).reduce((best, current) => {
+        ? leagueDataArray.filter(l => l.stake > 0).reduce((worst, current) => {
             const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
-            const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
-            return currentROI < bestROI ? current : best;
+            const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
+            // If ROI is equal, prefer the one with more stake (more data points)
+            if (currentROI < worstROI) return current;
+            if (currentROI === worstROI && current.stake > worst.stake) return current;
+            return worst;
           }, leagueDataArray[0])
         : null;
 
       // Find worst performers (opposite of most profitable)
       const worstProfitableLeague = leagueDataArray.length > 0
-        ? leagueDataArray.reduce((worst, current) => 
-            current.profit < worst.profit ? current : worst
-          )
+        ? leagueDataArray.reduce((worst, current) => {
+            if (current.profit < worst.profit) return current;
+            if (current.profit === worst.profit && current.bet_count > worst.bet_count) return current;
+            return worst;
+          })
         : null;
 
       const worstProfitableTeam = teamDataArray.length > 0
-        ? teamDataArray.reduce((worst, current) => 
-            current.profit < worst.profit ? current : worst
-          )
+        ? teamDataArray.reduce((worst, current) => {
+            if (current.profit < worst.profit) return current;
+            if (current.profit === worst.profit && current.bet_count > worst.bet_count) return current;
+            return worst;
+          })
         : null;
 
       const worstProfitableCategory = categoryDataArray.length > 0
-        ? categoryDataArray.reduce((worst, current) => 
-            current.profit < worst.profit ? current : worst
-          )
+        ? categoryDataArray.reduce((worst, current) => {
+            if (current.profit < worst.profit) return current;
+            if (current.profit === worst.profit && current.bet_count > worst.bet_count) return current;
+            return worst;
+          })
         : null;
 
       const worstProfitableBetType = betTypeDataArray.length > 0
-        ? betTypeDataArray.reduce((worst, current) => 
-            current.profit < worst.profit ? current : worst
-          )
+        ? betTypeDataArray.reduce((worst, current) => {
+            if (current.profit < worst.profit) return current;
+            if (current.profit === worst.profit && current.bet_count > worst.bet_count) return current;
+            return worst;
+          })
         : null;
 
       const worstProfitableDay = dayDataArray.length > 0
-        ? dayDataArray.reduce((worst, current) => 
-            current.profit < worst.profit ? current : worst
-          )
+        ? dayDataArray.reduce((worst, current) => {
+            if (current.profit < worst.profit) return current;
+            if (current.profit === worst.profit && current.bet_count > worst.bet_count) return current;
+            return worst;
+          })
         : null;
 
       // Get hour data and find best/worst
@@ -1703,7 +1741,9 @@ export class AnalyticsService {
         ? hourDataArray.reduce((best, current) => {
             const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
             const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
-            return currentROI > bestROI ? current : best;
+            if (currentROI > bestROI) return current;
+            if (currentROI === bestROI && current.bet_count > best.bet_count) return current;
+            return best;
           })
         : null;
 
@@ -1711,7 +1751,9 @@ export class AnalyticsService {
         ? hourDataArray.reduce((worst, current) => {
             const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
             const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
-            return currentROI < worstROI ? current : worst;
+            if (currentROI < worstROI) return current;
+            if (currentROI === worstROI && current.bet_count > worst.bet_count) return current;
+            return worst;
           })
         : null;
 
@@ -1721,7 +1763,9 @@ export class AnalyticsService {
         ? monthDataArray.reduce((best, current) => {
             const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
             const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
-            return currentROI > bestROI ? current : best;
+            if (currentROI > bestROI) return current;
+            if (currentROI === bestROI && current.bet_count > best.bet_count) return current;
+            return best;
           })
         : null;
 
@@ -1729,7 +1773,9 @@ export class AnalyticsService {
         ? monthDataArray.reduce((worst, current) => {
             const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
             const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
-            return currentROI < worstROI ? current : worst;
+            if (currentROI < worstROI) return current;
+            if (currentROI === worstROI && current.bet_count > worst.bet_count) return current;
+            return worst;
           })
         : null;
 
@@ -1739,7 +1785,9 @@ export class AnalyticsService {
         ? oddsRangeDataArray.reduce((best, current) => {
             const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
             const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
-            return currentROI > bestROI ? current : best;
+            if (currentROI > bestROI) return current;
+            if (currentROI === bestROI && current.bet_count > best.bet_count) return current;
+            return best;
           })
         : null;
 
@@ -1747,7 +1795,9 @@ export class AnalyticsService {
         ? oddsRangeDataArray.reduce((worst, current) => {
             const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
             const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
-            return currentROI < worstROI ? current : worst;
+            if (currentROI < worstROI) return current;
+            if (currentROI === worstROI && current.bet_count > worst.bet_count) return current;
+            return worst;
           })
         : null;
 
@@ -1765,7 +1815,10 @@ export class AnalyticsService {
         ? legLeagueDataArray.filter(l => l.total_resolved > 0).reduce((best, current) => {
             const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
             const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
-            return currentWR > bestWR ? current : best;
+            // If win rates are equal, prefer the one with more legs (more data points)
+            if (currentWR > bestWR) return current;
+            if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
+            return best;
           }, legLeagueDataArray[0])
         : null;
 
@@ -1773,7 +1826,10 @@ export class AnalyticsService {
         ? legLeagueDataArray.filter(l => l.total_resolved > 0).reduce((worst, current) => {
             const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
             const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
-            return currentWR < worstWR ? current : worst;
+            // If win rates are equal, prefer the one with more legs (more data points)
+            if (currentWR < worstWR) return current;
+            if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
+            return worst;
           }, legLeagueDataArray[0])
         : null;
 
@@ -1793,7 +1849,10 @@ export class AnalyticsService {
         ? legTeamDataArray.filter(t => t.total_resolved > 0).reduce((best, current) => {
             const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
             const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
-            return currentWR > bestWR ? current : best;
+            // If win rates are equal, prefer the one with more legs (more data points)
+            if (currentWR > bestWR) return current;
+            if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
+            return best;
           }, legTeamDataArray[0])
         : null;
 
@@ -1801,7 +1860,10 @@ export class AnalyticsService {
         ? legTeamDataArray.filter(t => t.total_resolved > 0).reduce((worst, current) => {
             const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
             const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
-            return currentWR < worstWR ? current : worst;
+            // If win rates are equal, prefer the one with more legs (more data points)
+            if (currentWR < worstWR) return current;
+            if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
+            return worst;
           }, legTeamDataArray[0])
         : null;
 
@@ -1821,7 +1883,10 @@ export class AnalyticsService {
         ? legCategoryDataArray.filter(c => c.total_resolved > 0).reduce((best, current) => {
             const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
             const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
-            return currentWR > bestWR ? current : best;
+            // If win rates are equal, prefer the one with more legs (more data points)
+            if (currentWR > bestWR) return current;
+            if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
+            return best;
           }, legCategoryDataArray[0])
         : null;
 
@@ -1829,7 +1894,10 @@ export class AnalyticsService {
         ? legCategoryDataArray.filter(c => c.total_resolved > 0).reduce((worst, current) => {
             const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
             const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
-            return currentWR < worstWR ? current : worst;
+            // If win rates are equal, prefer the one with more legs (more data points)
+            if (currentWR < worstWR) return current;
+            if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
+            return worst;
           }, legCategoryDataArray[0])
         : null;
 
@@ -1849,7 +1917,10 @@ export class AnalyticsService {
         ? legBetTypeDataArray.filter(bt => bt.total_resolved > 0).reduce((best, current) => {
             const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
             const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
-            return currentWR > bestWR ? current : best;
+            // If win rates are equal, prefer the one with more legs (more data points)
+            if (currentWR > bestWR) return current;
+            if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
+            return best;
           }, legBetTypeDataArray[0])
         : null;
 
@@ -1857,7 +1928,10 @@ export class AnalyticsService {
         ? legBetTypeDataArray.filter(bt => bt.total_resolved > 0).reduce((worst, current) => {
             const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
             const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
-            return currentWR < worstWR ? current : worst;
+            // If win rates are equal, prefer the one with more legs (more data points)
+            if (currentWR < worstWR) return current;
+            if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
+            return worst;
           }, legBetTypeDataArray[0])
         : null;
 
@@ -1873,7 +1947,10 @@ export class AnalyticsService {
         ? legDayDataArray.filter(d => d.total_resolved > 0).reduce((best, current) => {
             const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
             const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
-            return currentWR > bestWR ? current : best;
+            // If win rates are equal, prefer the one with more legs (more data points)
+            if (currentWR > bestWR) return current;
+            if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
+            return best;
           }, legDayDataArray[0])
         : null;
 
@@ -1881,7 +1958,10 @@ export class AnalyticsService {
         ? legDayDataArray.filter(d => d.total_resolved > 0).reduce((worst, current) => {
             const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
             const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
-            return currentWR < worstWR ? current : worst;
+            // If win rates are equal, prefer the one with more legs (more data points)
+            if (currentWR < worstWR) return current;
+            if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
+            return worst;
           }, legDayDataArray[0])
         : null;
 
