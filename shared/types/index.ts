@@ -434,30 +434,45 @@ export interface ResponsibleDetailedAnalytics {
     league_name: string;
     total_profit: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   worst_profitable_team: {
     team_id: string;
     team_name: string;
     total_profit: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   worst_profitable_category: {
     category_id: string;
     category_name: string;
     total_profit: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   worst_profitable_bet_type: {
     bet_type_id: string;
     bet_type_name: string;
     total_profit: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   worst_profitable_day: {
     day: string;
     day_number: number;
     total_profit: number;
     bet_count: number;
+    win_rate: number;
+    wins: number;
+    total_resolved: number;
   } | null;
   best_hour: {
     hour: number;

@@ -1052,6 +1052,83 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
 
+                {/* Worst Selections */}
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-gray-700 mb-3">Worst Selections</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {responsible.worst_profitable_league && (
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <div className="text-sm text-red-600 font-medium mb-1">League</div>
+                        <div className="text-base font-bold text-red-900">{responsible.worst_profitable_league.league_name}</div>
+                        <div className="text-sm text-red-700 mt-1">
+                          ${responsible.worst_profitable_league.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_league.total_profit.toFixed(2)} ({responsible.worst_profitable_league.bet_count} bets)
+                        </div>
+                        {responsible.worst_profitable_league.total_resolved > 0 && (
+                          <div className="text-xs text-red-600 mt-1">
+                            {responsible.worst_profitable_league.wins}/{responsible.worst_profitable_league.total_resolved} {(responsible.worst_profitable_league.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.worst_profitable_team && (
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <div className="text-sm text-red-600 font-medium mb-1">Team</div>
+                        <div className="text-base font-bold text-red-900">{responsible.worst_profitable_team.team_name}</div>
+                        <div className="text-sm text-red-700 mt-1">
+                          ${responsible.worst_profitable_team.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_team.total_profit.toFixed(2)} ({responsible.worst_profitable_team.bet_count} bets)
+                        </div>
+                        {responsible.worst_profitable_team.total_resolved > 0 && (
+                          <div className="text-xs text-red-600 mt-1">
+                            {responsible.worst_profitable_team.wins}/{responsible.worst_profitable_team.total_resolved} {(responsible.worst_profitable_team.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.worst_profitable_category && (
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <div className="text-sm text-red-600 font-medium mb-1">Category</div>
+                        <div className="text-base font-bold text-red-900">{responsible.worst_profitable_category.category_name}</div>
+                        <div className="text-sm text-red-700 mt-1">
+                          ${responsible.worst_profitable_category.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_category.total_profit.toFixed(2)} ({responsible.worst_profitable_category.bet_count} bets)
+                        </div>
+                        {responsible.worst_profitable_category.total_resolved > 0 && (
+                          <div className="text-xs text-red-600 mt-1">
+                            {responsible.worst_profitable_category.wins}/{responsible.worst_profitable_category.total_resolved} {(responsible.worst_profitable_category.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.worst_profitable_bet_type && (
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <div className="text-sm text-red-600 font-medium mb-1">Bet Type</div>
+                        <div className="text-base font-bold text-red-900">{responsible.worst_profitable_bet_type.bet_type_name}</div>
+                        <div className="text-sm text-red-700 mt-1">
+                          ${responsible.worst_profitable_bet_type.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_bet_type.total_profit.toFixed(2)} ({responsible.worst_profitable_bet_type.bet_count} bets)
+                        </div>
+                        {responsible.worst_profitable_bet_type.total_resolved > 0 && (
+                          <div className="text-xs text-red-600 mt-1">
+                            {responsible.worst_profitable_bet_type.wins}/{responsible.worst_profitable_bet_type.total_resolved} {(responsible.worst_profitable_bet_type.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.worst_profitable_day && (
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <div className="text-sm text-red-600 font-medium mb-1">Day</div>
+                        <div className="text-base font-bold text-red-900">{responsible.worst_profitable_day.day}</div>
+                        <div className="text-sm text-red-700 mt-1">
+                          ${responsible.worst_profitable_day.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_day.total_profit.toFixed(2)} ({responsible.worst_profitable_day.bet_count} bets)
+                        </div>
+                        {responsible.worst_profitable_day.total_resolved > 0 && (
+                          <div className="text-xs text-red-600 mt-1">
+                            {responsible.worst_profitable_day.wins}/{responsible.worst_profitable_day.total_resolved} {(responsible.worst_profitable_day.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
               {responsible.performance_by_leg_count && responsible.performance_by_leg_count.length > 0 && (
                 <div className="mb-8">
                   <h4 className="text-md font-semibold text-gray-700 mb-3">Best Number of Legs</h4>
