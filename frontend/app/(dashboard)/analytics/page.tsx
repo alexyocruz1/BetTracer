@@ -908,31 +908,98 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
 
-                {/* Key Insights */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  {responsible.most_profitable_league && (
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                      <div className="text-sm text-blue-600 font-medium mb-1">Most Profitable League</div>
-                      <div className="text-base font-bold text-blue-900">{responsible.most_profitable_league.league_name}</div>
-                      <div className="text-sm text-blue-700 mt-1">
-                        ${responsible.most_profitable_league.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_league.total_profit.toFixed(2)} ({responsible.most_profitable_league.bet_count} bets)
+                {/* Most Profitable */}
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-gray-700 mb-3">Most Profitable</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {responsible.most_profitable_league && (
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="text-sm text-blue-600 font-medium mb-1">League</div>
+                        <div className="text-base font-bold text-blue-900">{responsible.most_profitable_league.league_name}</div>
+                        <div className="text-sm text-blue-700 mt-1">
+                          ${responsible.most_profitable_league.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_league.total_profit.toFixed(2)} ({responsible.most_profitable_league.bet_count} bets)
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {responsible.favorite_league && (
-                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                      <div className="text-sm text-purple-600 font-medium mb-1">Favorite League</div>
-                      <div className="text-base font-bold text-purple-900">{responsible.favorite_league.league_name}</div>
-                      <div className="text-sm text-purple-700 mt-1">{responsible.favorite_league.bet_count} bets</div>
-                    </div>
-                  )}
-                  {responsible.favorite_team && (
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <div className="text-sm text-green-600 font-medium mb-1">Favorite Team</div>
-                      <div className="text-base font-bold text-green-900">{responsible.favorite_team.team_name}</div>
-                      <div className="text-sm text-green-700 mt-1">{responsible.favorite_team.bet_count} bets</div>
-                    </div>
-                  )}
+                    )}
+                    {responsible.most_profitable_team && (
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="text-sm text-blue-600 font-medium mb-1">Team</div>
+                        <div className="text-base font-bold text-blue-900">{responsible.most_profitable_team.team_name}</div>
+                        <div className="text-sm text-blue-700 mt-1">
+                          ${responsible.most_profitable_team.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_team.total_profit.toFixed(2)} ({responsible.most_profitable_team.bet_count} bets)
+                        </div>
+                      </div>
+                    )}
+                    {responsible.most_profitable_category && (
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="text-sm text-blue-600 font-medium mb-1">Category</div>
+                        <div className="text-base font-bold text-blue-900">{responsible.most_profitable_category.category_name}</div>
+                        <div className="text-sm text-blue-700 mt-1">
+                          ${responsible.most_profitable_category.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_category.total_profit.toFixed(2)} ({responsible.most_profitable_category.bet_count} bets)
+                        </div>
+                      </div>
+                    )}
+                    {responsible.most_profitable_bet_type && (
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="text-sm text-blue-600 font-medium mb-1">Bet Type</div>
+                        <div className="text-base font-bold text-blue-900">{responsible.most_profitable_bet_type.bet_type_name}</div>
+                        <div className="text-sm text-blue-700 mt-1">
+                          ${responsible.most_profitable_bet_type.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_bet_type.total_profit.toFixed(2)} ({responsible.most_profitable_bet_type.bet_count} bets)
+                        </div>
+                      </div>
+                    )}
+                    {responsible.most_profitable_day && (
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="text-sm text-blue-600 font-medium mb-1">Day</div>
+                        <div className="text-base font-bold text-blue-900">{responsible.most_profitable_day.day}</div>
+                        <div className="text-sm text-blue-700 mt-1">
+                          ${responsible.most_profitable_day.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_day.total_profit.toFixed(2)} ({responsible.most_profitable_day.bet_count} bets)
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Favorites */}
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-gray-700 mb-3">Favorites</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {responsible.favorite_league && (
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <div className="text-sm text-purple-600 font-medium mb-1">League</div>
+                        <div className="text-base font-bold text-purple-900">{responsible.favorite_league.league_name}</div>
+                        <div className="text-sm text-purple-700 mt-1">{responsible.favorite_league.bet_count} bets</div>
+                      </div>
+                    )}
+                    {responsible.favorite_team && (
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <div className="text-sm text-purple-600 font-medium mb-1">Team</div>
+                        <div className="text-base font-bold text-purple-900">{responsible.favorite_team.team_name}</div>
+                        <div className="text-sm text-purple-700 mt-1">{responsible.favorite_team.bet_count} bets</div>
+                      </div>
+                    )}
+                    {responsible.favorite_category && (
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <div className="text-sm text-purple-600 font-medium mb-1">Category</div>
+                        <div className="text-base font-bold text-purple-900">{responsible.favorite_category.category_name}</div>
+                        <div className="text-sm text-purple-700 mt-1">{responsible.favorite_category.bet_count} bets</div>
+                      </div>
+                    )}
+                    {responsible.favorite_bet_type && (
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <div className="text-sm text-purple-600 font-medium mb-1">Bet Type</div>
+                        <div className="text-base font-bold text-purple-900">{responsible.favorite_bet_type.bet_type_name}</div>
+                        <div className="text-sm text-purple-700 mt-1">{responsible.favorite_bet_type.bet_count} bets</div>
+                      </div>
+                    )}
+                    {responsible.favorite_day && (
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <div className="text-sm text-purple-600 font-medium mb-1">Day</div>
+                        <div className="text-base font-bold text-purple-900">{responsible.favorite_day.day}</div>
+                        <div className="text-sm text-purple-700 mt-1">{responsible.favorite_day.bet_count} bets</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
               {responsible.performance_by_leg_count && responsible.performance_by_leg_count.length > 0 && (

@@ -1054,9 +1054,13 @@ export class AnalyticsService {
       bets: any[];
       legs: any[];
       leagueMap: Map<string, { league_id: string; league_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
-      teamMap: Map<string, { team_id: string; team_name: string; bet_count: number }>;
+      teamMap: Map<string, { team_id: string; team_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
       betTypeMap: Map<string, { bet_type_id: string; bet_type_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
       categoryMap: Map<string, { category_id: string; category_name: string; profit: number; bet_count: number; stake: number; won: number; total: number }>;
+      dayMap: Map<number, { day: string; day_number: number; profit: number; bet_count: number; stake: number; won: number; total: number }>;
+      hourMap: Map<number, { hour: number; profit: number; bet_count: number; stake: number; won: number; total: number }>;
+      monthMap: Map<string, { month: string; month_number: number; year: number; profit: number; bet_count: number; stake: number; won: number; total: number }>;
+      oddsRangeMap: Map<string, { range: string; min_odds: number; max_odds: number; profit: number; bet_count: number; stake: number; won: number; total: number }>;
       legCountMap: Map<number, { bet_count: number; won: number; total_stake: number; total_profit: number }>;
     }>();
 
@@ -1076,6 +1080,10 @@ export class AnalyticsService {
             teamMap: new Map(),
             betTypeMap: new Map(),
             categoryMap: new Map(),
+            dayMap: new Map(),
+            hourMap: new Map(),
+            monthMap: new Map(),
+            oddsRangeMap: new Map(),
             legCountMap: new Map(),
           });
         }
@@ -1107,26 +1115,44 @@ export class AnalyticsService {
           leagueData.total += 1;
         }
 
-        // Track teams (home and away)
+        // Track teams (home and away) with profit tracking
         if (leg.home_team_id) {
           if (!responsibleData.teamMap.has(leg.home_team_id)) {
             responsibleData.teamMap.set(leg.home_team_id, {
               team_id: leg.home_team_id,
               team_name: '',
+              profit: 0,
               bet_count: 0,
+              stake: 0,
+              won: 0,
+              total: 0,
             });
           }
-          responsibleData.teamMap.get(leg.home_team_id)!.bet_count += 1;
+          const teamData = responsibleData.teamMap.get(leg.home_team_id)!;
+          teamData.bet_count += 1;
+          teamData.stake += Number(bet.stake || 0);
+          teamData.profit += Number(bet.profit_loss || 0);
+          if (bet.state === 'won') teamData.won += 1;
+          teamData.total += 1;
         }
         if (leg.away_team_id) {
           if (!responsibleData.teamMap.has(leg.away_team_id)) {
             responsibleData.teamMap.set(leg.away_team_id, {
               team_id: leg.away_team_id,
               team_name: '',
+              profit: 0,
               bet_count: 0,
+              stake: 0,
+              won: 0,
+              total: 0,
             });
           }
-          responsibleData.teamMap.get(leg.away_team_id)!.bet_count += 1;
+          const teamData = responsibleData.teamMap.get(leg.away_team_id)!;
+          teamData.bet_count += 1;
+          teamData.stake += Number(bet.stake || 0);
+          teamData.profit += Number(bet.profit_loss || 0);
+          if (bet.state === 'won') teamData.won += 1;
+          teamData.total += 1;
         }
 
         // Track bet types
@@ -1169,6 +1195,112 @@ export class AnalyticsService {
           categoryData.profit += Number(bet.profit_loss || 0);
           if (bet.state === 'won') categoryData.won += 1;
           categoryData.total += 1;
+        }
+
+        // Track day of week
+        const betDate = new Date(bet.date);
+        const dayOfWeek = betDate.getDay();
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        if (!responsibleData.dayMap.has(dayOfWeek)) {
+          responsibleData.dayMap.set(dayOfWeek, {
+            day: dayNames[dayOfWeek],
+            day_number: dayOfWeek,
+            profit: 0,
+            bet_count: 0,
+            stake: 0,
+            won: 0,
+            total: 0,
+          });
+        }
+        const dayData = responsibleData.dayMap.get(dayOfWeek)!;
+        dayData.bet_count += 1;
+        dayData.stake += Number(bet.stake || 0);
+        dayData.profit += Number(bet.profit_loss || 0);
+        if (bet.state === 'won') dayData.won += 1;
+        dayData.total += 1;
+
+        // Track hour of day
+        const hour = betDate.getHours();
+        if (!responsibleData.hourMap.has(hour)) {
+          responsibleData.hourMap.set(hour, {
+            hour,
+            profit: 0,
+            bet_count: 0,
+            stake: 0,
+            won: 0,
+            total: 0,
+          });
+        }
+        const hourData = responsibleData.hourMap.get(hour)!;
+        hourData.bet_count += 1;
+        hourData.stake += Number(bet.stake || 0);
+        hourData.profit += Number(bet.profit_loss || 0);
+        if (bet.state === 'won') hourData.won += 1;
+        hourData.total += 1;
+
+        // Track month
+        const month = betDate.getMonth();
+        const year = betDate.getFullYear();
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthKey = `${year}-${month}`;
+        if (!responsibleData.monthMap.has(monthKey)) {
+          responsibleData.monthMap.set(monthKey, {
+            month: monthNames[month],
+            month_number: month + 1,
+            year,
+            profit: 0,
+            bet_count: 0,
+            stake: 0,
+            won: 0,
+            total: 0,
+          });
+        }
+        const monthData = responsibleData.monthMap.get(monthKey)!;
+        monthData.bet_count += 1;
+        monthData.stake += Number(bet.stake || 0);
+        monthData.profit += Number(bet.profit_loss || 0);
+        if (bet.state === 'won') monthData.won += 1;
+        monthData.total += 1;
+
+        // Track odds ranges
+        const effectiveOdds = this.calculateEffectiveOdds(bet);
+        if (effectiveOdds && effectiveOdds >= 1) {
+          const oddsRanges = [
+            { min: 1.0, max: 1.5, label: '1.0-1.5' },
+            { min: 1.5, max: 2.0, label: '1.5-2.0' },
+            { min: 2.0, max: 3.0, label: '2.0-3.0' },
+            { min: 3.0, max: 5.0, label: '3.0-5.0' },
+            { min: 5.0, max: 10.0, label: '5.0-10.0' },
+            { min: 10.0, max: Infinity, label: '10.0+' },
+          ];
+          let rangeLabel = '';
+          for (const range of oddsRanges) {
+            if (effectiveOdds >= range.min && (range.max === Infinity || effectiveOdds < range.max)) {
+              rangeLabel = range.label;
+              break;
+            }
+          }
+          if (rangeLabel) {
+            if (!responsibleData.oddsRangeMap.has(rangeLabel)) {
+              const range = oddsRanges.find(r => r.label === rangeLabel)!;
+              responsibleData.oddsRangeMap.set(rangeLabel, {
+                range: rangeLabel,
+                min_odds: range.min,
+                max_odds: range.max === Infinity ? 999 : range.max,
+                profit: 0,
+                bet_count: 0,
+                stake: 0,
+                won: 0,
+                total: 0,
+              });
+            }
+            const oddsData = responsibleData.oddsRangeMap.get(rangeLabel)!;
+            oddsData.bet_count += 1;
+            oddsData.stake += Number(bet.stake || 0);
+            oddsData.profit += Number(bet.profit_loss || 0);
+            if (bet.state === 'won') oddsData.won += 1;
+            oddsData.total += 1;
+          }
         }
       });
     });
@@ -1279,11 +1411,17 @@ export class AnalyticsService {
           )
         : null;
 
-      // Get team names and find favorite team
+      // Get team names and find most profitable and favorite team
       const teamDataArray = Array.from(data.teamMap.values());
       teamDataArray.forEach(teamData => {
         teamData.team_name = referenceItemsMap.get(teamData.team_id) || '';
       });
+
+      const mostProfitableTeam = teamDataArray.length > 0
+        ? teamDataArray.reduce((best, current) => 
+            current.profit > best.profit ? current : best
+          )
+        : null;
 
       const favoriteTeam = teamDataArray.length > 0
         ? teamDataArray.reduce((best, current) => 
@@ -1291,17 +1429,173 @@ export class AnalyticsService {
           )
         : null;
 
-      // Get bet type names
+      // Get bet type names and find most profitable and favorite
       const betTypeDataArray = Array.from(data.betTypeMap.values());
       betTypeDataArray.forEach(betTypeData => {
         betTypeData.bet_type_name = referenceItemsMap.get(betTypeData.bet_type_id) || '';
       });
 
-      // Get category names
+      const mostProfitableBetType = betTypeDataArray.length > 0
+        ? betTypeDataArray.reduce((best, current) => 
+            current.profit > best.profit ? current : best
+          )
+        : null;
+
+      const favoriteBetType = betTypeDataArray.length > 0
+        ? betTypeDataArray.reduce((best, current) => 
+            current.bet_count > best.bet_count ? current : best
+          )
+        : null;
+
+      // Get category names and find most profitable and favorite
       const categoryDataArray = Array.from(data.categoryMap.values());
       categoryDataArray.forEach(categoryData => {
         categoryData.category_name = referenceItemsMap.get(categoryData.category_id) || '';
       });
+
+      const mostProfitableCategory = categoryDataArray.length > 0
+        ? categoryDataArray.reduce((best, current) => 
+            current.profit > best.profit ? current : best
+          )
+        : null;
+
+      const favoriteCategory = categoryDataArray.length > 0
+        ? categoryDataArray.reduce((best, current) => 
+            current.bet_count > best.bet_count ? current : best
+          )
+        : null;
+
+      // Get day data and find most profitable and favorite
+      const dayDataArray = Array.from(data.dayMap.values());
+      const mostProfitableDay = dayDataArray.length > 0
+        ? dayDataArray.reduce((best, current) => 
+            current.profit > best.profit ? current : best
+          )
+        : null;
+
+      const favoriteDay = dayDataArray.length > 0
+        ? dayDataArray.reduce((best, current) => 
+            current.bet_count > best.bet_count ? current : best
+          )
+        : null;
+
+      // Find best/worst win rate and ROI
+      const bestWinRateLeague = leagueDataArray.length > 0
+        ? leagueDataArray.filter(l => l.total > 0).reduce((best, current) => {
+            const currentWR = current.total > 0 ? current.won / current.total : 0;
+            const bestWR = best.total > 0 ? best.won / best.total : 0;
+            return currentWR > bestWR ? current : best;
+          }, leagueDataArray[0])
+        : null;
+
+      const worstWinRateLeague = leagueDataArray.length > 0
+        ? leagueDataArray.filter(l => l.total > 0).reduce((best, current) => {
+            const currentWR = current.total > 0 ? current.won / current.total : 0;
+            const bestWR = best.total > 0 ? best.won / best.total : 0;
+            return currentWR < bestWR ? current : best;
+          }, leagueDataArray[0])
+        : null;
+
+      const bestROILeague = leagueDataArray.length > 0
+        ? leagueDataArray.filter(l => l.stake > 0).reduce((best, current) => {
+            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+            const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
+            return currentROI > bestROI ? current : best;
+          }, leagueDataArray[0])
+        : null;
+
+      const worstROILeague = leagueDataArray.length > 0
+        ? leagueDataArray.filter(l => l.stake > 0).reduce((best, current) => {
+            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+            const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
+            return currentROI < bestROI ? current : best;
+          }, leagueDataArray[0])
+        : null;
+
+      // Find worst performers (opposite of most profitable)
+      const worstProfitableLeague = leagueDataArray.length > 0
+        ? leagueDataArray.reduce((worst, current) => 
+            current.profit < worst.profit ? current : worst
+          )
+        : null;
+
+      const worstProfitableTeam = teamDataArray.length > 0
+        ? teamDataArray.reduce((worst, current) => 
+            current.profit < worst.profit ? current : worst
+          )
+        : null;
+
+      const worstProfitableCategory = categoryDataArray.length > 0
+        ? categoryDataArray.reduce((worst, current) => 
+            current.profit < worst.profit ? current : worst
+          )
+        : null;
+
+      const worstProfitableBetType = betTypeDataArray.length > 0
+        ? betTypeDataArray.reduce((worst, current) => 
+            current.profit < worst.profit ? current : worst
+          )
+        : null;
+
+      const worstProfitableDay = dayDataArray.length > 0
+        ? dayDataArray.reduce((worst, current) => 
+            current.profit < worst.profit ? current : worst
+          )
+        : null;
+
+      // Get hour data and find best/worst
+      const hourDataArray = Array.from(data.hourMap.values());
+      const bestHour = hourDataArray.length > 0
+        ? hourDataArray.reduce((best, current) => {
+            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+            const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
+            return currentROI > bestROI ? current : best;
+          })
+        : null;
+
+      const worstHour = hourDataArray.length > 0
+        ? hourDataArray.reduce((worst, current) => {
+            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+            const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
+            return currentROI < worstROI ? current : worst;
+          })
+        : null;
+
+      // Get month data and find best/worst
+      const monthDataArray = Array.from(data.monthMap.values());
+      const bestMonth = monthDataArray.length > 0
+        ? monthDataArray.reduce((best, current) => {
+            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+            const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
+            return currentROI > bestROI ? current : best;
+          })
+        : null;
+
+      const worstMonth = monthDataArray.length > 0
+        ? monthDataArray.reduce((worst, current) => {
+            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+            const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
+            return currentROI < worstROI ? current : worst;
+          })
+        : null;
+
+      // Get odds range data and find best/worst
+      const oddsRangeDataArray = Array.from(data.oddsRangeMap.values());
+      const bestOddsRange = oddsRangeDataArray.length > 0
+        ? oddsRangeDataArray.reduce((best, current) => {
+            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+            const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
+            return currentROI > bestROI ? current : best;
+          })
+        : null;
+
+      const worstOddsRange = oddsRangeDataArray.length > 0
+        ? oddsRangeDataArray.reduce((worst, current) => {
+            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+            const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
+            return currentROI < worstROI ? current : worst;
+          })
+        : null;
 
       // Build performance arrays
       const performanceByLeague = leagueDataArray.map(league => ({
@@ -1350,6 +1644,30 @@ export class AnalyticsService {
           total_profit: mostProfitableLeague.profit,
           bet_count: mostProfitableLeague.bet_count,
         } : null,
+        most_profitable_team: mostProfitableTeam ? {
+          team_id: mostProfitableTeam.team_id,
+          team_name: mostProfitableTeam.team_name,
+          total_profit: mostProfitableTeam.profit,
+          bet_count: mostProfitableTeam.bet_count,
+        } : null,
+        most_profitable_category: mostProfitableCategory ? {
+          category_id: mostProfitableCategory.category_id,
+          category_name: mostProfitableCategory.category_name,
+          total_profit: mostProfitableCategory.profit,
+          bet_count: mostProfitableCategory.bet_count,
+        } : null,
+        most_profitable_bet_type: mostProfitableBetType ? {
+          bet_type_id: mostProfitableBetType.bet_type_id,
+          bet_type_name: mostProfitableBetType.bet_type_name,
+          total_profit: mostProfitableBetType.profit,
+          bet_count: mostProfitableBetType.bet_count,
+        } : null,
+        most_profitable_day: mostProfitableDay ? {
+          day: mostProfitableDay.day,
+          day_number: mostProfitableDay.day_number,
+          total_profit: mostProfitableDay.profit,
+          bet_count: mostProfitableDay.bet_count,
+        } : null,
         favorite_league: favoriteLeague ? {
           league_id: favoriteLeague.league_id,
           league_name: favoriteLeague.league_name,
@@ -1359,6 +1677,21 @@ export class AnalyticsService {
           team_id: favoriteTeam.team_id,
           team_name: favoriteTeam.team_name,
           bet_count: favoriteTeam.bet_count,
+        } : null,
+        favorite_category: favoriteCategory ? {
+          category_id: favoriteCategory.category_id,
+          category_name: favoriteCategory.category_name,
+          bet_count: favoriteCategory.bet_count,
+        } : null,
+        favorite_bet_type: favoriteBetType ? {
+          bet_type_id: favoriteBetType.bet_type_id,
+          bet_type_name: favoriteBetType.bet_type_name,
+          bet_count: favoriteBetType.bet_count,
+        } : null,
+        favorite_day: favoriteDay ? {
+          day: favoriteDay.day,
+          day_number: favoriteDay.day_number,
+          bet_count: favoriteDay.bet_count,
         } : null,
         performance_by_league: performanceByLeague,
         performance_by_bet_type: performanceByBetType,
@@ -1371,6 +1704,110 @@ export class AnalyticsService {
           total_profit: bestLegCount.total_profit,
           roi: bestLegCount.roi,
           total_stake: bestLegCount.total_stake,
+        } : null,
+        best_win_rate_league: bestWinRateLeague ? {
+          league_id: bestWinRateLeague.league_id,
+          league_name: bestWinRateLeague.league_name,
+          win_rate: bestWinRateLeague.total > 0 ? bestWinRateLeague.won / bestWinRateLeague.total : 0,
+          bet_count: bestWinRateLeague.bet_count,
+        } : null,
+        worst_win_rate_league: worstWinRateLeague ? {
+          league_id: worstWinRateLeague.league_id,
+          league_name: worstWinRateLeague.league_name,
+          win_rate: worstWinRateLeague.total > 0 ? worstWinRateLeague.won / worstWinRateLeague.total : 0,
+          bet_count: worstWinRateLeague.bet_count,
+        } : null,
+        best_roi_league: bestROILeague ? {
+          league_id: bestROILeague.league_id,
+          league_name: bestROILeague.league_name,
+          roi: bestROILeague.stake > 0 ? bestROILeague.profit / bestROILeague.stake : 0,
+          bet_count: bestROILeague.bet_count,
+        } : null,
+        worst_roi_league: worstROILeague ? {
+          league_id: worstROILeague.league_id,
+          league_name: worstROILeague.league_name,
+          roi: worstROILeague.stake > 0 ? worstROILeague.profit / worstROILeague.stake : 0,
+          bet_count: worstROILeague.bet_count,
+        } : null,
+        worst_profitable_league: worstProfitableLeague ? {
+          league_id: worstProfitableLeague.league_id,
+          league_name: worstProfitableLeague.league_name,
+          total_profit: worstProfitableLeague.profit,
+          bet_count: worstProfitableLeague.bet_count,
+        } : null,
+        worst_profitable_team: worstProfitableTeam ? {
+          team_id: worstProfitableTeam.team_id,
+          team_name: worstProfitableTeam.team_name,
+          total_profit: worstProfitableTeam.profit,
+          bet_count: worstProfitableTeam.bet_count,
+        } : null,
+        worst_profitable_category: worstProfitableCategory ? {
+          category_id: worstProfitableCategory.category_id,
+          category_name: worstProfitableCategory.category_name,
+          total_profit: worstProfitableCategory.profit,
+          bet_count: worstProfitableCategory.bet_count,
+        } : null,
+        worst_profitable_bet_type: worstProfitableBetType ? {
+          bet_type_id: worstProfitableBetType.bet_type_id,
+          bet_type_name: worstProfitableBetType.bet_type_name,
+          total_profit: worstProfitableBetType.profit,
+          bet_count: worstProfitableBetType.bet_count,
+        } : null,
+        worst_profitable_day: worstProfitableDay ? {
+          day: worstProfitableDay.day,
+          day_number: worstProfitableDay.day_number,
+          total_profit: worstProfitableDay.profit,
+          bet_count: worstProfitableDay.bet_count,
+        } : null,
+        best_hour: bestHour ? {
+          hour: bestHour.hour,
+          roi: bestHour.stake > 0 ? bestHour.profit / bestHour.stake : 0,
+          win_rate: bestHour.total > 0 ? bestHour.won / bestHour.total : 0,
+          total_profit: bestHour.profit,
+          bet_count: bestHour.bet_count,
+        } : null,
+        worst_hour: worstHour ? {
+          hour: worstHour.hour,
+          roi: worstHour.stake > 0 ? worstHour.profit / worstHour.stake : 0,
+          win_rate: worstHour.total > 0 ? worstHour.won / worstHour.total : 0,
+          total_profit: worstHour.profit,
+          bet_count: worstHour.bet_count,
+        } : null,
+        best_month: bestMonth ? {
+          month: bestMonth.month,
+          month_number: bestMonth.month_number,
+          year: bestMonth.year,
+          roi: bestMonth.stake > 0 ? bestMonth.profit / bestMonth.stake : 0,
+          win_rate: bestMonth.total > 0 ? bestMonth.won / bestMonth.total : 0,
+          total_profit: bestMonth.profit,
+          bet_count: bestMonth.bet_count,
+        } : null,
+        worst_month: worstMonth ? {
+          month: worstMonth.month,
+          month_number: worstMonth.month_number,
+          year: worstMonth.year,
+          roi: worstMonth.stake > 0 ? worstMonth.profit / worstMonth.stake : 0,
+          win_rate: worstMonth.total > 0 ? worstMonth.won / worstMonth.total : 0,
+          total_profit: worstMonth.profit,
+          bet_count: worstMonth.bet_count,
+        } : null,
+        best_odds_range: bestOddsRange ? {
+          range: bestOddsRange.range,
+          min_odds: bestOddsRange.min_odds,
+          max_odds: bestOddsRange.max_odds,
+          roi: bestOddsRange.stake > 0 ? bestOddsRange.profit / bestOddsRange.stake : 0,
+          win_rate: bestOddsRange.total > 0 ? bestOddsRange.won / bestOddsRange.total : 0,
+          total_profit: bestOddsRange.profit,
+          bet_count: bestOddsRange.bet_count,
+        } : null,
+        worst_odds_range: worstOddsRange ? {
+          range: worstOddsRange.range,
+          min_odds: worstOddsRange.min_odds,
+          max_odds: worstOddsRange.max_odds,
+          roi: worstOddsRange.stake > 0 ? worstOddsRange.profit / worstOddsRange.stake : 0,
+          win_rate: worstOddsRange.total > 0 ? worstOddsRange.won / worstOddsRange.total : 0,
+          total_profit: worstOddsRange.profit,
+          bet_count: worstOddsRange.bet_count,
         } : null,
       });
     }
