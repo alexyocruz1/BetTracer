@@ -35,6 +35,7 @@ router.get('/:id', validate(getBetSchema), asyncHandler(betsController.getBet));
 router.patch('/:id', validate(updateBetSchema), asyncHandler(betsController.updateBet));
 router.patch('/:id/state', validate(updateBetStateSchema), asyncHandler(betsController.updateBetState));
 router.delete('/:id', validate(deleteBetSchema), asyncHandler(betsController.deleteBet));
+router.post('/generate-video', asyncHandler(betsController.generateVideo));
 
 export default router;
 

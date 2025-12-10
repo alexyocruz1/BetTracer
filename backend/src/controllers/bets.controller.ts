@@ -3,6 +3,9 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import { BetsService } from '../services/bets.service';
 import { sendSuccess } from '../utils/responses';
 import { invalidateUserMLCache } from './ml.controller';
+import axios from 'axios';
+
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 
 export class BetsController {
   constructor(private betsService: BetsService) {}
@@ -99,6 +102,61 @@ export class BetsController {
 
     await this.betsService.deleteBet(userId, id);
     return res.status(204).send();
+  };
+
+  generateVideo = async (req: AuthRequest, res: Response): Promise<Response> => {
+    try {
+      const { image_base64, duration, fps, text_elements, number_elements } = req.body;
+
+      if (!image_base64) {
+        return res.status(400).json({
+          error: {
+            message: 'Missing required field: image_base64',
+          },
+        });
+      }
+
+      // Call ML service to generate video
+      const response = await axios.post(
+        `${ML_SERVICE_URL}/generate-video`,
+        {
+          image_base64,
+          duration: duration || 10.0,
+          fps: fps || 30,
+          text_elements: text_elements || null,
+          number_elements: number_elements || null,
+        },
+        {
+          responseType: 'arraybuffer',
+          timeout: 120000, // 2 minutes timeout for video generation
+        }
+      );
+
+      // Set headers for video response
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Content-Disposition', 'attachment; filename=bet-video.mp4');
+      res.setHeader('Content-Length', response.data.length);
+
+      return res.send(response.data);
+    } catch (error: any) {
+      console.error('Video generation error:', error.message);
+
+      if (error.code === 'ECONNREFUSED' || error.response?.status >= 500) {
+        return res.status(503).json({
+          error: {
+            message: 'Video generation service temporarily unavailable',
+            details: error.message,
+          },
+        });
+      }
+
+      return res.status(500).json({
+        error: {
+          message: 'Video generation failed',
+          details: error.message,
+        },
+      });
+    }
   };
 }
 

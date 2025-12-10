@@ -627,6 +627,50 @@ async def predict(request: PredictRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
+# Video generation endpoint
+try:
+    from video_generator import generate_video_from_base64
+    VIDEO_GENERATOR_AVAILABLE = True
+except ImportError:
+    VIDEO_GENERATOR_AVAILABLE = False
+    print("Warning: Video generator not available. Install dependencies: pip install Pillow opencv-python imageio imageio-ffmpeg")
+
+from fastapi.responses import Response
+
+class VideoGenerationRequest(BaseModel):
+    image_base64: str
+    duration: float = 10.0
+    fps: int = 30
+    text_elements: Optional[List[dict]] = None
+    number_elements: Optional[List[dict]] = None
+
+@app.post("/generate-video")
+async def generate_video(request: VideoGenerationRequest):
+    """
+    Generate animated video from image with typing and counting animations.
+    """
+    if not VIDEO_GENERATOR_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Video generator not available. Please install dependencies.")
+    
+    try:
+        video_data = generate_video_from_base64(
+            request.image_base64,
+            duration=request.duration,
+            fps=request.fps,
+            text_elements=request.text_elements,
+            number_elements=request.number_elements
+        )
+        
+        return Response(
+            content=video_data,
+            media_type="video/mp4",
+            headers={
+                "Content-Disposition": "attachment; filename=bet-video.mp4"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Video generation error: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

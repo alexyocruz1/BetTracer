@@ -7,6 +7,7 @@ import { apiClient } from '@/lib/api/client';
 interface HighlightStatsImageProps {
   bet: MainBet;
   onReady?: () => void;
+  tiktokSafe?: boolean; // When true, removes betting-specific content for TikTok compliance
 }
 
 interface BetSpecificStats {
@@ -21,7 +22,7 @@ interface BetSpecificStats {
   oddsRangeStats?: { range: string; win_rate: number; total_bets: number; total_profit: number };
 }
 
-export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImageProps) {
+export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }: HighlightStatsImageProps) {
   const [referenceItems, setReferenceItems] = useState<Map<string, ReferenceItem>>(new Map());
   const [stats, setStats] = useState<BetSpecificStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -215,8 +216,9 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
   // Collect all valid stats
   const validStats: Array<{ type: string; element: JSX.Element }> = [];
 
-  // 1. League Performance (for leagues used in this bet) - show up to 2
-  stats.leaguesStats?.slice(0, 2).forEach((league, index) => {
+  // 1. League Performance (for leagues used in this bet) - show up to 3 in TikTok safe mode
+  const maxLeagues = tiktokSafe ? 3 : 2;
+  stats.leaguesStats?.slice(0, maxLeagues).forEach((league, index) => {
     validStats.push({
       type: `league-${index}`,
       element: (
@@ -226,9 +228,18 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         }}>
           <div className="flex justify-between items-center">
             <div>
-              <div className="text-3xl font-bold text-white mb-2">{league.league_name} Performance</div>
-              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(league.win_rate)}</div>
-              <div className="text-lg text-gray-400">{league.bet_count} bets</div>
+              <div className="text-3xl font-bold text-white mb-2">
+                {tiktokSafe ? '🏆 ' : ''}{league.league_name} {tiktokSafe ? 'Performance' : 'Analysis'}
+              </div>
+              <div className="text-xl text-gray-300">
+                {tiktokSafe ? 'Success Rate' : 'Win Rate'}: {formatPercentage(league.win_rate)}
+              </div>
+              {!tiktokSafe && (
+                <div className="text-lg text-gray-400">{league.bet_count} bets</div>
+              )}
+              {tiktokSafe && (
+                <div className="text-lg text-gray-400 mt-2">📈 League statistics & insights</div>
+              )}
             </div>
             <div className="text-6xl font-bold" style={{ color: league.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
               {formatPercentage(league.win_rate)}
@@ -239,8 +250,9 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
     });
   });
 
-  // 2. Team Performance (for teams used in this bet) - show up to 2
-  stats.teamsStats?.slice(0, 2).forEach((team, index) => {
+  // 2. Team Performance (for teams used in this bet) - show up to 3 in TikTok safe mode
+  const maxTeams = tiktokSafe ? 3 : 2;
+  stats.teamsStats?.slice(0, maxTeams).forEach((team, index) => {
     validStats.push({
       type: `team-${index}`,
       element: (
@@ -250,9 +262,18 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         }}>
           <div className="flex justify-between items-center">
             <div>
-              <div className="text-3xl font-bold text-white mb-2">{team.team_name} Performance</div>
-              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(team.win_rate)}</div>
-              <div className="text-lg text-gray-400">{team.total_legs} legs</div>
+              <div className="text-3xl font-bold text-white mb-2">
+                {tiktokSafe ? '⚽ ' : ''}{team.team_name} {tiktokSafe ? 'Form' : 'Analysis'}
+              </div>
+              <div className="text-xl text-gray-300">
+                {tiktokSafe ? 'Success Rate' : 'Win Rate'}: {formatPercentage(team.win_rate)}
+              </div>
+              {!tiktokSafe && (
+                <div className="text-lg text-gray-400">{team.total_legs} matches</div>
+              )}
+              {tiktokSafe && (
+                <div className="text-lg text-gray-400 mt-2">📊 Team performance analysis</div>
+              )}
             </div>
             <div className="text-6xl font-bold" style={{ color: team.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
               {formatPercentage(team.win_rate)}
@@ -263,9 +284,10 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
     });
   });
 
-  // 3. Bet Type Performance
-  stats.betTypesStats?.slice(0, 2).forEach((betType, index) => {
-    validStats.push({
+  // 3. Bet Type Performance - Hidden in TikTok safe mode
+  if (!tiktokSafe) {
+    stats.betTypesStats?.slice(0, 2).forEach((betType, index) => {
+      validStats.push({
       type: `betType-${index}`,
       element: (
         <div key={`betType-${index}`} className="rounded-3xl p-8 border-2" style={{ 
@@ -309,60 +331,120 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
         </div>
       )
     });
-  });
+    });
+  }
 
-  // 5. Day of Week Performance
+  // 5. Day of Week Performance - Reframed for TikTok safe mode
   if (stats.dayOfWeekStats) {
-    validStats.push({
-      type: 'dayOfWeek',
-      element: (
-        <div key="dayOfWeek" className="rounded-3xl p-8 border-2" style={{ 
-          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          borderColor: 'rgba(255, 255, 255, 0.15)'
-        }}>
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="text-3xl font-bold text-white mb-2">{stats.dayOfWeekStats.day} Performance</div>
-              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.dayOfWeekStats.win_rate)}</div>
-              <div className="text-lg text-gray-400">{stats.dayOfWeekStats.total_bets} bets</div>
-            </div>
-            <div className="text-6xl font-bold" style={{ color: stats.dayOfWeekStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
-              {formatPercentage(stats.dayOfWeekStats.win_rate)}
-            </div>
-          </div>
-        </div>
-      )
-    });
-  }
-
-  // 6. Weekend/Weekday Performance
-  if (stats.weekendStats) {
-    validStats.push({
-      type: 'weekend',
-      element: (
-        <div key="weekend" className="rounded-3xl p-8 border-2" style={{ 
-          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          borderColor: 'rgba(255, 255, 255, 0.15)'
-        }}>
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="text-3xl font-bold text-white mb-2">
-                {(bet && (new Date(bet.date).getDay() === 0 || new Date(bet.date).getDay() === 6)) ? 'Weekend' : 'Weekday'} Performance
+    if (tiktokSafe) {
+      validStats.push({
+        type: 'dayOfWeek',
+        element: (
+          <div key="dayOfWeek" className="rounded-3xl p-8 border-2" style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderColor: 'rgba(255, 255, 255, 0.15)'
+          }}>
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="text-3xl font-bold text-white mb-2">
+                  📅 {stats.dayOfWeekStats.day} Performance
+                </div>
+                <div className="text-xl text-gray-300">
+                  Success Rate: {formatPercentage(stats.dayOfWeekStats.win_rate)}
+                </div>
+                <div className="text-lg text-gray-400 mt-2">
+                  📊 Best day for match analysis
+                </div>
               </div>
-              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.weekendStats.win_rate)}</div>
-              <div className="text-lg text-gray-400">{stats.weekendStats.total_bets} bets</div>
-            </div>
-            <div className="text-6xl font-bold" style={{ color: stats.weekendStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
-              {formatPercentage(stats.weekendStats.win_rate)}
+              <div className="text-6xl font-bold" style={{ color: stats.dayOfWeekStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+                {formatPercentage(stats.dayOfWeekStats.win_rate)}
+              </div>
             </div>
           </div>
-        </div>
-      )
-    });
+        )
+      });
+    } else {
+      validStats.push({
+        type: 'dayOfWeek',
+        element: (
+          <div key="dayOfWeek" className="rounded-3xl p-8 border-2" style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderColor: 'rgba(255, 255, 255, 0.15)'
+          }}>
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="text-3xl font-bold text-white mb-2">{stats.dayOfWeekStats.day} Performance</div>
+                <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.dayOfWeekStats.win_rate)}</div>
+                <div className="text-lg text-gray-400">{stats.dayOfWeekStats.total_bets} bets</div>
+              </div>
+              <div className="text-6xl font-bold" style={{ color: stats.dayOfWeekStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+                {formatPercentage(stats.dayOfWeekStats.win_rate)}
+              </div>
+            </div>
+          </div>
+        )
+      });
+    }
   }
 
-  // 7. Leg Count Performance
-  if (stats.legCountStats) {
+  // 6. Weekend/Weekday Performance - Reframed for TikTok safe mode
+  if (stats.weekendStats) {
+    if (tiktokSafe) {
+      const isWeekend = bet && (new Date(bet.date).getDay() === 0 || new Date(bet.date).getDay() === 6);
+      validStats.push({
+        type: 'weekend',
+        element: (
+          <div key="weekend" className="rounded-3xl p-8 border-2" style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderColor: 'rgba(255, 255, 255, 0.15)'
+          }}>
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="text-3xl font-bold text-white mb-2">
+                  🎯 {isWeekend ? 'Weekend' : 'Weekday'} Performance
+                </div>
+                <div className="text-xl text-gray-300">
+                  Success Rate: {formatPercentage(stats.weekendStats.win_rate)}
+                </div>
+                <div className="text-lg text-gray-400 mt-2">
+                  📈 {isWeekend ? 'Weekend' : 'Weekday'} match insights
+                </div>
+              </div>
+              <div className="text-6xl font-bold" style={{ color: stats.weekendStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+                {formatPercentage(stats.weekendStats.win_rate)}
+              </div>
+            </div>
+          </div>
+        )
+      });
+    } else {
+      validStats.push({
+        type: 'weekend',
+        element: (
+          <div key="weekend" className="rounded-3xl p-8 border-2" style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderColor: 'rgba(255, 255, 255, 0.15)'
+          }}>
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="text-3xl font-bold text-white mb-2">
+                  {(bet && (new Date(bet.date).getDay() === 0 || new Date(bet.date).getDay() === 6)) ? 'Weekend' : 'Weekday'} Performance
+                </div>
+                <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.weekendStats.win_rate)}</div>
+                <div className="text-lg text-gray-400">{stats.weekendStats.total_bets} bets</div>
+              </div>
+              <div className="text-6xl font-bold" style={{ color: stats.weekendStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+                {formatPercentage(stats.weekendStats.win_rate)}
+              </div>
+            </div>
+          </div>
+        )
+      });
+    }
+  }
+
+  // 7. Leg Count Performance - Hidden in TikTok safe mode
+  if (!tiktokSafe && stats.legCountStats) {
     validStats.push({
       type: 'legCount',
       element: (
@@ -385,8 +467,8 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
     });
   }
 
-  // 8. Stake Range Performance
-  if (stats.stakeRangeStats) {
+  // 8. Stake Range Performance - Hidden in TikTok safe mode
+  if (!tiktokSafe && stats.stakeRangeStats) {
     validStats.push({
       type: 'stakeRange',
       element: (
@@ -409,8 +491,8 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
     });
   }
 
-  // 9. Odds Range Performance
-  if (stats.oddsRangeStats) {
+  // 9. Odds Range Performance - Hidden in TikTok safe mode
+  if (!tiktokSafe && stats.oddsRangeStats) {
     validStats.push({
       type: 'oddsRange',
       element: (
@@ -433,8 +515,9 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
     });
   }
 
-  // Show exactly the first 7 valid stats
-  const statsToShow = validStats.slice(0, 7).map(stat => stat.element);
+  // Show up to 7 valid stats (more in TikTok safe mode to fill the image)
+  const maxStats = tiktokSafe ? 7 : 7;
+  const statsToShow = validStats.slice(0, maxStats).map(stat => stat.element);
 
   return (
     <div
@@ -456,8 +539,12 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
     >
       {/* Header */}
       <div className="text-center mb-10">
-        <div className="text-7xl text-white font-bold mb-4">Bet Stats</div>
-        <div className="text-4xl text-gray-300">Performance Statistics</div>
+        <div className="text-7xl text-white font-bold mb-4">
+          {tiktokSafe ? 'Sports Analysis' : 'Bet Stats'}
+        </div>
+        <div className="text-4xl text-gray-300">
+          {tiktokSafe ? 'Team & League Performance' : 'Performance Statistics'}
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -472,16 +559,33 @@ export default function HighlightStatsImage({ bet, onReady }: HighlightStatsImag
       {/* Footer */}
       <div style={{ marginTop: 'auto', paddingTop: '32px', borderTop: '1px solid rgba(255, 255, 255, 0.15)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div className="text-3xl text-gray-400 font-semibold mb-3">Generated by</div>
-          <div 
-            className="text-5xl font-bold"
-            style={{
-              color: '#60a5fa',
-              textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
-            }}
-          >
-            BetTracer
-          </div>
+          {tiktokSafe ? (
+            <>
+              <div className="text-3xl text-gray-400 font-semibold mb-3">Sports Analysis</div>
+              <div 
+                className="text-5xl font-bold"
+                style={{
+                  color: '#60a5fa',
+                  textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
+                }}
+              >
+                Match Insights
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-3xl text-gray-400 font-semibold mb-3">Generated by</div>
+              <div 
+                className="text-5xl font-bold"
+                style={{
+                  color: '#60a5fa',
+                  textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
+                }}
+              >
+                BetTracer
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

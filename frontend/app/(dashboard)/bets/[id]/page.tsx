@@ -9,6 +9,7 @@ import BetslipImage from '@/components/BetslipImage';
 import HighlightStatsImage from '@/components/HighlightStatsImage';
 import { useMLPrediction } from '@/hooks/useMLPrediction';
 import MLInsights, { LegSummary } from '@/components/bets/MLInsights';
+import { supabase } from '@/lib/supabase/client';
 
 export default function BetDetailPage() {
   const params = useParams();
@@ -25,8 +26,11 @@ export default function BetDetailPage() {
   const [showStatsPreview, setShowStatsPreview] = useState(false);
   const [statsReady, setStatsReady] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
+  const [generatingBetslipVideo, setGeneratingBetslipVideo] = useState(false);
+  const [generatingStatsVideo, setGeneratingStatsVideo] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
   const [fitToScreen, setFitToScreen] = useState(false);
+  const [tiktokSafeMode, setTiktokSafeMode] = useState(true); // Default to TikTok safe mode
   const [referenceItems, setReferenceItems] = useState<Map<string, ReferenceItem>>(new Map());
   const {
     predict: runMLPrediction,
@@ -506,6 +510,180 @@ export default function BetDetailPage() {
     }
   };
 
+  const generateBetslipVideo = async () => {
+    if (!bet || generatingBetslipVideo) return;
+
+    try {
+      setGeneratingBetslipVideo(true);
+
+      // First, generate the image
+      setBetslipReady(false);
+      setShowBetslipPreview(true);
+      
+      // Wait for image to be ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (!betslipRef.current) {
+        throw new Error('Betslip ref not available');
+      }
+
+      // Wait a bit more for rendering
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Capture image
+      const dataUrl = await toPng(betslipRef.current, {
+        pixelRatio: 2,
+        width: 1080,
+        height: betslipRef.current.scrollHeight,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+        },
+        cacheBust: true,
+        skipAutoScale: true,
+        canvasWidth: 2160,
+        canvasHeight: betslipRef.current.scrollHeight * 2,
+        skipFonts: false,
+        quality: 1.0,
+      });
+
+      // Convert to base64
+      const base64Image = dataUrl.split(',')[1] || dataUrl;
+
+      // Call backend to generate video
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080'}/api/bets/generate-video`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          image_base64: base64Image,
+          duration: 10.0,
+          fps: 30,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+        throw new Error(error.error?.message || 'Failed to generate video');
+      }
+
+      // Get video blob
+      const videoBlob = await response.blob();
+
+      // Create download link
+      const url = window.URL.createObjectURL(videoBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `betslip-video-${bet.id}-${new Date().toISOString().split('T')[0]}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setShowBetslipPreview(false);
+      setBetslipReady(false);
+    } catch (error: any) {
+      console.error('Failed to generate betslip video:', error);
+      alert(`Failed to generate betslip video: ${error?.response?.data?.error?.message || error?.message || 'Unknown error'}`);
+    } finally {
+      setGeneratingBetslipVideo(false);
+    }
+  };
+
+  const generateStatsVideo = async () => {
+    if (!bet || generatingStatsVideo) return;
+
+    try {
+      setGeneratingStatsVideo(true);
+
+      // First, generate the image
+      setStatsReady(false);
+      setShowStatsPreview(true);
+      
+      // Wait for image to be ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (!statsRef.current) {
+        throw new Error('Stats ref not available');
+      }
+
+      // Find the actual component
+      const wrapper = statsRef.current;
+      const innerWrapper = wrapper.firstElementChild as HTMLElement;
+      const componentWrapper = innerWrapper?.firstElementChild as HTMLElement;
+      const actualComponent = componentWrapper?.querySelector('.image-generation-container') as HTMLElement || componentWrapper;
+      
+      if (!actualComponent) {
+        throw new Error('Could not find statistics component');
+      }
+
+      // Wait a bit more for rendering
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Capture image
+      const dataUrl = await toPng(actualComponent, {
+        pixelRatio: 2,
+        width: 1080,
+        height: actualComponent.scrollHeight,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+        },
+        cacheBust: true,
+        skipAutoScale: true,
+        canvasWidth: 2160,
+        canvasHeight: actualComponent.scrollHeight * 2,
+        skipFonts: false,
+        quality: 1.0,
+      });
+
+      // Convert to base64
+      const base64Image = dataUrl.split(',')[1] || dataUrl;
+
+      // Call backend to generate video
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080'}/api/bets/generate-video`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          image_base64: base64Image,
+          duration: 10.0,
+          fps: 30,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+        throw new Error(error.error?.message || 'Failed to generate video');
+      }
+
+      // Get video blob
+      const videoBlob = await response.blob();
+
+      // Create download link
+      const url = window.URL.createObjectURL(videoBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `stats-video-${bet.id}-${new Date().toISOString().split('T')[0]}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setShowStatsPreview(false);
+      setStatsReady(false);
+    } catch (error: any) {
+      console.error('Failed to generate stats video:', error);
+      alert(`Failed to generate stats video: ${error?.response?.data?.error?.message || error?.message || 'Unknown error'}`);
+    } finally {
+      setGeneratingStatsVideo(false);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;
   }
@@ -582,7 +760,7 @@ export default function BetDetailPage() {
                     width: fitToScreen ? 'fit-content' : '1080px',
                   }}
                 >
-                <BetslipImage bet={bet} onReady={handleBetslipReady} />
+                <BetslipImage bet={bet} onReady={handleBetslipReady} tiktokSafe={tiktokSafeMode} />
                 </div>
               </div>
             </div>
@@ -665,7 +843,7 @@ export default function BetDetailPage() {
                         width: fitToScreen ? 'fit-content' : '1080px',
                       }}
                     >
-                      <HighlightStatsImage bet={bet} onReady={handleStatsReady} />
+                      <HighlightStatsImage bet={bet} onReady={handleStatsReady} tiktokSafe={tiktokSafeMode} />
                     </div>
                   </div>
                 </div>
@@ -675,21 +853,77 @@ export default function BetDetailPage() {
       )}
 
       {/* Generate Buttons */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <button
-          onClick={generateBetslipImage}
-          disabled={generatingBetslip}
-          className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 min-h-[44px]"
-        >
-          {generatingBetslip ? 'Generating...' : '📸 Generate Betslip for TikTok'}
-        </button>
-        <button
-          onClick={generateStatsImage}
-          disabled={generatingStats}
-          className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 disabled:opacity-50 min-h-[44px]"
-        >
-          {generatingStats ? 'Generating...' : '📊 Generate Statistics for TikTok'}
-        </button>
+      <div className="mb-6">
+        {/* TikTok Safe Mode Toggle */}
+        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                Content Mode
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {tiktokSafeMode 
+                  ? 'TikTok Safe Mode: Sports commentary & analysis (no betting content)'
+                  : 'Full Mode: Includes all betting information (stakes, odds, profit/loss)'}
+            </p>
+            </div>
+            <div className="ml-4">
+              <button
+                type="button"
+                onClick={() => setTiktokSafeMode(!tiktokSafeMode)}
+                className={`relative inline-flex h-8 w-16 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                  tiktokSafeMode ? 'bg-green-600' : 'bg-gray-300'
+                }`}
+                role="switch"
+                aria-checked={tiktokSafeMode}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    tiktokSafeMode ? 'translate-x-8' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <span className={`text-xs font-medium ${tiktokSafeMode ? 'text-green-600' : 'text-gray-500'}`}>
+              {tiktokSafeMode ? '✓ TikTok Safe' : 'Full Details'}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <button
+            onClick={generateBetslipImage}
+            disabled={generatingBetslip}
+            className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 min-h-[44px]"
+          >
+            {generatingBetslip ? 'Generating...' : tiktokSafeMode ? '📸 Generate Betslip (TikTok Safe)' : '📸 Generate Betslip'}
+          </button>
+          <button
+            onClick={generateStatsImage}
+            disabled={generatingStats}
+            className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 disabled:opacity-50 min-h-[44px]"
+          >
+            {generatingStats ? 'Generating...' : tiktokSafeMode ? '📊 Generate Statistics (TikTok Safe)' : '📊 Generate Statistics'}
+          </button>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={() => generateBetslipVideo()}
+            disabled={generatingBetslipVideo || !bet}
+            className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 min-h-[44px]"
+          >
+            {generatingBetslipVideo ? 'Generating Video...' : tiktokSafeMode ? '🎬 Generate Betslip Video (TikTok Safe)' : '🎬 Generate Betslip Video'}
+          </button>
+          <button
+            onClick={() => generateStatsVideo()}
+            disabled={generatingStatsVideo || !bet}
+            className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 disabled:opacity-50 min-h-[44px]"
+          >
+            {generatingStatsVideo ? 'Generating Video...' : tiktokSafeMode ? '🎬 Generate Stats Video (TikTok Safe)' : '🎬 Generate Stats Video'}
+          </button>
+        </div>
       </div>
       <div className="mb-6">
         <button
