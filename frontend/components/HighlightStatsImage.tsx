@@ -519,17 +519,82 @@ export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }
   const maxStats = tiktokSafe ? 7 : 7;
   const statsToShow = validStats.slice(0, maxStats).map(stat => stat.element);
 
+  // Calculate optimal spacing based on number of stats and TikTok safe mode
+  const getOptimalStatsLayout = () => {
+    const statsCount = statsToShow.length;
+    // For TikTok, always use exactly 1920px height
+    // Adjust spacing based on content
+    if (tiktokSafe) {
+      // TikTok Safe mode - optimize for 1920px
+      if (statsCount <= 4) {
+        return {
+          height: '1920px',
+          padding: '60px 40px',
+          gap: '40px',
+          headerMarginBottom: '40px',
+          footerMarginTop: '40px'
+        };
+      } else if (statsCount <= 6) {
+        return {
+          height: '1920px',
+          padding: '50px 40px',
+          gap: '32px',
+          headerMarginBottom: '32px',
+          footerMarginTop: '32px'
+        };
+      } else {
+        return {
+          height: '1920px',
+          padding: '40px 40px',
+          gap: '24px',
+          headerMarginBottom: '24px',
+          footerMarginTop: '24px'
+        };
+      }
+    } else {
+      // Full mode - also optimized for TikTok 1920px height
+      if (statsCount <= 4) {
+        return {
+          height: '1920px',
+          padding: '60px 40px',
+          gap: '40px',
+          headerMarginBottom: '40px',
+          footerMarginTop: '40px'
+        };
+      } else if (statsCount <= 6) {
+        return {
+          height: '1920px',
+          padding: '50px 40px',
+          gap: '32px',
+          headerMarginBottom: '32px',
+          footerMarginTop: '32px'
+        };
+      } else {
+        return {
+          height: '1920px', // Force 1920px for TikTok compliance
+          padding: '40px 40px',
+          gap: '24px',
+          headerMarginBottom: '24px',
+          footerMarginTop: '24px'
+        };
+      }
+    }
+  };
+
+  const statsLayout = getOptimalStatsLayout();
+
   return (
     <div
       ref={containerRef}
       className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white image-generation-container"
       style={{
         width: '1080px',
-        minHeight: '1920px',
-        padding: '60px 40px',
+        height: statsLayout.height,
+        minHeight: statsLayout.minHeight || statsLayout.height,
+        padding: statsLayout.padding,
         fontFamily: 'system-ui, -apple-system, sans-serif',
         boxSizing: 'border-box',
-        overflow: 'visible',
+        overflow: 'hidden', // Changed from 'visible' to 'hidden' to ensure exact height
         fontSize: '16px',
         lineHeight: '1.5',
         display: 'flex',
@@ -538,17 +603,24 @@ export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }
       }}
     >
       {/* Header */}
-      <div className="text-center mb-10">
+      <div className="text-center" style={{ marginBottom: statsLayout.headerMarginBottom }}>
         <div className="text-7xl text-white font-bold mb-4">
-          {tiktokSafe ? 'Sports Analysis' : 'Bet Stats'}
+          {tiktokSafe ? '⚽ Sports Analysis' : 'Bet Stats'}
         </div>
         <div className="text-4xl text-gray-300">
-          {tiktokSafe ? 'Team & League Performance' : 'Performance Statistics'}
+          {tiktokSafe ? '📊 Team & League Performance' : 'Performance Statistics'}
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', flex: '1', marginBottom: '40px' }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: statsLayout.gap, 
+        flex: '1', 
+        marginBottom: statsLayout.footerMarginTop,
+        overflow: 'hidden' // Ensure content doesn't overflow
+      }}>
         {statsToShow.length > 0 ? statsToShow : (
           <div className="text-center text-3xl text-gray-400 py-20">
             No statistics available for this bet
@@ -557,7 +629,12 @@ export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: 'auto', paddingTop: '32px', borderTop: '1px solid rgba(255, 255, 255, 0.15)' }}>
+      <div style={{ 
+        marginTop: 'auto', 
+        paddingTop: '24px', 
+        borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+        flexShrink: 0 // Prevent footer from shrinking
+      }}>
         <div style={{ textAlign: 'center' }}>
           {tiktokSafe ? (
             <>

@@ -247,62 +247,115 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
   const getOptimalBetslipLayout = (legCount: number) => {
     // TikTok optimal size: 1080x1920px (9:16 aspect ratio)
     // We need to fit everything within 1920px height
+    // When tiktokSafe is true, ALWAYS use 1920px height for TikTok compliance
     
-    // Determine layout based on content needs
+    // If TikTok Safe mode, always use 1920px and optimize spacing
+    if (tiktokSafe) {
+      if (legCount <= 3) {
+        return {
+          height: '1920px', // Standard TikTok
+          legPadding: '40px',
+          legSpacing: '32px',
+          fontSize: 'large',
+          headerHeight: 200, // Reduced for TikTok safe
+          summaryHeight: 180, // Reduced for TikTok safe
+          footerHeight: 120,
+          paddingTop: 60,
+          paddingBottom: 50
+        };
+      } else if (legCount === 4) {
+        return {
+          height: '1920px', // Standard TikTok - must fit!
+          legPadding: '28px',
+          legSpacing: '20px',
+          fontSize: 'medium',
+          headerHeight: 180, // Reduced for TikTok safe
+          summaryHeight: 160, // Reduced for TikTok safe
+          footerHeight: 100,
+          paddingTop: 50,
+          paddingBottom: 40
+        };
+      } else if (legCount <= 6) {
+        return {
+          height: '1920px', // Force 1920px for TikTok
+          legPadding: '20px',
+          legSpacing: '12px',
+          fontSize: 'small',
+          headerHeight: 160,
+          summaryHeight: 140,
+          footerHeight: 80,
+          paddingTop: 40,
+          paddingBottom: 30
+        };
+      } else {
+        return {
+          height: '1920px', // Force 1920px for TikTok
+          legPadding: '16px',
+          legSpacing: '8px',
+          fontSize: 'small',
+          headerHeight: 140,
+          summaryHeight: 120,
+          footerHeight: 60,
+          paddingTop: 30,
+          paddingBottom: 20
+        };
+      }
+    }
+    
+    // Full mode - also optimized for TikTok 1920px height
+    // Need to be more compact than TikTok safe mode due to additional betting info
     if (legCount <= 3) {
-      // Few legs - generous spacing
+      // Few legs - compact spacing to fit footer
       return {
         height: '1920px', // Standard TikTok
-        legPadding: '40px',
-        legSpacing: '32px',
+        legPadding: '36px', // Slightly reduced
+        legSpacing: '28px', // Slightly reduced
         fontSize: 'large',
-        headerHeight: 250,
-        summaryHeight: 220,
-        footerHeight: 150,
-        paddingTop: 60,
-        paddingBottom: 60
+        headerHeight: 220, // Reduced to make room for footer
+        summaryHeight: 200, // Reduced to make room for footer
+        footerHeight: 120,
+        paddingTop: 50,
+        paddingBottom: 50 // Ensure footer space
       };
     } else if (legCount === 4) {
       // 4 legs - optimized to fit TikTok's 1920px height
       // More compact spacing while maintaining readability
       return {
         height: '1920px', // Standard TikTok - must fit!
-        legPadding: '28px', // Reduced from 32px
-        legSpacing: '20px', // Reduced from 24px
+        legPadding: '24px', // More compact
+        legSpacing: '16px', // More compact
         fontSize: 'medium',
-        headerHeight: 220, // Reduced from 250
-        summaryHeight: 180, // Reduced from 220
-        footerHeight: 120, // Reduced from 150
-        paddingTop: 60, // Standard
-        paddingBottom: 50 // Slightly reduced
-      };
-    } else if (legCount <= 6) {
-      // 5-6 legs - more compact
-      const calculatedHeight = Math.max(2400, Math.min(2800, 1920 + (legCount - 4) * 300));
-      return {
-        height: `${calculatedHeight}px`,
-        legPadding: '24px',
-        legSpacing: '16px',
-        fontSize: 'medium',
-        headerHeight: 200,
-        summaryHeight: 160,
+        headerHeight: 200, // Reduced to make room for footer
+        summaryHeight: 160, // Reduced to make room for footer
         footerHeight: 100,
         paddingTop: 50,
-        paddingBottom: 40
+        paddingBottom: 40 // Ensure footer space
       };
-    } else {
-      // Many legs - very compact spacing
-      const calculatedHeight = Math.max(2800, Math.min(3200, 1920 + (legCount - 4) * 250));
+    } else if (legCount <= 6) {
+      // 5-6 legs - compact to fit 1920px
       return {
-        height: `${calculatedHeight}px`,
-        legPadding: '20px',
-        legSpacing: '12px',
-        fontSize: 'small',
-        headerHeight: 180,
-        summaryHeight: 140,
+        height: '1920px', // Force 1920px for TikTok compliance
+        legPadding: '20px', // More compact
+        legSpacing: '12px', // Tighter spacing
+        fontSize: 'medium',
+        headerHeight: 180, // Reduced to make room for footer
+        summaryHeight: 140, // Reduced to make room for footer
         footerHeight: 80,
         paddingTop: 40,
-        paddingBottom: 30
+        paddingBottom: 30 // Ensure footer space
+      };
+    } else {
+      // Many legs - very compact spacing to fit 1920px
+      return {
+        height: '1920px', // Force 1920px for TikTok compliance
+        legPadding: '16px', // Very compact
+        legSpacing: '8px', // Very tight spacing
+        fontSize: 'small',
+        headerHeight: 160, // Reduced to make room for footer
+        summaryHeight: 120, // Reduced to make room for footer
+        footerHeight: 60,
+        paddingTop: 30,
+        paddingBottom: 20 // Ensure footer space
       };
     }
   };
@@ -451,8 +504,8 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
       <div 
         className="rounded-3xl border-2"
         style={{
-          padding: legCount === 4 ? '32px' : '48px',
-          marginBottom: legCount === 4 ? '24px' : '48px',
+          padding: legCount === 4 ? '28px' : (legCount <= 6 ? '36px' : '32px'),
+          marginBottom: legCount === 4 ? '20px' : (legCount <= 6 ? '32px' : '24px'),
           background: 'rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(10px)',
           borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -461,23 +514,23 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
       >
         {!tiktokSafe && (
           <>
-            <div className="flex justify-between items-start" style={{ gap: legCount === 4 ? '40px' : '60px', marginBottom: legCount === 4 ? '20px' : '40px' }}>
+            <div className="flex justify-between items-start" style={{ gap: legCount === 4 ? '32px' : (legCount <= 6 ? '48px' : '40px'), marginBottom: legCount === 4 ? '16px' : (legCount <= 6 ? '28px' : '20px') }}>
               <div className="flex-1" style={{ minWidth: '200px' }}>
-                <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '12px' : '16px' }}>Total Odds</div>
+                <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '10px' : (legCount <= 6 ? '12px' : '10px') }}>Total Odds</div>
                 <div className={`${fonts.statValue} font-black`} style={{ color: '#fbbf24' }}>
                   {bet.odds?.toFixed(2)}x
                 </div>
               </div>
               <div className="flex-1 text-center" style={{ minWidth: '200px' }}>
-                <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '12px' : '16px' }}>Stake</div>
+                <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '10px' : (legCount <= 6 ? '12px' : '10px') }}>Stake</div>
                 <div className={`${fonts.statValue} font-bold`}>${bet.stake.toFixed(2)}</div>
               </div>
               <div className="flex-1 text-right" style={{ minWidth: '200px' }}>
-                <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '12px' : '16px' }}>Matches</div>
+                <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '10px' : (legCount <= 6 ? '12px' : '10px') }}>Matches</div>
                 <div className={`${fonts.statValue} font-bold`}>{bet.legs?.length || 0}</div>
               </div>
             </div>
-            <div className="border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.2)', paddingTop: legCount === 4 ? '20px' : '32px' }}>
+            <div className="border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.2)', paddingTop: legCount === 4 ? '16px' : (legCount <= 6 ? '24px' : '16px') }}>
               <div className="flex justify-between items-center">
                 <div>
                   <div 
@@ -734,16 +787,23 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: 'auto', paddingTop: legCount === 4 ? '20px' : '32px', borderTop: '1px solid rgba(255, 255, 255, 0.15)' }}>
+      <div style={{ 
+        marginTop: 'auto', 
+        paddingTop: legCount === 4 ? '16px' : (legCount <= 6 ? '20px' : '16px'), 
+        paddingBottom: '0',
+        borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+        flexShrink: 0 // Prevent footer from being compressed
+      }}>
         <div style={{ textAlign: 'center' }}>
           {tiktokSafe ? (
             <>
-              <div className={`${fonts.legDetails} text-gray-400 font-semibold mb-3`}>Sports Analysis</div>
+              <div className={`${fonts.legDetails} text-gray-400 font-semibold mb-2`} style={{ fontSize: legCount >= 5 ? '16px' : undefined }}>Sports Analysis</div>
               <div 
                 className={`${fonts.statLabel} font-bold`}
                 style={{
                   color: '#60a5fa',
                   textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
+                  fontSize: legCount >= 5 ? '24px' : undefined
                 }}
               >
                 Match Insights
@@ -751,12 +811,13 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
             </>
           ) : (
             <>
-              <div className={`${fonts.legDetails} text-gray-400 font-semibold mb-3`}>Generated by</div>
+              <div className={`${fonts.legDetails} text-gray-400 font-semibold mb-2`} style={{ fontSize: legCount >= 5 ? '16px' : undefined }}>Generated by</div>
               <div 
                 className={`${fonts.statLabel} font-bold`}
                 style={{
                   color: '#60a5fa',
                   textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
+                  fontSize: legCount >= 5 ? '24px' : undefined
                 }}
               >
                 BetTracer
