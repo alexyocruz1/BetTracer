@@ -590,7 +590,6 @@ export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }
       style={{
         width: '1080px',
         height: statsLayout.height,
-        minHeight: statsLayout.minHeight || statsLayout.height,
         padding: statsLayout.padding,
         fontFamily: 'system-ui, -apple-system, sans-serif',
         boxSizing: 'border-box',
