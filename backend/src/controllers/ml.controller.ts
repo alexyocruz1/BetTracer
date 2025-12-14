@@ -323,52 +323,52 @@ export class MLController {
 
       // Fetch reference items
       const [teams, leagues, betTypes, categories, responsibles] = await Promise.all([
-        this.referenceItemsService.getItems({ kind: 'team', limit: 1000 }).catch(() => ({ data: [] })),
-        this.referenceItemsService.getItems({ kind: 'league', limit: 1000 }).catch(() => ({ data: [] })),
-        this.referenceItemsService.getItems({ kind: 'bet_type', limit: 1000 }).catch(() => ({ data: [] })),
-        this.referenceItemsService.getItems({ kind: 'category', limit: 1000 }).catch(() => ({ data: [] })),
-        this.referenceItemsService.getItems({ kind: 'responsible', limit: 1000 }).catch(() => ({ data: [] })),
+        this.referenceItemsService.getReferenceItems({ kind: 'team', limit: 1000, offset: 0 }).catch(() => ({ items: [], total: 0 })),
+        this.referenceItemsService.getReferenceItems({ kind: 'league', limit: 1000, offset: 0 }).catch(() => ({ items: [], total: 0 })),
+        this.referenceItemsService.getReferenceItems({ kind: 'bet_type', limit: 1000, offset: 0 }).catch(() => ({ items: [], total: 0 })),
+        this.referenceItemsService.getReferenceItems({ kind: 'category', limit: 1000, offset: 0 }).catch(() => ({ items: [], total: 0 })),
+        this.referenceItemsService.getReferenceItems({ kind: 'responsible', limit: 1000, offset: 0 }).catch(() => ({ items: [], total: 0 })),
       ]);
 
       // Build maps for quick lookup
-      const teamsMap = new Map(teams.data.map(t => [t.id, t]));
-      const leaguesMap = new Map(leagues.data.map(l => [l.id, l]));
-      const betTypesMap = new Map(betTypes.data.map(bt => [bt.id, bt]));
-      const categoriesMap = new Map(categories.data.map(c => [c.id, c]));
-      const responsiblesMap = new Map(responsibles.data.map(r => [r.id, r]));
+      const teamsMap = new Map(teams.items.map((t) => [t.id, t]));
+      const leaguesMap = new Map(leagues.items.map((l) => [l.id, l]));
+      const betTypesMap = new Map(betTypes.items.map((bt) => [bt.id, bt]));
+      const categoriesMap = new Map(categories.items.map((c) => [c.id, c]));
+      const responsiblesMap = new Map(responsibles.items.map((r) => [r.id, r]));
 
       // Find best performing entities
       const bestLeagues = (byLeague || [])
-        .filter(l => l.win_rate > 0.5 && l.total_bets >= 3)
+        .filter(l => l.win_rate > 0.5 && l.bet_count >= 3)
         .sort((a, b) => b.win_rate - a.win_rate)
         .slice(0, 10);
 
       const bestBetTypes = (byBetType || [])
-        .filter(bt => bt.win_rate > 0.5 && bt.total_bets >= 3)
+        .filter(bt => bt.win_rate > 0.5 && bt.bet_count >= 3)
         .sort((a, b) => b.win_rate - a.win_rate)
         .slice(0, 10);
 
       const bestCategories = (byCategory || [])
-        .filter(c => c.win_rate > 0.5 && c.total_bets >= 3)
+        .filter(c => c.win_rate > 0.5 && c.bet_count >= 3)
         .sort((a, b) => b.win_rate - a.win_rate)
         .slice(0, 10);
 
       const bestLegCounts = (byLegs || [])
-        .filter(l => l.win_rate > 0.5 && l.total_bets >= 3)
+        .filter(l => l.win_rate > 0.5 && l.bet_count >= 3)
         .sort((a, b) => b.win_rate - a.win_rate)
         .slice(0, 5);
 
       // Get best performing responsibles
       const bestResponsibles = (responsible || [])
-        .filter(r => r.win_rate > 0.5 && r.total_bets >= 3)
-        .sort((a, b) => b.win_rate - a.win_rate)
+        .filter(r => r.summary.win_rate > 0.5 && r.summary.bet_count >= 3)
+        .sort((a, b) => b.summary.win_rate - a.summary.win_rate)
         .slice(0, 5);
 
       // Get optimal day of week
-      const optimalDay = temporal?.day_of_week_analysis
-        ? Object.entries(temporal.day_of_week_analysis)
-            .filter(([_, data]: [string, any]) => data.total_bets >= 3)
-            .sort(([_, a]: [string, any], [__, b]: [string, any]) => b.win_rate - a.win_rate)[0]?.[0]
+      const optimalDay = temporal?.by_day_of_week
+        ? temporal.by_day_of_week
+            .filter(day => day.total_bets >= 3)
+            .sort((a, b) => b.win_rate - a.win_rate)[0]?.day_number?.toString() || null
         : null;
 
       // Generate recommendations per responsible
@@ -392,7 +392,7 @@ export class MLController {
           const league = respLeagues[i];
           const betType = respBetTypes[i % respBetTypes.length];
           const category = respCategories[i % respCategories.length];
-          const legCount = bestLegCounts[0]?.leg_count || 2;
+          const legCount = bestLegCounts[0]?.num_legs || 2;
 
           // Get teams from this league (if available)
           // For now, we'll create a generic recommendation
@@ -412,7 +412,7 @@ export class MLController {
               `League "${leaguesMap.get(league.league_id)?.name}" has ${(league.win_rate * 100).toFixed(1)}% win rate`,
               `Bet type "${betTypesMap.get(betType.bet_type_id)?.name}" has ${(betType.win_rate * 100).toFixed(1)}% win rate`,
               `Category "${categoriesMap.get(category.category_id)?.name}" has ${(category.win_rate * 100).toFixed(1)}% win rate`,
-              `${respName} has ${(resp.win_rate * 100).toFixed(1)}% win rate`,
+              `${respName} has ${(resp.summary.win_rate * 100).toFixed(1)}% win rate`,
             ],
           };
 
@@ -436,7 +436,7 @@ export class MLController {
             bet_type_name: betTypesMap.get(betType.bet_type_id)?.name || 'Unknown Bet Type',
             category_id: category.category_id,
             category_name: categoriesMap.get(category.category_id)?.name || 'Unknown Category',
-            recommended_leg_count: bestLegCounts[0]?.leg_count || 2,
+            recommended_leg_count: bestLegCounts[0]?.num_legs || 2,
             recommended_day: optimalDay,
             confidence_score: (league.win_rate + betType.win_rate + category.win_rate) / 3,
             reasoning: [
