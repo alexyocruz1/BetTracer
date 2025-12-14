@@ -72,57 +72,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     };
 
-    // Try localStorage first (fast path)
-    const storedSession = getSessionFromStorage();
-    if (storedSession && mounted) {
-      // We have a token, create a minimal session object
-      // The full session will be fetched in the background
-      const session = {
-        access_token: storedSession.access_token,
-        refresh_token: '', // Will be updated when real session loads
-        expires_in: 3600,
-        expires_at: Math.floor(Date.now() / 1000) + 3600,
-        token_type: 'bearer',
-        user: storedSession.user,
-      } as Session;
-      
-      setSession(session);
-      setUser(storedSession.user);
-      
-      // Fetch admin status
-      fetchAdminStatus(storedSession.user.id).catch(() => {
-        setIsAdmin(false);
-      });
-      
-      setLoading(false);
-      
-      // Still try to get the real session in the background (for refresh tokens, etc.)
-      supabase.auth.getSession().then(({ data: { session: realSession } }) => {
-        if (mounted && realSession) {
-          setSession(realSession);
-          setUser(realSession.user);
-        }
-      }).catch(() => {
-        // Ignore - we already have a session from localStorage
-      });
-      
-      return () => {
-        mounted = false;
-      };
-    }
+    // Always use getSession() to ensure we get a valid, non-expired session
+    // getSession() handles token refresh automatically if needed
+    // Don't rely on localStorage directly as it might contain expired tokens
 
-    // No token in localStorage, try getSession() with timeout
+    // Get initial session with timeout and proper expiration handling
     timeoutId = setTimeout(() => {
       if (mounted) {
-        console.warn('[Auth] Session check timeout after 3s - no session found');
+        console.warn('[Auth] Session check timeout after 5s - no session found');
         setSession(null);
         setUser(null);
         setIsAdmin(false);
         setLoading(false);
       }
-    }, 3000); // 3 second timeout
+    }, 5000); // Increased timeout to 5 seconds to account for slow backend (Render sleep)
 
-    // Get initial session with error handling
+    // Get initial session with error handling and expiration check
     supabase.auth
       .getSession()
       .then(async ({ data: { session }, error }) => {
@@ -139,17 +104,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          try {
-            await fetchAdminStatus(session.user.id);
-          } catch (error) {
-            console.error('[Auth] Error fetching admin status:', error);
+        // Check if session exists and is valid
+        if (session) {
+          const expiresAt = session.expires_at;
+          
+          // Check if session is expired
+          if (expiresAt && expiresAt < Math.floor(Date.now() / 1000)) {
+            console.warn('[Auth] Session expired, attempting refresh...');
+            
+            // Try to refresh the expired session
+            if (session.refresh_token) {
+              try {
+                const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(session);
+                
+                if (refreshError || !refreshData?.session) {
+                  console.error('[Auth] Failed to refresh expired session:', refreshError);
+                  setSession(null);
+                  setUser(null);
+                  setIsAdmin(false);
+                  setLoading(false);
+                  return;
+                }
+                
+                // Session refreshed successfully
+                setSession(refreshData.session);
+                setUser(refreshData.session.user);
+                
+                if (refreshData.session.user) {
+                  try {
+                    await fetchAdminStatus(refreshData.session.user.id);
+                  } catch (error) {
+                    console.error('[Auth] Error fetching admin status:', error);
+                    setIsAdmin(false);
+                  }
+                } else {
+                  setIsAdmin(false);
+                }
+                
+                setLoading(false);
+                return;
+              } catch (refreshErr) {
+                console.error('[Auth] Error during session refresh:', refreshErr);
+                setSession(null);
+                setUser(null);
+                setIsAdmin(false);
+                setLoading(false);
+                return;
+              }
+            } else {
+              // No refresh token, session is invalid
+              console.warn('[Auth] Session expired and no refresh token available');
+              setSession(null);
+              setUser(null);
+              setIsAdmin(false);
+              setLoading(false);
+              return;
+            }
+          }
+          
+          // Session is valid, use it
+          setSession(session);
+          setUser(session.user);
+          
+          if (session.user) {
+            try {
+              await fetchAdminStatus(session.user.id);
+            } catch (error) {
+              console.error('[Auth] Error fetching admin status:', error);
+              setIsAdmin(false);
+            }
+          } else {
             setIsAdmin(false);
           }
         } else {
+          // No session found
+          setSession(null);
+          setUser(null);
           setIsAdmin(false);
         }
         
@@ -168,12 +198,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
+      console.log('[Auth] Auth state changed:', event, session ? 'session exists' : 'no session');
+      
+      // Update session and user state
       setSession(session);
       setUser(session?.user ?? null);
       
+      // Update admin status if we have a user
       if (session?.user) {
         try {
           await fetchAdminStatus(session.user.id);
@@ -188,10 +222,110 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
+    // Listen for visibility changes (when user returns to tab)
+    const handleVisibilityChange = async () => {
+      if (!mounted || typeof document === 'undefined') return;
+      
+      if (document.visibilityState === 'visible') {
+        // User returned to the tab, refresh session to check if it's still valid
+        try {
+          const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('[Auth] Error refreshing session on visibility change:', error);
+            // If session check fails, clear state and redirect to login
+            setSession(null);
+            setUser(null);
+            setIsAdmin(false);
+            if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
+            return;
+          }
+
+          // If we have a session but it's expired or about to expire, try to refresh it
+          if (currentSession) {
+            const expiresAt = currentSession.expires_at;
+            if (expiresAt) {
+              const expiresIn = expiresAt - Math.floor(Date.now() / 1000);
+              
+              // If token expires within 5 minutes, refresh it
+              if (expiresIn < 300 && currentSession.refresh_token) {
+                try {
+                  const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(currentSession);
+                  
+                  if (refreshError || !refreshData?.session) {
+                    console.error('[Auth] Failed to refresh session on visibility change:', refreshError);
+                    // Session refresh failed, sign out
+                    await supabase.auth.signOut();
+                    setSession(null);
+                    setUser(null);
+                    setIsAdmin(false);
+                    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+                      window.location.href = '/login';
+                    }
+                    return;
+                  }
+                  
+                  // Session refreshed successfully
+                  setSession(refreshData.session);
+                  setUser(refreshData.session.user);
+                  if (refreshData.session.user) {
+                    await fetchAdminStatus(refreshData.session.user.id);
+                  }
+                } catch (refreshErr) {
+                  console.error('[Auth] Error during session refresh on visibility change:', refreshErr);
+                  await supabase.auth.signOut();
+                  setSession(null);
+                  setUser(null);
+                  setIsAdmin(false);
+                  if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                  }
+                }
+              } else {
+                // Session is still valid, just update state
+                setSession(currentSession);
+                setUser(currentSession.user);
+                if (currentSession.user) {
+                  await fetchAdminStatus(currentSession.user.id);
+                }
+              }
+            } else {
+              // No expiration info, just update state
+              setSession(currentSession);
+              setUser(currentSession.user);
+              if (currentSession.user) {
+                await fetchAdminStatus(currentSession.user.id);
+              }
+            }
+          } else {
+            // No session found, clear state
+            setSession(null);
+            setUser(null);
+            setIsAdmin(false);
+            if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
+          }
+        } catch (err) {
+          console.error('[Auth] Error handling visibility change:', err);
+        }
+      }
+    };
+
+    // Add visibility change listener
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
     return () => {
       mounted = false;
       clearTimeout(timeoutId);
       subscription.unsubscribe();
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
     };
   }, []);
 

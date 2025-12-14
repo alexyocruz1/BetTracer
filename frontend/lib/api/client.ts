@@ -18,66 +18,45 @@ class ApiClient {
     // Add auth token to requests
     this.client.interceptors.request.use(
       async (config) => {
-        // Fast path: Try localStorage first (synchronous, no async overhead)
-        let accessToken: string | null = null;
-        
-        if (typeof window !== 'undefined') {
-          try {
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-            const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || '';
-            
-            if (projectRef) {
-              const storageKey = `sb-${projectRef}-auth-token`;
-              const stored = localStorage.getItem(storageKey);
+        try {
+          // Always use getSession() to ensure we have a valid, refreshed token
+          // getSession() will automatically refresh expired tokens if autoRefreshToken is enabled
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('[API Client] Error getting session:', error);
+            // If session retrieval fails, try to continue without token
+            // Backend will handle authentication
+            return config;
+          }
+
+          if (session?.access_token) {
+            // Check if token is about to expire (within 5 minutes)
+            const expiresAt = session.expires_at;
+            if (expiresAt) {
+              const expiresIn = expiresAt - Math.floor(Date.now() / 1000);
               
-              if (stored) {
+              // If token expires soon, try to refresh it
+              if (expiresIn < 300 && session.refresh_token) {
                 try {
-                  const parsed = JSON.parse(stored);
-                  // Check if token is expired
-                  const expiresAt = parsed?.expires_at;
-                  if (expiresAt && Date.now() / 1000 < expiresAt) {
-                    accessToken = parsed?.access_token || null;
-                  } else if (parsed?.access_token) {
-                    // Token exists but might be expired, still try it
-                    // Backend will reject if truly expired
-                    accessToken = parsed.access_token;
+                  const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(session);
+                  if (!refreshError && refreshData?.session?.access_token) {
+                    config.headers.Authorization = `Bearer ${refreshData.session.access_token}`;
+                    return config;
                   }
-                } catch (e) {
-                  // Invalid JSON, ignore
+                } catch (refreshErr) {
+                  console.warn('[API Client] Failed to refresh session:', refreshErr);
+                  // Continue with current token, backend will handle if it's expired
                 }
               }
             }
-          } catch (e) {
-            // localStorage access failed, ignore
-          }
-        }
-
-        // If we got a token from localStorage, use it immediately
-        if (accessToken) {
-          config.headers.Authorization = `Bearer ${accessToken}`;
-          return config;
-        }
-
-        // Fallback: Try getSession() with very short timeout (only if localStorage failed)
-        // This is mainly to refresh expired tokens
-        try {
-          const sessionPromise = supabase.auth.getSession();
-          const timeoutPromise = new Promise<{ data: { session: null }; error: null }>((resolve) => {
-            setTimeout(() => {
-              resolve({ data: { session: null }, error: null });
-            }, 1000); // Very short timeout since we already tried localStorage
-          });
-
-          const result = await Promise.race([sessionPromise, timeoutPromise]);
-          const { data: sessionData } = result;
-
-          // sessionData is { session: Session | null }, so access token via session.access_token
-          if (sessionData?.session?.access_token) {
-            config.headers.Authorization = `Bearer ${sessionData.session.access_token}`;
+            
+            config.headers.Authorization = `Bearer ${session.access_token}`;
           }
         } catch (error) {
-          // Silently fail - we already tried localStorage
-          // If both fail, request will proceed without token (backend will handle auth)
+          // If session retrieval completely fails, proceed without token
+          // Backend will return 401 if authentication is required
+          console.warn('[API Client] Failed to get session for request:', error);
         }
 
         return config;
@@ -90,7 +69,7 @@ class ApiClient {
     // Handle errors
     this.client.interceptors.response.use(
       (response) => response,
-      (error) => {
+      async (error) => {
         console.error('[API Client] Request failed:', {
           url: error.config?.url,
           method: error.config?.method,
@@ -99,12 +78,47 @@ class ApiClient {
         });
         
         if (error.response?.status === 401) {
-          // Handle unauthorized - redirect to login
-          supabase.auth.signOut().catch(console.error);
-          // Use setTimeout to avoid navigation during render
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 0);
+          // Check if we can refresh the session before signing out
+          try {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError || !session) {
+              // No valid session, sign out and redirect
+              await supabase.auth.signOut();
+              if (typeof window !== 'undefined') {
+                window.location.href = '/login';
+              }
+              return Promise.reject(error);
+            }
+
+            // Try to refresh the session if it exists
+            if (session.refresh_token) {
+              const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(session);
+              
+              if (!refreshError && refreshData?.session?.access_token) {
+                // Session refreshed successfully, retry the original request
+                const originalRequest = error.config;
+                if (originalRequest) {
+                  originalRequest.headers.Authorization = `Bearer ${refreshData.session.access_token}`;
+                  // Retry the request with the new token
+                  return this.client.request(originalRequest);
+                }
+              }
+            }
+
+            // Refresh failed or no refresh token, sign out and redirect
+            await supabase.auth.signOut();
+            if (typeof window !== 'undefined') {
+              window.location.href = '/login';
+            }
+          } catch (authError) {
+            console.error('[API Client] Auth error during 401 handling:', authError);
+            // Sign out on any error during auth handling
+            await supabase.auth.signOut().catch(console.error);
+            if (typeof window !== 'undefined') {
+              window.location.href = '/login';
+            }
+          }
         }
         
         // Handle network errors (common in Edge)

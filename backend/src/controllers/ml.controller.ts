@@ -382,20 +382,19 @@ export class MLController {
         const respLeagues = bestLeagues.filter(l => 
           // We'll use leagues that have good overall performance
           l.win_rate > 0.55
-        ).slice(0, 3);
+        ).slice(0, 10);
 
-        const respBetTypes = bestBetTypes.slice(0, 3);
-        const respCategories = bestCategories.slice(0, 3);
+        const respBetTypes = bestBetTypes.slice(0, 10);
+        const respCategories = bestCategories.slice(0, 10);
 
-        // Generate 2-3 recommendations per responsible
-        for (let i = 0; i < Math.min(3, respLeagues.length); i++) {
+        // Generate multiple recommendations per responsible (up to 10 combinations)
+        // Create combinations of leagues, bet types, and categories
+        for (let i = 0; i < Math.min(10, respLeagues.length); i++) {
           const league = respLeagues[i];
           const betType = respBetTypes[i % respBetTypes.length];
           const category = respCategories[i % respCategories.length];
-          const legCount = bestLegCounts[0]?.num_legs || 2;
+          const legCount = bestLegCounts[i % bestLegCounts.length]?.num_legs || bestLegCounts[0]?.num_legs || 2;
 
-          // Get teams from this league (if available)
-          // For now, we'll create a generic recommendation
           const recommendation = {
             responsible_id: respId,
             responsible_name: respName,
@@ -407,7 +406,7 @@ export class MLController {
             category_name: categoriesMap.get(category.category_id)?.name || 'Unknown Category',
             recommended_leg_count: legCount,
             recommended_day: optimalDay,
-            confidence_score: (league.win_rate + betType.win_rate + category.win_rate) / 3,
+            confidence_score: (league.win_rate + betType.win_rate + category.win_rate + resp.summary.win_rate) / 4,
             reasoning: [
               `League "${leaguesMap.get(league.league_id)?.name}" has ${(league.win_rate * 100).toFixed(1)}% win rate`,
               `Bet type "${betTypesMap.get(betType.bet_type_id)?.name}" has ${(betType.win_rate * 100).toFixed(1)}% win rate`,
@@ -422,10 +421,11 @@ export class MLController {
 
       // If no responsibles, generate general recommendations
       if (recommendations.length === 0) {
-        for (let i = 0; i < Math.min(3, bestLeagues.length); i++) {
+        for (let i = 0; i < Math.min(10, bestLeagues.length); i++) {
           const league = bestLeagues[i];
           const betType = bestBetTypes[i % bestBetTypes.length];
           const category = bestCategories[i % bestCategories.length];
+          const legCount = bestLegCounts[i % bestLegCounts.length]?.num_legs || bestLegCounts[0]?.num_legs || 2;
 
           recommendations.push({
             responsible_id: null,
@@ -436,7 +436,7 @@ export class MLController {
             bet_type_name: betTypesMap.get(betType.bet_type_id)?.name || 'Unknown Bet Type',
             category_id: category.category_id,
             category_name: categoriesMap.get(category.category_id)?.name || 'Unknown Category',
-            recommended_leg_count: bestLegCounts[0]?.num_legs || 2,
+            recommended_leg_count: legCount,
             recommended_day: optimalDay,
             confidence_score: (league.win_rate + betType.win_rate + category.win_rate) / 3,
             reasoning: [
@@ -448,13 +448,14 @@ export class MLController {
         }
       }
 
-      // Sort by confidence score
+      // Sort by confidence score and take top 10
       recommendations.sort((a, b) => b.confidence_score - a.confidence_score);
+      const topRecommendations = recommendations.slice(0, 10);
 
       return res.json({
-        data: recommendations,
+        data: topRecommendations,
         meta: {
-          total: recommendations.length,
+          total: topRecommendations.length,
           generated_at: new Date().toISOString(),
         },
       });
