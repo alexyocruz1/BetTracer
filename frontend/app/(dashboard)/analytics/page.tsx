@@ -237,23 +237,8 @@ export default function AnalyticsPage() {
     fetchAnalytics();
   }, [fetchAnalytics]);
 
-  // Auto-refresh when page becomes visible (e.g., after updating a bet)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        // Small delay to ensure any pending updates are complete
-        setTimeout(() => {
-          fetchAnalytics();
-        }, 500);
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [fetchAnalytics]);
+  // Note: Removed auto-refresh on visibility change to prevent unwanted refreshes when switching tabs
+  // Users can manually refresh if needed
 
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;

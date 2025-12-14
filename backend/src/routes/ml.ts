@@ -24,5 +24,6 @@ router.use((req: AuthRequest, _res, next) => {
 });
 
 router.post('/predict', asyncHandler(mlController.predict));
+router.get('/recommendations', asyncHandler(mlController.recommend));
 
 export default router;

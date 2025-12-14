@@ -293,5 +293,180 @@ export class MLController {
       });
     }
   };
+
+  recommend = async (req: AuthRequest, res: Response): Promise<Response> => {
+    try {
+      const userId = req.user!.id;
+      
+      console.log('[MLController] Generating bet recommendations for user:', userId);
+
+      // Fetch comprehensive analytics
+      const [
+        summary,
+        byLeague,
+        byBetType,
+        byCategory,
+        byLegs,
+        temporal,
+        responsible,
+        teamPerformance,
+      ] = await Promise.all([
+        this.analyticsService.getSummary(userId).catch(() => null),
+        this.analyticsService.getByLeague(userId).catch(() => null),
+        this.analyticsService.getByBetType(userId).catch(() => null),
+        this.analyticsService.getByCategory(userId).catch(() => null),
+        this.analyticsService.getByLegs(userId).catch(() => null),
+        this.analyticsService.getTemporalAnalytics(userId).catch(() => null),
+        this.analyticsService.getResponsibleDetailedAnalytics(userId).catch(() => null),
+        this.analyticsService.getTeamPerformance(userId).catch(() => null),
+      ]);
+
+      // Fetch reference items
+      const [teams, leagues, betTypes, categories, responsibles] = await Promise.all([
+        this.referenceItemsService.getItems({ kind: 'team', limit: 1000 }).catch(() => ({ data: [] })),
+        this.referenceItemsService.getItems({ kind: 'league', limit: 1000 }).catch(() => ({ data: [] })),
+        this.referenceItemsService.getItems({ kind: 'bet_type', limit: 1000 }).catch(() => ({ data: [] })),
+        this.referenceItemsService.getItems({ kind: 'category', limit: 1000 }).catch(() => ({ data: [] })),
+        this.referenceItemsService.getItems({ kind: 'responsible', limit: 1000 }).catch(() => ({ data: [] })),
+      ]);
+
+      // Build maps for quick lookup
+      const teamsMap = new Map(teams.data.map(t => [t.id, t]));
+      const leaguesMap = new Map(leagues.data.map(l => [l.id, l]));
+      const betTypesMap = new Map(betTypes.data.map(bt => [bt.id, bt]));
+      const categoriesMap = new Map(categories.data.map(c => [c.id, c]));
+      const responsiblesMap = new Map(responsibles.data.map(r => [r.id, r]));
+
+      // Find best performing entities
+      const bestLeagues = (byLeague || [])
+        .filter(l => l.win_rate > 0.5 && l.total_bets >= 3)
+        .sort((a, b) => b.win_rate - a.win_rate)
+        .slice(0, 10);
+
+      const bestBetTypes = (byBetType || [])
+        .filter(bt => bt.win_rate > 0.5 && bt.total_bets >= 3)
+        .sort((a, b) => b.win_rate - a.win_rate)
+        .slice(0, 10);
+
+      const bestCategories = (byCategory || [])
+        .filter(c => c.win_rate > 0.5 && c.total_bets >= 3)
+        .sort((a, b) => b.win_rate - a.win_rate)
+        .slice(0, 10);
+
+      const bestLegCounts = (byLegs || [])
+        .filter(l => l.win_rate > 0.5 && l.total_bets >= 3)
+        .sort((a, b) => b.win_rate - a.win_rate)
+        .slice(0, 5);
+
+      // Get best performing responsibles
+      const bestResponsibles = (responsible || [])
+        .filter(r => r.win_rate > 0.5 && r.total_bets >= 3)
+        .sort((a, b) => b.win_rate - a.win_rate)
+        .slice(0, 5);
+
+      // Get optimal day of week
+      const optimalDay = temporal?.day_of_week_analysis
+        ? Object.entries(temporal.day_of_week_analysis)
+            .filter(([_, data]: [string, any]) => data.total_bets >= 3)
+            .sort(([_, a]: [string, any], [__, b]: [string, any]) => b.win_rate - a.win_rate)[0]?.[0]
+        : null;
+
+      // Generate recommendations per responsible
+      const recommendations: any[] = [];
+
+      for (const resp of bestResponsibles) {
+        const respId = resp.responsible_id;
+        const respName = responsiblesMap.get(respId)?.name || 'Unknown';
+
+        // Get this responsible's best performing combinations
+        const respLeagues = bestLeagues.filter(l => 
+          // We'll use leagues that have good overall performance
+          l.win_rate > 0.55
+        ).slice(0, 3);
+
+        const respBetTypes = bestBetTypes.slice(0, 3);
+        const respCategories = bestCategories.slice(0, 3);
+
+        // Generate 2-3 recommendations per responsible
+        for (let i = 0; i < Math.min(3, respLeagues.length); i++) {
+          const league = respLeagues[i];
+          const betType = respBetTypes[i % respBetTypes.length];
+          const category = respCategories[i % respCategories.length];
+          const legCount = bestLegCounts[0]?.leg_count || 2;
+
+          // Get teams from this league (if available)
+          // For now, we'll create a generic recommendation
+          const recommendation = {
+            responsible_id: respId,
+            responsible_name: respName,
+            league_id: league.league_id,
+            league_name: leaguesMap.get(league.league_id)?.name || 'Unknown League',
+            bet_type_id: betType.bet_type_id,
+            bet_type_name: betTypesMap.get(betType.bet_type_id)?.name || 'Unknown Bet Type',
+            category_id: category.category_id,
+            category_name: categoriesMap.get(category.category_id)?.name || 'Unknown Category',
+            recommended_leg_count: legCount,
+            recommended_day: optimalDay,
+            confidence_score: (league.win_rate + betType.win_rate + category.win_rate) / 3,
+            reasoning: [
+              `League "${leaguesMap.get(league.league_id)?.name}" has ${(league.win_rate * 100).toFixed(1)}% win rate`,
+              `Bet type "${betTypesMap.get(betType.bet_type_id)?.name}" has ${(betType.win_rate * 100).toFixed(1)}% win rate`,
+              `Category "${categoriesMap.get(category.category_id)?.name}" has ${(category.win_rate * 100).toFixed(1)}% win rate`,
+              `${respName} has ${(resp.win_rate * 100).toFixed(1)}% win rate`,
+            ],
+          };
+
+          recommendations.push(recommendation);
+        }
+      }
+
+      // If no responsibles, generate general recommendations
+      if (recommendations.length === 0) {
+        for (let i = 0; i < Math.min(3, bestLeagues.length); i++) {
+          const league = bestLeagues[i];
+          const betType = bestBetTypes[i % bestBetTypes.length];
+          const category = bestCategories[i % bestCategories.length];
+
+          recommendations.push({
+            responsible_id: null,
+            responsible_name: 'General',
+            league_id: league.league_id,
+            league_name: leaguesMap.get(league.league_id)?.name || 'Unknown League',
+            bet_type_id: betType.bet_type_id,
+            bet_type_name: betTypesMap.get(betType.bet_type_id)?.name || 'Unknown Bet Type',
+            category_id: category.category_id,
+            category_name: categoriesMap.get(category.category_id)?.name || 'Unknown Category',
+            recommended_leg_count: bestLegCounts[0]?.leg_count || 2,
+            recommended_day: optimalDay,
+            confidence_score: (league.win_rate + betType.win_rate + category.win_rate) / 3,
+            reasoning: [
+              `League "${leaguesMap.get(league.league_id)?.name}" has ${(league.win_rate * 100).toFixed(1)}% win rate`,
+              `Bet type "${betTypesMap.get(betType.bet_type_id)?.name}" has ${(betType.win_rate * 100).toFixed(1)}% win rate`,
+              `Category "${categoriesMap.get(category.category_id)?.name}" has ${(category.win_rate * 100).toFixed(1)}% win rate`,
+            ],
+          });
+        }
+      }
+
+      // Sort by confidence score
+      recommendations.sort((a, b) => b.confidence_score - a.confidence_score);
+
+      return res.json({
+        data: recommendations,
+        meta: {
+          total: recommendations.length,
+          generated_at: new Date().toISOString(),
+        },
+      });
+    } catch (error: any) {
+      console.error('[MLController] Recommendation error:', error);
+      return res.status(500).json({
+        error: {
+          message: 'Failed to generate recommendations',
+          details: error.message,
+        },
+      });
+    }
+  };
 }
 

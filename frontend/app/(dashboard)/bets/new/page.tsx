@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
 import { ReferenceItem, CreateBetRequest, MLPredictRequest } from '@/types';
 import {
@@ -17,6 +17,7 @@ import MLInsights, { LegSummary } from '@/components/bets/MLInsights';
 
 export default function NewBetPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState<ReferenceItem[]>([]);
   const [leagues, setLeagues] = useState<ReferenceItem[]>([]);
@@ -60,20 +61,56 @@ export default function NewBetPage() {
 
   useEffect(() => {
     fetchReferenceItems();
-    
-    // Refetch when page becomes visible (in case items were added in another tab)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchReferenceItems();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    // Note: Removed auto-refetch on visibility change to prevent unwanted refreshes when switching tabs
+    // Reference items are fetched once on mount
   }, []);
+
+  // Handle query parameters from recommendations
+  useEffect(() => {
+    const leagueId = searchParams.get('league');
+    const betTypeId = searchParams.get('betType');
+    const categoryId = searchParams.get('category');
+    const responsibleId = searchParams.get('responsible');
+    const legsParam = searchParams.get('legs');
+
+    if (leagueId || betTypeId || categoryId || responsibleId || legsParam) {
+      // Wait for reference items to load
+      if (leagues.length > 0 && betTypes.length > 0 && categories.length > 0) {
+        const legCount = legsParam ? parseInt(legsParam, 10) : 1;
+        const newLegs = Array.from({ length: legCount }, (_, index) => {
+          const existingLeg = formData.legs[index] || { odd: 1, result_state: 'pending' };
+          return {
+            ...existingLeg,
+            league_id: leagueId || existingLeg.league_id,
+            bet_type_id: betTypeId || existingLeg.bet_type_id,
+            category_id: categoryId || existingLeg.category_id,
+            responsible_id: responsibleId || existingLeg.responsible_id,
+          };
+        });
+
+        setFormData(prev => ({
+          ...prev,
+          legs: newLegs,
+        }));
+
+        // Update leg odds arrays
+        setLegDecimalOdds(newLegs.map(leg => leg.odd ? leg.odd.toFixed(2) : ''));
+        setLegAmericanOdds(newLegs.map(leg => {
+          const american = decimalToAmerican(leg.odd);
+          return american ? formatAmericanOdds(american) : '';
+        }));
+
+        // Clear query params after applying
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        newSearchParams.delete('league');
+        newSearchParams.delete('betType');
+        newSearchParams.delete('category');
+        newSearchParams.delete('responsible');
+        newSearchParams.delete('legs');
+        router.replace(`/bets/new?${newSearchParams.toString()}`);
+      }
+    }
+  }, [searchParams, leagues.length, betTypes.length, categories.length, responsibles.length]);
 
   const fetchReferenceItems = async () => {
     try {

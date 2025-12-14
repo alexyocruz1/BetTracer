@@ -699,10 +699,10 @@ export default function BetDetailPage() {
       {/* Betslip Preview Modal */}
       {showBetslipPreview && (
         <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
-          <div className="bg-white rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:h-auto flex flex-col">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 flex flex-col gap-3 z-10 flex-shrink-0">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:h-auto flex flex-col">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-3 sm:p-4 flex flex-col gap-3 z-10 flex-shrink-0">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Betslip Preview</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Betslip Preview</h2>
                 <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={downloadBetslip}
@@ -716,7 +716,7 @@ export default function BetDetailPage() {
                     setShowBetslipPreview(false);
                     setGeneratingBetslip(false);
                   }}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 min-h-[44px] text-sm sm:text-base"
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 min-h-[44px] text-sm sm:text-base"
                 >
                   Close
                   </button>
@@ -727,13 +727,13 @@ export default function BetDetailPage() {
                   onClick={() => setFitToScreen(!fitToScreen)}
                   className={`px-3 py-1 rounded-md text-sm font-medium min-h-[36px] transition-colors ${
                     fitToScreen 
-                      ? 'bg-primary-100 text-primary-700 border border-primary-300' 
-                      : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-300 dark:border-primary-600' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
                   {fitToScreen ? '📐 Fit to Screen: ON' : '🔍 Fit to Screen: OFF'}
                 </button>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   {fitToScreen ? 'Full image visible' : 'Scroll to see full image'}
                 </span>
               </div>
@@ -771,10 +771,10 @@ export default function BetDetailPage() {
       {/* Statistics Preview Modal */}
       {showStatsPreview && (
         <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
-          <div className="bg-white rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:h-auto flex flex-col">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 flex flex-col gap-3 z-10 flex-shrink-0">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:h-auto flex flex-col">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-3 sm:p-4 flex flex-col gap-3 z-10 flex-shrink-0">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Statistics Preview</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Statistics Preview</h2>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     onClick={downloadStats}
@@ -788,7 +788,7 @@ export default function BetDetailPage() {
                       setShowStatsPreview(false);
                       setGeneratingStats(false);
                     }}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 min-h-[44px] text-sm sm:text-base"
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 min-h-[44px] text-sm sm:text-base"
                   >
                     Close
                   </button>
@@ -799,13 +799,13 @@ export default function BetDetailPage() {
                   onClick={() => setFitToScreen(!fitToScreen)}
                   className={`px-3 py-1 rounded-md text-sm font-medium min-h-[36px] transition-colors ${
                     fitToScreen 
-                      ? 'bg-primary-100 text-primary-700 border border-primary-300' 
-                      : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-300 dark:border-primary-600' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
                   {fitToScreen ? '📐 Fit to Screen: ON' : '🔍 Fit to Screen: OFF'}
                 </button>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   {fitToScreen ? 'Full image visible' : 'Scroll to see full image'}
                 </span>
               </div>
@@ -893,20 +893,20 @@ export default function BetDetailPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
-          <button
-            onClick={generateBetslipImage}
-            disabled={generatingBetslip}
-            className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 min-h-[44px]"
-          >
+        <button
+          onClick={generateBetslipImage}
+          disabled={generatingBetslip}
+          className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 min-h-[44px]"
+        >
             {generatingBetslip ? 'Generating...' : tiktokSafeMode ? '📸 Generate Betslip (TikTok Safe)' : '📸 Generate Betslip'}
-          </button>
-          <button
-            onClick={generateStatsImage}
-            disabled={generatingStats}
-            className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 disabled:opacity-50 min-h-[44px]"
-          >
+        </button>
+        <button
+          onClick={generateStatsImage}
+          disabled={generatingStats}
+          className="inline-flex items-center justify-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 disabled:opacity-50 min-h-[44px]"
+        >
             {generatingStats ? 'Generating...' : tiktokSafeMode ? '📊 Generate Statistics (TikTok Safe)' : '📊 Generate Statistics'}
-          </button>
+        </button>
         </div>
         <div className="flex flex-col sm:flex-row gap-4">
           <button
@@ -932,26 +932,26 @@ export default function BetDetailPage() {
         >
           ← Back to Bets
         </button>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Bet Details</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Bet Details</h1>
       </div>
 
-      <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 sm:p-6 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-500">Stake</label>
-            <div className="text-lg font-semibold">${bet.stake}</div>
+            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Stake</label>
+            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">${bet.stake}</div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-500">Odds</label>
-            <div className="text-lg font-semibold">
+            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Odds</label>
+            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {hasVoidedLegs ? (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="line-through text-gray-400">{bet.odds?.toFixed(2)}x</span>
-                    <span className="text-primary-600 font-bold">{effectiveOdds.toFixed(2)}x</span>
-                    <span className="text-xs text-gray-500">(Effective)</span>
+                    <span className="line-through text-gray-400 dark:text-gray-500">{bet.odds?.toFixed(2)}x</span>
+                    <span className="text-primary-600 dark:text-primary-400 font-bold">{effectiveOdds.toFixed(2)}x</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">(Effective)</span>
                   </div>
-                  <div className="text-xs text-amber-600 font-medium">
+                  <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                     {voidedCount} leg{voidedCount > 1 ? 's' : ''} voided
                   </div>
                 </div>
@@ -961,33 +961,33 @@ export default function BetDetailPage() {
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-500">State</label>
+            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">State</label>
             <div>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                bet.state === 'won' ? 'bg-green-100 text-green-800' :
-                bet.state === 'lost' ? 'bg-red-100 text-red-800' :
-                bet.state === 'void' ? 'bg-gray-100 text-gray-800' :
-                'bg-yellow-100 text-yellow-800'
+                bet.state === 'won' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                bet.state === 'lost' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
+                bet.state === 'void' ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300' :
+                'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
               }`}>
                 {bet.state}
               </span>
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-500">Profit/Loss</label>
+            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Profit/Loss</label>
             <div className={`text-lg font-semibold ${
               bet.profit_loss === null || bet.profit_loss === undefined
-                ? 'text-gray-500'
+                ? 'text-gray-500 dark:text-gray-400'
                 : bet.profit_loss >= 0
-                ? 'text-green-600'
-                : 'text-red-600'
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-red-600 dark:text-red-400'
             }`}>
               {bet.profit_loss !== null && bet.profit_loss !== undefined
                 ? `$${bet.profit_loss.toFixed(2)}`
                 : hasVoidedLegs && bet.state === 'pending' ? (
                   <div className="space-y-1">
-                    <div className="text-gray-400">Pending</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-gray-400 dark:text-gray-500">Pending</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                       Effective payout: ${(bet.stake * effectiveOdds).toFixed(2)}
                     </div>
                   </div>
@@ -995,13 +995,13 @@ export default function BetDetailPage() {
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-500">Date</label>
-            <div className="text-lg">{new Date(bet.date).toLocaleString()}</div>
+            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Date</label>
+            <div className="text-lg text-gray-900 dark:text-gray-100">{new Date(bet.date).toLocaleString()}</div>
           </div>
           {bet.notes && (
             <div>
-              <label className="text-sm font-medium text-gray-500">Notes</label>
-              <div className="text-lg">{bet.notes}</div>
+              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Notes</label>
+              <div className="text-lg text-gray-900 dark:text-gray-100">{bet.notes}</div>
             </div>
           )}
         </div>
@@ -1045,22 +1045,22 @@ export default function BetDetailPage() {
         />
       </div>
 
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Legs</h2>
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Legs</h2>
         {hasVoidedLegs && (
-          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
             <div className="flex items-start gap-2">
-              <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
               <div className="flex-1">
-                <h4 className="text-sm font-semibold text-amber-900 mb-1">
+                <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-300 mb-1">
                   {voidedCount} Leg{voidedCount > 1 ? 's' : ''} Voided
                 </h4>
-                <p className="text-sm text-amber-700">
+                <p className="text-sm text-amber-700 dark:text-amber-300">
                   This bet has {voidedCount} voided leg{voidedCount > 1 ? 's' : ''}. Effective odds have been recalculated to exclude voided legs.
                 </p>
-                <div className="mt-2 text-sm text-amber-800">
+                <div className="mt-2 text-sm text-amber-800 dark:text-amber-300">
                   <span className="font-medium">Original odds:</span> {bet.odds?.toFixed(2)}x → <span className="font-medium">Effective odds:</span> {effectiveOdds.toFixed(2)}x
                 </div>
               </div>
@@ -1073,16 +1073,16 @@ export default function BetDetailPage() {
               key={leg.id} 
               className={`border rounded-md p-4 ${
                 leg.result_state === 'void' 
-                  ? 'bg-gray-50 border-gray-300 opacity-75' 
-                  : 'border-gray-200'
+                  ? 'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 opacity-75' 
+                  : 'border-gray-200 dark:border-gray-700'
               }`}
             >
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-lg">Leg {index + 1}</h3>
+                    <h3 className="font-medium text-lg text-gray-900 dark:text-gray-100">Leg {index + 1}</h3>
                     {leg.result_state === 'void' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-200 text-gray-700 border border-gray-300">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600">
                         ⚠️ VOID
                       </span>
                     )}
@@ -1091,7 +1091,7 @@ export default function BetDetailPage() {
                   {/* Teams */}
                   {(leg.home_team_id || leg.away_team_id) && (
                     <div className={`text-base font-semibold mt-2 ${
-                      leg.result_state === 'void' ? 'text-gray-400' : 'text-gray-900'
+                      leg.result_state === 'void' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'
                     }`}>
                       {(() => {
                         const homeName = leg.home_team_id ? getReferenceName(leg.home_team_id) : '';
@@ -1101,14 +1101,14 @@ export default function BetDetailPage() {
                           return (
                             <>
                               {homeName && <span>{homeName}</span>}
-                              {homeName && awayName && <span className={`mx-2 ${leg.result_state === 'void' ? 'text-gray-400' : 'text-gray-500'}`}>vs</span>}
+                              {homeName && awayName && <span className={`mx-2 ${leg.result_state === 'void' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>vs</span>}
                               {awayName && <span>{awayName}</span>}
                             </>
                           );
                         }
                         // Show IDs for debugging if names not found
                         return (
-                          <span className="text-gray-400 italic">
+                          <span className="text-gray-400 dark:text-gray-500 italic">
                             {leg.home_team_id && `Home: ${leg.home_team_id.substring(0, 8)}...`}
                             {leg.home_team_id && leg.away_team_id && ' / '}
                             {leg.away_team_id && `Away: ${leg.away_team_id.substring(0, 8)}...`}
@@ -1122,7 +1122,7 @@ export default function BetDetailPage() {
                   {/* League */}
                   {leg.league_id && getReferenceName(leg.league_id) && (
                     <div className={`text-sm mt-1 ${
-                      leg.result_state === 'void' ? 'text-gray-400' : 'text-gray-600'
+                      leg.result_state === 'void' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'
                     }`}>
                       {getReferenceName(leg.league_id)}
                     </div>
@@ -1133,22 +1133,22 @@ export default function BetDetailPage() {
                     <div className="flex gap-2 mt-2 flex-wrap">
                       {leg.bet_type_id && (
                         getReferenceName(leg.bet_type_id) ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                             {getReferenceName(leg.bet_type_id)}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                             Bet Type: {leg.bet_type_id.substring(0, 8)}...
                           </span>
                         )
                       )}
                       {leg.category_id && (
                         getReferenceName(leg.category_id) ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
                             {getReferenceName(leg.category_id)}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                             Category: {leg.category_id.substring(0, 8)}...
                           </span>
                         )
@@ -1159,30 +1159,30 @@ export default function BetDetailPage() {
                   {/* Responsible */}
                   {leg.responsible_id && getReferenceName(leg.responsible_id) && (
                     <div className="mt-2">
-                      <span className="text-sm text-gray-500">Responsible: </span>
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Responsible: </span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         {getReferenceName(leg.responsible_id)}
                       </span>
                     </div>
                   )}
 
                   <div className="text-sm mt-2">
-                    <span className={leg.result_state === 'void' ? 'text-gray-400 line-through' : 'text-gray-500'}>
+                    <span className={leg.result_state === 'void' ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-500 dark:text-gray-400'}>
                       Odds: {leg.odd.toFixed(2)}x
                     </span>
                     {leg.result_state === 'void' && (
-                      <span className="ml-2 text-xs text-gray-500 italic">(excluded from calculation)</span>
+                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 italic">(excluded from calculation)</span>
                     )}
                   </div>
                   {leg.notes && (
-                    <div className={`text-sm mt-2 ${leg.result_state === 'void' ? 'text-gray-400' : 'text-gray-600'}`}>{leg.notes}</div>
+                    <div className={`text-sm mt-2 ${leg.result_state === 'void' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'}`}>{leg.notes}</div>
                   )}
                 </div>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  leg.result_state === 'won' ? 'bg-green-100 text-green-800' :
-                  leg.result_state === 'lost' ? 'bg-red-100 text-red-800' :
-                  leg.result_state === 'void' ? 'bg-gray-200 text-gray-700 border border-gray-300' :
-                  'bg-yellow-100 text-yellow-800'
+                  leg.result_state === 'won' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                  leg.result_state === 'lost' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
+                  leg.result_state === 'void' ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600' :
+                  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
                 }`}>
                   {leg.result_state === 'void' ? 'VOID' : leg.result_state}
                 </span>

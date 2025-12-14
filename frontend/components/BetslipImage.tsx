@@ -515,24 +515,24 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
         {!tiktokSafe && (
           <>
             <div className="flex justify-between items-start" style={{ gap: legCount === 4 ? '32px' : (legCount <= 6 ? '48px' : '40px'), marginBottom: legCount === 4 ? '16px' : (legCount <= 6 ? '28px' : '20px') }}>
-              <div className="flex-1" style={{ minWidth: '200px' }}>
+          <div className="flex-1" style={{ minWidth: '200px' }}>
                 <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '10px' : (legCount <= 6 ? '12px' : '10px') }}>Total Odds</div>
-                <div className={`${fonts.statValue} font-black`} style={{ color: '#fbbf24' }}>
-                  {bet.odds?.toFixed(2)}x
-                </div>
-              </div>
-              <div className="flex-1 text-center" style={{ minWidth: '200px' }}>
-                <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '10px' : (legCount <= 6 ? '12px' : '10px') }}>Stake</div>
-                <div className={`${fonts.statValue} font-bold`}>${bet.stake.toFixed(2)}</div>
-              </div>
-              <div className="flex-1 text-right" style={{ minWidth: '200px' }}>
-                <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '10px' : (legCount <= 6 ? '12px' : '10px') }}>Matches</div>
-                <div className={`${fonts.statValue} font-bold`}>{bet.legs?.length || 0}</div>
-              </div>
+            <div className={`${fonts.statValue} font-black`} style={{ color: '#fbbf24' }}>
+              {bet.odds?.toFixed(2)}x
             </div>
+          </div>
+          <div className="flex-1 text-center" style={{ minWidth: '200px' }}>
+                <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '10px' : (legCount <= 6 ? '12px' : '10px') }}>Stake</div>
+            <div className={`${fonts.statValue} font-bold`}>${bet.stake.toFixed(2)}</div>
+          </div>
+          <div className="flex-1 text-right" style={{ minWidth: '200px' }}>
+                <div className={`${fonts.statLabel} font-bold text-gray-200`} style={{ marginBottom: legCount === 4 ? '10px' : (legCount <= 6 ? '12px' : '10px') }}>Matches</div>
+            <div className={`${fonts.statValue} font-bold`}>{bet.legs?.length || 0}</div>
+          </div>
+        </div>
             <div className="border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.2)', paddingTop: legCount === 4 ? '16px' : (legCount <= 6 ? '24px' : '16px') }}>
-              <div className="flex justify-between items-center">
-                <div>
+          <div className="flex justify-between items-center">
+            <div>
                   <div 
                     className="text-gray-300 font-medium"
                     style={{ 
@@ -540,25 +540,25 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
                       marginBottom: legCount === 4 ? '8px' : '12px'
                     }}
                   >
-                    {bet.profit_loss !== null && bet.profit_loss !== undefined ? 'Profit/Loss' : 'Potential Win'}
-                  </div>
-                  <div 
+                {bet.profit_loss !== null && bet.profit_loss !== undefined ? 'Profit/Loss' : 'Potential Win'}
+              </div>
+              <div 
                     className="font-bold"
-                    style={{ 
+                style={{ 
                       fontSize: legCount === 4 ? '48px' : '64px',
-                      color: bet.profit_loss !== null && bet.profit_loss !== undefined 
-                        ? (bet.profit_loss >= 0 ? '#4ade80' : '#f87171')
-                        : '#60a5fa'
-                    }}
-                  >
-                    {bet.profit_loss !== null && bet.profit_loss !== undefined 
-                      ? `$${bet.profit_loss >= 0 ? '+' : ''}${bet.profit_loss.toFixed(2)}`
-                      : `$${(bet.stake * (bet.odds || 1)).toFixed(2)}`
-                    }
-                  </div>
-                </div>
-                {bet.profit_loss !== null && bet.profit_loss !== undefined && (
-                  <div className="text-right">
+                  color: bet.profit_loss !== null && bet.profit_loss !== undefined 
+                    ? (bet.profit_loss >= 0 ? '#4ade80' : '#f87171')
+                    : '#60a5fa'
+                }}
+              >
+                {bet.profit_loss !== null && bet.profit_loss !== undefined 
+                  ? `$${bet.profit_loss >= 0 ? '+' : ''}${bet.profit_loss.toFixed(2)}`
+                  : `$${(bet.stake * (bet.odds || 1)).toFixed(2)}`
+                }
+              </div>
+            </div>
+            {bet.profit_loss !== null && bet.profit_loss !== undefined && (
+              <div className="text-right">
                     <div 
                       className="text-gray-300 font-medium"
                       style={{ 
@@ -568,19 +568,19 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
                     >
                       ROI
                     </div>
-                    <div 
+                <div 
                       className="font-bold"
                       style={{ 
                         fontSize: legCount === 4 ? '40px' : '56px',
                         color: bet.profit_loss >= 0 ? '#4ade80' : '#f87171'
                       }}
-                    >
-                      {((bet.profit_loss / bet.stake) * 100).toFixed(1)}%
-                    </div>
-                  </div>
-                )}
+                >
+                  {((bet.profit_loss / bet.stake) * 100).toFixed(1)}%
+                </div>
               </div>
-            </div>
+            )}
+          </div>
+        </div>
           </>
         )}
         {tiktokSafe && (
@@ -688,52 +688,52 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
 
                 {/* Bet Type and Category - Hidden in TikTok safe mode */}
                 {!tiktokSafe && (
-                  <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    {leg.bet_type_id && (
-                      <div
-                        style={{ 
-                          background: 'rgba(59, 130, 246, 0.4)',
-                          border: '2px solid rgba(59, 130, 246, 0.6)',
-                          borderRadius: '9999px',
-                          paddingLeft: '20px',
-                          paddingRight: '20px',
-                          paddingTop: '14px',
-                          paddingBottom: '14px',
-                          fontSize: '22px',
-                          fontWeight: '700',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          whiteSpace: 'nowrap',
-                          boxSizing: 'border-box',
-                        }}
-                      >
-                        {getReferenceName(leg.bet_type_id)}
-                      </div>
-                    )}
-                    {leg.category_id && (
-                      <div
-                        style={{ 
-                          background: 'rgba(168, 85, 247, 0.4)',
-                          border: '2px solid rgba(168, 85, 247, 0.6)',
-                          borderRadius: '9999px',
-                          paddingLeft: '20px',
-                          paddingRight: '20px',
-                          paddingTop: '14px',
-                          paddingBottom: '14px',
-                          fontSize: '22px',
-                          fontWeight: '700',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          whiteSpace: 'nowrap',
-                          boxSizing: 'border-box',
-                        }}
-                      >
-                        {getReferenceName(leg.category_id)}
-                      </div>
-                    )}
-                  </div>
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {leg.bet_type_id && (
+                    <div
+                      style={{ 
+                        background: 'rgba(59, 130, 246, 0.4)',
+                        border: '2px solid rgba(59, 130, 246, 0.6)',
+                        borderRadius: '9999px',
+                        paddingLeft: '20px',
+                        paddingRight: '20px',
+                        paddingTop: '14px',
+                        paddingBottom: '14px',
+                        fontSize: '22px',
+                        fontWeight: '700',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        whiteSpace: 'nowrap',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      {getReferenceName(leg.bet_type_id)}
+                    </div>
+                  )}
+                  {leg.category_id && (
+                    <div
+                      style={{ 
+                        background: 'rgba(168, 85, 247, 0.4)',
+                        border: '2px solid rgba(168, 85, 247, 0.6)',
+                        borderRadius: '9999px',
+                        paddingLeft: '20px',
+                        paddingRight: '20px',
+                        paddingTop: '14px',
+                        paddingBottom: '14px',
+                        fontSize: '22px',
+                        fontWeight: '700',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        whiteSpace: 'nowrap',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      {getReferenceName(leg.category_id)}
+                    </div>
+                  )}
+                </div>
                 )}
 
                 {/* Leg State - Hidden in TikTok safe mode */}
@@ -768,18 +768,18 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
 
               {/* Odds - Hidden in TikTok safe mode */}
               {!tiktokSafe && (
-                <div className="text-right ml-8 flex-shrink-0">
-                  <div className={`${fonts.legDetails} text-gray-300 mb-3 font-semibold`}>Odds</div>
-                  <div 
-                    className={`${fonts.legOdds} font-black`}
-                    style={{ 
-                      color: '#fbbf24',
-                      textShadow: '0 2px 8px rgba(251, 191, 36, 0.3)',
-                    }}
-                  >
-                    {leg.odd.toFixed(2)}x
-                  </div>
+              <div className="text-right ml-8 flex-shrink-0">
+                <div className={`${fonts.legDetails} text-gray-300 mb-3 font-semibold`}>Odds</div>
+                <div 
+                  className={`${fonts.legOdds} font-black`}
+                  style={{ 
+                    color: '#fbbf24',
+                    textShadow: '0 2px 8px rgba(251, 191, 36, 0.3)',
+                  }}
+                >
+                  {leg.odd.toFixed(2)}x
                 </div>
+              </div>
               )}
             </div>
           </div>
@@ -812,16 +812,16 @@ export default function BetslipImage({ bet, onReady, tiktokSafe = false }: Betsl
           ) : (
             <>
               <div className={`${fonts.legDetails} text-gray-400 font-semibold mb-2`} style={{ fontSize: legCount >= 5 ? '16px' : undefined }}>Generated by</div>
-              <div 
-                className={`${fonts.statLabel} font-bold`}
-                style={{
-                  color: '#60a5fa',
-                  textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
+          <div 
+            className={`${fonts.statLabel} font-bold`}
+            style={{
+              color: '#60a5fa',
+              textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
                   fontSize: legCount >= 5 ? '24px' : undefined
-                }}
-              >
-                BetTracer
-              </div>
+            }}
+          >
+            BetTracer
+          </div>
             </>
           )}
         </div>

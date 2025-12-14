@@ -235,7 +235,7 @@ export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }
                 {tiktokSafe ? 'Success Rate' : 'Win Rate'}: {formatPercentage(league.win_rate)}
               </div>
               {!tiktokSafe && (
-                <div className="text-lg text-gray-400">{league.bet_count} bets</div>
+              <div className="text-lg text-gray-400">{league.bet_count} bets</div>
               )}
               {tiktokSafe && (
                 <div className="text-lg text-gray-400 mt-2">📈 League statistics & insights</div>
@@ -286,8 +286,8 @@ export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }
 
   // 3. Bet Type Performance - Hidden in TikTok safe mode
   if (!tiktokSafe) {
-    stats.betTypesStats?.slice(0, 2).forEach((betType, index) => {
-      validStats.push({
+  stats.betTypesStats?.slice(0, 2).forEach((betType, index) => {
+    validStats.push({
       type: `betType-${index}`,
       element: (
         <div key={`betType-${index}`} className="rounded-3xl p-8 border-2" style={{ 
@@ -331,7 +331,7 @@ export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }
         </div>
       )
     });
-    });
+  });
   }
 
   // 5. Day of Week Performance - Reframed for TikTok safe mode
@@ -364,26 +364,26 @@ export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }
         )
       });
     } else {
-      validStats.push({
-        type: 'dayOfWeek',
-        element: (
-          <div key="dayOfWeek" className="rounded-3xl p-8 border-2" style={{ 
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderColor: 'rgba(255, 255, 255, 0.15)'
-          }}>
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="text-3xl font-bold text-white mb-2">{stats.dayOfWeekStats.day} Performance</div>
-                <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.dayOfWeekStats.win_rate)}</div>
-                <div className="text-lg text-gray-400">{stats.dayOfWeekStats.total_bets} bets</div>
-              </div>
-              <div className="text-6xl font-bold" style={{ color: stats.dayOfWeekStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
-                {formatPercentage(stats.dayOfWeekStats.win_rate)}
-              </div>
+    validStats.push({
+      type: 'dayOfWeek',
+      element: (
+        <div key="dayOfWeek" className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">{stats.dayOfWeekStats.day} Performance</div>
+              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.dayOfWeekStats.win_rate)}</div>
+              <div className="text-lg text-gray-400">{stats.dayOfWeekStats.total_bets} bets</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: stats.dayOfWeekStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(stats.dayOfWeekStats.win_rate)}
             </div>
           </div>
-        )
-      });
+        </div>
+      )
+    });
     }
   }
 
@@ -418,28 +418,28 @@ export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }
         )
       });
     } else {
-      validStats.push({
-        type: 'weekend',
-        element: (
-          <div key="weekend" className="rounded-3xl p-8 border-2" style={{ 
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderColor: 'rgba(255, 255, 255, 0.15)'
-          }}>
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="text-3xl font-bold text-white mb-2">
-                  {(bet && (new Date(bet.date).getDay() === 0 || new Date(bet.date).getDay() === 6)) ? 'Weekend' : 'Weekday'} Performance
-                </div>
-                <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.weekendStats.win_rate)}</div>
-                <div className="text-lg text-gray-400">{stats.weekendStats.total_bets} bets</div>
+    validStats.push({
+      type: 'weekend',
+      element: (
+        <div key="weekend" className="rounded-3xl p-8 border-2" style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}>
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-3xl font-bold text-white mb-2">
+                {(bet && (new Date(bet.date).getDay() === 0 || new Date(bet.date).getDay() === 6)) ? 'Weekend' : 'Weekday'} Performance
               </div>
-              <div className="text-6xl font-bold" style={{ color: stats.weekendStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
-                {formatPercentage(stats.weekendStats.win_rate)}
-              </div>
+              <div className="text-xl text-gray-300">Win Rate: {formatPercentage(stats.weekendStats.win_rate)}</div>
+              <div className="text-lg text-gray-400">{stats.weekendStats.total_bets} bets</div>
+            </div>
+            <div className="text-6xl font-bold" style={{ color: stats.weekendStats.win_rate >= 0.5 ? '#10b981' : '#ef4444' }}>
+              {formatPercentage(stats.weekendStats.win_rate)}
             </div>
           </div>
-        )
-      });
+        </div>
+      )
+    });
     }
   }
 
@@ -650,16 +650,16 @@ export default function HighlightStatsImage({ bet, onReady, tiktokSafe = false }
             </>
           ) : (
             <>
-              <div className="text-3xl text-gray-400 font-semibold mb-3">Generated by</div>
-              <div 
-                className="text-5xl font-bold"
-                style={{
-                  color: '#60a5fa',
-                  textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
-                }}
-              >
-                BetTracer
-              </div>
+          <div className="text-3xl text-gray-400 font-semibold mb-3">Generated by</div>
+          <div 
+            className="text-5xl font-bold"
+            style={{
+              color: '#60a5fa',
+              textShadow: '0 2px 8px rgba(96, 165, 250, 0.3)',
+            }}
+          >
+            BetTracer
+          </div>
             </>
           )}
         </div>
