@@ -43,60 +43,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let timeoutId: NodeJS.Timeout;
-
-    // Helper to get session from localStorage (fast, synchronous)
-    const getSessionFromStorage = (): { access_token: string; user: any } | null => {
-      if (typeof window === 'undefined') return null;
-      
-      try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-        const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || '';
-        
-        if (projectRef) {
-          const storageKey = `sb-${projectRef}-auth-token`;
-          const stored = localStorage.getItem(storageKey);
-          
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed?.access_token && parsed?.user) {
-              return {
-                access_token: parsed.access_token,
-                user: parsed.user,
-              };
-            }
-          }
-        }
-      } catch (e) {
-        // Ignore errors
-      }
-      return null;
-    };
+    let sessionSetByAuthStateChange = false;
 
     // Always use getSession() to ensure we get a valid, non-expired session
     // getSession() handles token refresh automatically if needed
-    // Don't rely on localStorage directly as it might contain expired tokens
+    // The auth state change listener will also handle session updates
 
     // Get initial session with timeout and proper expiration handling
     timeoutId = setTimeout(() => {
-      if (mounted) {
-        console.warn('[Auth] Session check timeout after 5s - no session found');
-        setSession(null);
-        setUser(null);
-        setIsAdmin(false);
+      if (mounted && !sessionSetByAuthStateChange) {
+        // Only clear session if auth state change hasn't already set it
+        // This prevents clearing session when Render is slow but auth state change fires
+        console.warn('[Auth] Session check timeout after 15s - checking if session exists');
+        // Don't clear session immediately, let auth state change handle it
+        // Just stop loading
         setLoading(false);
       }
-    }, 5000); // Increased timeout to 5 seconds to account for slow backend (Render sleep)
+    }, 15000); // Increased to 15 seconds to account for Render sleep time
 
     // Get initial session with error handling and expiration check
+    // Note: Even if this times out, onAuthStateChange will still fire and handle the session
     supabase.auth
       .getSession()
       .then(async ({ data: { session }, error }) => {
         if (!mounted) return;
         
+        // Clear timeout since we got a response
         clearTimeout(timeoutId);
+        
+        // If auth state change already set the session, don't overwrite it
+        if (sessionSetByAuthStateChange) {
+          return;
+        }
         
         if (error) {
           console.error('[Auth] Error getting session:', error);
+          // Don't clear session here if auth state change might set it
+          // Let auth state change handle it
           setSession(null);
           setUser(null);
           setIsAdmin(false);
@@ -195,13 +178,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       });
 
-    // Listen for auth changes
+    // Listen for auth changes - this will fire even if getSession() times out
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
       console.log('[Auth] Auth state changed:', event, session ? 'session exists' : 'no session');
+      
+      // Mark that auth state change has set the session
+      sessionSetByAuthStateChange = true;
+      
+      // Clear the timeout since auth state change fired
+      clearTimeout(timeoutId);
       
       // Update session and user state
       setSession(session);
