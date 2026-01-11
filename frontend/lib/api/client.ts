@@ -12,7 +12,7 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 30000, // 30 second timeout (increased for bet creation with multiple legs)
+      timeout: 60000, // 60 second timeout (increased to account for Render sleep time and slow responses)
     });
 
     // Add auth token to requests

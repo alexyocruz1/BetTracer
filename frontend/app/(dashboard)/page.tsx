@@ -28,7 +28,7 @@ export default function DashboardPage() {
         setSummary(null);
         setLoading(false);
       }
-    }, 20000); // 20 second safety timeout
+    }, 60000); // 60 second safety timeout (increased to account for Render sleep time)
 
     const fetchDashboardData = async () => {
       try {

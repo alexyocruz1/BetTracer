@@ -27,7 +27,7 @@ export default function LoginPage() {
       console.warn('[Login] Sign in taking too long, resetting loading state');
       setLoading(false);
       setError('Sign in is taking longer than expected. Please check your connection and try again.');
-    }, 15000); // 15 second safety timeout
+    }, 45000); // 45 second safety timeout (increased to account for Render sleep time)
 
     try {
       await signIn(email, password);

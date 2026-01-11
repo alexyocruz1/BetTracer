@@ -31,7 +31,7 @@ export default function BetsPage() {
         setBets([]);
         setLoading(false);
       }
-    }, 20000); // 20 second safety timeout
+    }, 60000); // 60 second safety timeout (increased to account for Render sleep time)
     
     const fetchReferenceItems = async () => {
       try {

@@ -81,7 +81,7 @@ export default function AnalyticsPage() {
         setFrequency(null);
         setLoading(false);
       }
-    }, 30000); // 30 second timeout (analytics has many requests)
+    }, 90000); // 90 second timeout (analytics has many requests, increased to account for Render sleep time)
     
     try {
       const params = new URLSearchParams();
