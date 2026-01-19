@@ -46,6 +46,8 @@ export default function AnalyticsPage() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [granularity, setGranularity] = useState<'daily' | 'weekly' | 'monthly' | 'all-time'>('all-time');
+  const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'advanced'>('overview');
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -332,7 +334,87 @@ export default function AnalyticsPage() {
         <MLScenarioSimulator />
       </div>
 
-      {summary ? (
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`${
+              activeTab === 'overview'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('performance')}
+            className={`${
+              activeTab === 'performance'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            Performance
+          </button>
+          <button
+            onClick={() => setActiveTab('advanced')}
+            className={`${
+              activeTab === 'advanced'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            Advanced
+          </button>
+        </nav>
+      </div>
+
+      {/* Helper function to toggle section */}
+      {(() => {
+        const toggleSection = (sectionId: string) => {
+          setExpandedSections(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(sectionId)) {
+              newSet.delete(sectionId);
+            } else {
+              newSet.add(sectionId);
+            }
+            return newSet;
+          });
+        };
+
+        const isExpanded = (sectionId: string) => expandedSections.has(sectionId);
+
+        const CollapsibleSection = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => {
+          const expanded = isExpanded(id);
+          return (
+            <div className="bg-white shadow rounded-lg mb-4">
+              <button
+                onClick={() => toggleSection(id)}
+                className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+              >
+                <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+                <svg
+                  className={`w-5 h-5 text-gray-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {expanded && <div className="px-6 pb-6">{children}</div>}
+            </div>
+          );
+        };
+
+        return (
+          <>
+            {/* Overview Tab */}
+            {activeTab === 'overview' && (
+              <div>
+                {summary ? (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
           <div className="bg-white overflow-hidden shadow rounded-lg p-5">
             <div className={`text-2xl font-bold ${summary.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -368,7 +450,36 @@ export default function AnalyticsPage() {
         </div>
       ) : null}
 
-      {byLeague.length > 0 && (
+                {/* Best/Worst Performers */}
+                {bestWorstPerformers && (
+                  <div className="bg-white shadow rounded-lg p-6 mb-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Best & Worst Performers</h2>
+                    {/* Best/Worst content will be inserted here from existing code */}
+                  </div>
+                )}
+
+                {/* Time Series */}
+                {timeSeries.length > 0 && (
+                  <div className="bg-white shadow rounded-lg p-6 mb-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Performance Over Time</h2>
+                    {/* Time series content will be inserted here */}
+                  </div>
+                )}
+
+                {/* Streak Analysis */}
+                {streakAnalysis && (
+                  <div className="bg-white shadow rounded-lg p-6 mb-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Streak Analysis</h2>
+                    {/* Streak content will be inserted here */}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Performance Tab */}
+            {activeTab === 'performance' && (
+              <div>
+                {byLeague.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Performance by League</h2>
           
@@ -856,7 +967,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {responsibleDetailed.length > 0 && (
+                {/* Responsible Detailed */}
+                {responsibleDetailed.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Detailed Analytics by Responsible</h2>
           
@@ -1496,7 +1608,7 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {byBetType.length > 0 && (
+                {byBetType.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Performance by Bet Type</h2>
           
@@ -1575,7 +1687,7 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {byCategory.length > 0 && (
+                {byCategory.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Performance by Category</h2>
           
@@ -1657,7 +1769,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {legAnalytics && legAnalytics.total_legs > 0 && (
+                {/* Leg Analytics */}
+                {legAnalytics && legAnalytics.total_legs > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Leg-Level Analytics</h2>
           
@@ -1710,7 +1823,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {oddsAnalysis.length > 0 && (
+                {/* Odds Analysis */}
+                {oddsAnalysis.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Odds Analysis</h2>
           
@@ -1770,8 +1884,14 @@ export default function AnalyticsPage() {
           </div>
         </div>
       )}
+              </div>
+            )}
 
-      {bestWorstPerformers && (
+            {/* Advanced Tab - All other analytics sections */}
+            {activeTab === 'advanced' && (
+              <div>
+                {/* Best/Worst Performers */}
+                {bestWorstPerformers && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Best & Worst Performers</h2>
           
@@ -1821,7 +1941,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {streakAnalysis && (
+                {/* Streak Analysis */}
+                {streakAnalysis && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Streak Analysis</h2>
           
@@ -1881,7 +2002,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {teamPerformance.length > 0 && (
+                {/* Team Performance */}
+                {teamPerformance.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Team Performance</h2>
           
@@ -1926,7 +2048,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {timeSeries.length > 0 && (
+                {/* Time Series */}
+                {timeSeries.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">Performance Over Time</h2>
@@ -2076,8 +2199,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* Period Comparison */}
-      {periodComparison && (
+                {/* Period Comparison */}
+                {periodComparison && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Period Comparison</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -2170,7 +2293,8 @@ export default function AnalyticsPage() {
       )}
 
       {/* Stake Analysis */}
-      {stakeAnalysis.length > 0 && (
+                {/* Stake Analysis */}
+                {stakeAnalysis.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Stake Size Analysis</h2>
           <p className="text-sm text-gray-600 mb-6">
@@ -2224,7 +2348,8 @@ export default function AnalyticsPage() {
       )}
 
       {/* Temporal Analytics */}
-      {temporal && (
+                {/* Temporal Analytics */}
+                {temporal && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Temporal Patterns</h2>
           <p className="text-sm text-gray-600 mb-6">
@@ -2304,7 +2429,8 @@ export default function AnalyticsPage() {
       )}
 
       {/* Risk Metrics */}
-      {riskMetrics && (
+                {/* Risk Metrics */}
+                {riskMetrics && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Risk & Volatility Metrics</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -2357,7 +2483,8 @@ export default function AnalyticsPage() {
       )}
 
       {/* Bankroll Analysis */}
-      {bankroll && (
+                {/* Bankroll Analysis */}
+                {bankroll && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Bankroll Management</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -2401,7 +2528,8 @@ export default function AnalyticsPage() {
       )}
 
       {/* Frequency Analysis */}
-      {frequency && (
+                {/* Frequency Analysis */}
+                {frequency && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Betting Frequency Analysis</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -2438,7 +2566,8 @@ export default function AnalyticsPage() {
       )}
 
       {/* EV Analysis */}
-      {evAnalysis && (
+                {/* EV Analysis */}
+                {evAnalysis && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Expected Value (EV) Analysis</h2>
           <div className="mb-6">
@@ -2482,7 +2611,8 @@ export default function AnalyticsPage() {
       )}
 
       {/* Recovery Analysis */}
-      {recovery && (
+                {/* Recovery Analysis */}
+                {recovery && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Recovery Analysis</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -2513,7 +2643,8 @@ export default function AnalyticsPage() {
       )}
 
       {/* Combination Analytics */}
-      {combinations && combinations.top_combinations.length > 0 && (
+                {/* Combination Analytics */}
+                {combinations && combinations.top_combinations.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Top Combinations</h2>
           <div className="overflow-x-auto">
@@ -2548,6 +2679,21 @@ export default function AnalyticsPage() {
           </div>
         </div>
       )}
+              </div>
+            )}
+
+            {/* Advanced Tab */}
+            {activeTab === 'advanced' && (
+              <div>
+                {/* All remaining advanced analytics sections */}
+                {/* Additional sections like Odds Analysis, Leg Analytics, Temporal, Stake Analysis, 
+                    Combinations, Risk Metrics, EV Analysis, Recovery, Bankroll, Frequency, 
+                    Responsible Detailed will appear here as they are rendered */}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

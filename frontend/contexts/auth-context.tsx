@@ -44,6 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     let timeoutId: NodeJS.Timeout;
     let sessionSetByAuthStateChange = false;
+    
+    // Track current session token and user ID to avoid stale closures
+    let currentSessionToken: string | null = null;
+    let currentUserId: string | null = null;
 
     // Always use getSession() to ensure we get a valid, non-expired session
     // getSession() handles token refresh automatically if needed
@@ -54,9 +58,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (mounted && !sessionSetByAuthStateChange) {
         // Only clear session if auth state change hasn't already set it
         // This prevents clearing session when Render is slow but auth state change fires
-        console.warn('[Auth] Session check timeout after 15s - checking if session exists');
-        // Don't clear session immediately, let auth state change handle it
-        // Just stop loading
+        console.warn('[Auth] Session check timeout after 15s - checking if session exists in storage');
+        
+        // Before clearing, check localStorage for session persistence
+        // This handles cases where getSession() times out but session is still valid
+        try {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+          const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || '';
+          
+          if (projectRef && typeof window !== 'undefined') {
+            const storageKey = `sb-${projectRef}-auth-token`;
+            const stored = localStorage.getItem(storageKey);
+            
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (parsed?.access_token) {
+                // Session exists in storage, don't clear - let auth state change handle it
+                console.log('[Auth] Session found in storage, waiting for auth state change');
+                setLoading(false);
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore storage errors
+        }
+        
+        // No session in storage either, but don't clear state yet
+        // Let auth state change handle it - it might still fire
         setLoading(false);
       }
     }, 15000); // Increased to 15 seconds to account for Render sleep time
@@ -78,8 +107,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (error) {
           console.error('[Auth] Error getting session:', error);
-          // Don't clear session here if auth state change might set it
-          // Let auth state change handle it
+          // Don't clear session here - check localStorage first
+          // Auth state change will handle it properly
+          try {
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+            const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || '';
+            
+            if (projectRef && typeof window !== 'undefined') {
+              const storageKey = `sb-${projectRef}-auth-token`;
+              const stored = localStorage.getItem(storageKey);
+              
+              if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed?.access_token) {
+                  // Session exists in storage, don't clear - let auth state change handle it
+                  console.log('[Auth] Session found in storage despite getSession error');
+                  setLoading(false);
+                  return;
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore storage errors
+          }
+          
+          // No session in storage, clear state
           setSession(null);
           setUser(null);
           setIsAdmin(false);
@@ -112,6 +164,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // Session refreshed successfully
                 setSession(refreshData.session);
                 setUser(refreshData.session.user);
+                
+                // Track current session token and user ID for visibility change handler
+                currentSessionToken = refreshData.session.access_token || null;
+                currentUserId = refreshData.session.user?.id || null;
                 
                 if (refreshData.session.user) {
                   try {
@@ -149,6 +205,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(session);
           setUser(session.user);
           
+          // Track current session token and user ID for visibility change handler
+          currentSessionToken = session.access_token || null;
+          currentUserId = session.user?.id || null;
+          
           if (session.user) {
             try {
               await fetchAdminStatus(session.user.id);
@@ -164,6 +224,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(null);
           setUser(null);
           setIsAdmin(false);
+          currentSessionToken = null;
+          currentUserId = null;
         }
         
         setLoading(false);
@@ -193,16 +255,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(timeoutId);
       
       // Update session and user state
+      // Always update to ensure state is in sync with Supabase
       setSession(session);
       setUser(session?.user ?? null);
       
-      // Update admin status if we have a user
+      // Track current session token and user ID for visibility change handler
+      currentSessionToken = session?.access_token || null;
+      currentUserId = session?.user?.id || null;
+      
+      // Update admin status if we have a user and it changed
       if (session?.user) {
-        try {
-          await fetchAdminStatus(session.user.id);
-        } catch (error) {
-          console.error('[Auth] Error fetching admin status:', error);
-          setIsAdmin(false);
+        // Only fetch admin status if user ID changed to avoid unnecessary API calls
+        if (session.user.id !== currentUserId) {
+          try {
+            await fetchAdminStatus(session.user.id);
+          } catch (error) {
+            console.error('[Auth] Error fetching admin status:', error);
+            setIsAdmin(false);
+          }
         }
       } else {
         setIsAdmin(false);
@@ -212,95 +282,163 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Listen for visibility changes (when user returns to tab)
+    // Use debouncing to prevent rapid-fire calls that could interfere with button clicks
+    let visibilityTimeout: NodeJS.Timeout | null = null;
+    let isHandlingVisibility = false;
+    
     const handleVisibilityChange = async () => {
       if (!mounted || typeof document === 'undefined') return;
       
-      if (document.visibilityState === 'visible') {
-        // User returned to the tab, refresh session to check if it's still valid
-        try {
-          const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+      // Debounce: wait 1000ms before handling visibility change
+      // Increased debounce to prevent interference with button clicks when switching tabs
+      if (visibilityTimeout) {
+        clearTimeout(visibilityTimeout);
+      }
+      
+      visibilityTimeout = setTimeout(async () => {
+        if (!mounted || isHandlingVisibility) return;
+        
+        if (document.visibilityState === 'visible') {
+          isHandlingVisibility = true;
           
-          if (error) {
-            console.error('[Auth] Error refreshing session on visibility change:', error);
-            // If session check fails, clear state and redirect to login
-            setSession(null);
-            setUser(null);
-            setIsAdmin(false);
-            if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-              window.location.href = '/login';
+          try {
+            // Get current session state using a function to avoid stale closure
+            const getCurrentState = () => {
+              // Use a ref-like pattern by checking localStorage for the latest token
+              try {
+                const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+                const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || '';
+                if (projectRef && typeof window !== 'undefined') {
+                  const storageKey = `sb-${projectRef}-auth-token`;
+                  const stored = localStorage.getItem(storageKey);
+                  if (stored) {
+                    const parsed = JSON.parse(stored);
+                    return parsed?.access_token || null;
+                  }
+                }
+              } catch (e) {
+                // Ignore errors
+              }
+              return null;
+            };
+            
+            // Only check session if token might have changed (check localStorage first)
+            const storedToken = getCurrentState();
+            if (storedToken === currentSessionToken && currentSessionToken !== null) {
+              // Token hasn't changed, skip the check to avoid unnecessary API calls
+              isHandlingVisibility = false;
+              return;
             }
-            return;
-          }
+            
+            // Only check session if we don't already have a valid one
+            // This prevents unnecessary API calls that could interfere with button clicks
+            const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+            
+            if (error) {
+              console.error('[Auth] Error refreshing session on visibility change:', error);
+              // Only redirect if we're not already on login page and we had a session before
+              if (currentSessionToken && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+                currentSessionToken = null;
+                currentUserId = null;
+                setSession(null);
+                setUser(null);
+                setIsAdmin(false);
+                window.location.href = '/login';
+              }
+              isHandlingVisibility = false;
+              return;
+            }
 
-          // If we have a session but it's expired or about to expire, try to refresh it
-          if (currentSession) {
-            const expiresAt = currentSession.expires_at;
-            if (expiresAt) {
-              const expiresIn = expiresAt - Math.floor(Date.now() / 1000);
-              
-              // If token expires within 5 minutes, refresh it
-              if (expiresIn < 300 && currentSession.refresh_token) {
-                try {
-                  const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(currentSession);
-                  
-                  if (refreshError || !refreshData?.session) {
-                    console.error('[Auth] Failed to refresh session on visibility change:', refreshError);
-                    // Session refresh failed, sign out
-                    await supabase.auth.signOut();
-                    setSession(null);
-                    setUser(null);
-                    setIsAdmin(false);
-                    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-                      window.location.href = '/login';
+            // Only update state if session actually changed or is expired/about to expire
+            if (currentSession) {
+              const expiresAt = currentSession.expires_at;
+              if (expiresAt) {
+                const expiresIn = expiresAt - Math.floor(Date.now() / 1000);
+                
+                // Only refresh if token expires within 2 minutes (more conservative)
+                // This prevents unnecessary refreshes that could interfere with operations
+                if (expiresIn < 120 && currentSession.refresh_token) {
+                  try {
+                    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(currentSession);
+                    
+                    if (refreshError || !refreshData?.session) {
+                      console.error('[Auth] Failed to refresh session on visibility change:', refreshError);
+                      // Only sign out if we're not on login page
+                      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+                        await supabase.auth.signOut();
+                        currentSessionToken = null;
+                        currentUserId = null;
+                        setSession(null);
+                        setUser(null);
+                        setIsAdmin(false);
+                        window.location.href = '/login';
+                      }
+                      isHandlingVisibility = false;
+                      return;
                     }
-                    return;
+                    
+                    // Session refreshed successfully - only update if it actually changed
+                    if (refreshData.session.access_token !== currentSessionToken) {
+                      currentSessionToken = refreshData.session.access_token || null;
+                      currentUserId = refreshData.session.user?.id || null;
+                      setSession(refreshData.session);
+                      setUser(refreshData.session.user);
+                      if (refreshData.session.user) {
+                        // Only fetch admin status if user changed
+                        if (refreshData.session.user.id !== currentUserId) {
+                          await fetchAdminStatus(refreshData.session.user.id);
+                        }
+                      }
+                    }
+                  } catch (refreshErr) {
+                    console.error('[Auth] Error during session refresh on visibility change:', refreshErr);
+                    // Don't sign out on error - let the user continue working
+                    // The API client will handle 401 errors
                   }
-                  
-                  // Session refreshed successfully
-                  setSession(refreshData.session);
-                  setUser(refreshData.session.user);
-                  if (refreshData.session.user) {
-                    await fetchAdminStatus(refreshData.session.user.id);
-                  }
-                } catch (refreshErr) {
-                  console.error('[Auth] Error during session refresh on visibility change:', refreshErr);
-                  await supabase.auth.signOut();
-                  setSession(null);
-                  setUser(null);
-                  setIsAdmin(false);
-                  if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-                    window.location.href = '/login';
+                } else {
+                  // Session is still valid - only update if it actually changed
+                  if (currentSession.access_token !== currentSessionToken) {
+                    currentSessionToken = currentSession.access_token || null;
+                    currentUserId = currentSession.user?.id || null;
+                    setSession(currentSession);
+                    setUser(currentSession.user);
+                    // Don't fetch admin status if user hasn't changed - avoid unnecessary API calls
+                    if (currentSession.user && currentSession.user.id !== currentUserId) {
+                      await fetchAdminStatus(currentSession.user.id);
+                    }
                   }
                 }
               } else {
-                // Session is still valid, just update state
-                setSession(currentSession);
-                setUser(currentSession.user);
-                if (currentSession.user) {
-                  await fetchAdminStatus(currentSession.user.id);
+                // No expiration info - only update if session actually changed
+                if (currentSession.access_token !== currentSessionToken) {
+                  currentSessionToken = currentSession.access_token || null;
+                  currentUserId = currentSession.user?.id || null;
+                  setSession(currentSession);
+                  setUser(currentSession.user);
+                  if (currentSession.user && currentSession.user.id !== currentUserId) {
+                    await fetchAdminStatus(currentSession.user.id);
+                  }
                 }
               }
             } else {
-              // No expiration info, just update state
-              setSession(currentSession);
-              setUser(currentSession.user);
-              if (currentSession.user) {
-                await fetchAdminStatus(currentSession.user.id);
+              // No session found - only clear if we had one before
+              if (currentSessionToken && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+                currentSessionToken = null;
+                currentUserId = null;
+                setSession(null);
+                setUser(null);
+                setIsAdmin(false);
+                window.location.href = '/login';
               }
             }
-          } else {
-            // No session found, clear state
-            setSession(null);
-            setUser(null);
-            setIsAdmin(false);
-            if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-              window.location.href = '/login';
-            }
+          } catch (err) {
+            console.error('[Auth] Error handling visibility change:', err);
+            // Don't clear session on error - let user continue working
+          } finally {
+            isHandlingVisibility = false;
           }
-        } catch (err) {
-          console.error('[Auth] Error handling visibility change:', err);
         }
-      }
+      }, 1000); // 1000ms debounce to prevent interference with button clicks
     };
 
     // Add visibility change listener
@@ -311,6 +449,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
       clearTimeout(timeoutId);
+      if (visibilityTimeout) {
+        clearTimeout(visibilityTimeout);
+      }
       subscription.unsubscribe();
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
