@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
 import { ReferenceItem } from '@/types';
+import { InlineLoading, TableSkeleton } from '@/components/ui/LoadingSkeleton';
 
 type ReferenceItemKind = 'team' | 'league' | 'bet_type' | 'category' | 'responsible';
 
@@ -235,7 +236,11 @@ export default function AdminPage() {
   };
 
   if (authLoading) {
-    return <div className="text-center py-12">Loading...</div>;
+    return (
+      <div className="px-4 py-6 sm:px-0">
+        <InlineLoading message="Checking permissions..." />
+      </div>
+    );
   }
 
   if (!isAdmin) {
@@ -370,7 +375,9 @@ export default function AdminPage() {
             />
           </div>
           {loading ? (
-            <div className="text-center py-8 text-gray-500">Loading...</div>
+            <div className="py-8">
+              <TableSkeleton rows={5} cols={3} />
+            </div>
           ) : error ? (
             <div className="text-center py-8">
               <div className="text-red-600 mb-3 font-medium">{error}</div>

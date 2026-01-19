@@ -147,7 +147,19 @@ export default function BetsPage() {
   };
 
   if (loading) {
-    return <div className="text-center py-12">Loading...</div>;
+    return (
+      <div className="px-4 py-6 sm:px-0">
+        <div className="mb-6">
+          <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4 animate-pulse"></div>
+          <div className="flex flex-wrap gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+        <TableSkeleton rows={8} cols={6} />
+      </div>
+    );
   }
 
   // Calculate page range for pagination buttons

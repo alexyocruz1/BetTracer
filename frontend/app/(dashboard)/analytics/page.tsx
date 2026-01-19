@@ -61,12 +61,15 @@ const TableSkeleton = () => (
   </div>
 );
 
-const ChartSkeleton = ({ height = 250 }: { height?: number }) => (
-  <div className="mb-6 animate-pulse">
-    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4"></div>
-    <div className="bg-gray-100 dark:bg-gray-800 rounded" style={{ height: `${height}px` }}></div>
-  </div>
-);
+const ChartSkeleton = ({ height = 250 }: { height?: number }) => {
+  const heightClass = height === 250 ? 'h-[250px]' : height === 300 ? 'h-[300px]' : height === 350 ? 'h-[350px]' : `h-[${height}px]`;
+  return (
+    <div className="mb-6 animate-pulse">
+      <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4"></div>
+      <div className={`bg-gray-100 dark:bg-gray-800 rounded ${heightClass}`} role="presentation"></div>
+    </div>
+  );
+};
 
 const BestWorstSkeleton = () => (
   <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 animate-pulse">
@@ -138,6 +141,26 @@ const MainLoadingSkeleton = () => (
   </div>
 );
 
+// Helper function to get chart styles based on theme
+const getChartStyles = (theme: string) => ({
+  gridColor: theme === 'dark' ? '#374151' : '#e5e7eb',
+  tickColor: theme === 'dark' ? '#9ca3af' : '#6b7280',
+  tooltipBg: theme === 'dark' ? '#1f2937' : '#fff',
+  tooltipBorder: theme === 'dark' ? '#374151' : '#e5e7eb',
+  tooltipText: theme === 'dark' ? '#f3f4f6' : '#111827',
+});
+
+// Helper function for table wrapper
+const TableWrapper = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <div className={`overflow-x-auto -mx-6 px-6 ${className}`}>
+    <div className="inline-block min-w-full align-middle">
+      <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-opacity-10 md:rounded-lg">
+        {children}
+      </div>
+    </div>
+  </div>
+);
+
 export default function AnalyticsPage() {
   const { theme } = useTheme();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -168,6 +191,27 @@ export default function AnalyticsPage() {
   const [granularity, setGranularity] = useState<'daily' | 'weekly' | 'monthly' | 'all-time'>('all-time');
   const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'advanced'>('overview');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  // Date filter presets
+  const applyDatePreset = (preset: '7d' | '30d' | '90d' | 'all') => {
+    const today = new Date();
+    const endDateStr = today.toISOString().split('T')[0];
+    
+    if (preset === 'all') {
+      setStartDate('');
+      setEndDate('');
+      return;
+    }
+    
+    const days = preset === '7d' ? 7 : preset === '30d' ? 30 : 90;
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - days);
+    const startDateStr = startDate.toISOString().split('T')[0];
+    
+    setStartDate(startDateStr);
+    setEndDate(endDateStr);
+  };
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -371,8 +415,8 @@ export default function AnalyticsPage() {
       <div className="mb-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               Detailed breakdowns of your betting performance by league, time period, and more. 
               Use this page to analyze trends and identify your most profitable betting strategies.
             </p>
@@ -380,7 +424,7 @@ export default function AnalyticsPage() {
           <button
             onClick={() => fetchAnalytics()}
             disabled={loading}
-            className="ml-4 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0 flex items-center gap-2 transition-all"
+            className="ml-4 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0 flex items-center gap-2 transition-all"
             title="Refresh analytics data"
           >
             <svg 
@@ -401,52 +445,92 @@ export default function AnalyticsPage() {
         </div>
         
         {/* Filters */}
-        <div className="mt-4 flex flex-wrap gap-4 items-end">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
-              aria-label="Start Date"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
-              aria-label="End Date"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Time Period</label>
-            <select
-              value={granularity}
-              onChange={(e) => setGranularity(e.target.value as 'daily' | 'weekly' | 'monthly' | 'all-time')}
-              className="block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900"
-              aria-label="Time Period"
-            >
-              <option value="all-time">All Time</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </div>
-          {(startDate || endDate) && (
+        <div className="mt-4 space-y-4">
+          {/* Date Presets */}
+          <div className="flex flex-wrap gap-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 self-center">Quick Filters:</span>
             <button
-              onClick={() => {
-                setStartDate('');
-                setEndDate('');
-              }}
-              className="px-4 py-3 text-base sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 min-h-[44px]"
+              onClick={() => applyDatePreset('7d')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                startDate && endDate ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
             >
-              Clear Filters
+              Last 7 Days
             </button>
-          )}
+            <button
+              onClick={() => applyDatePreset('30d')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                startDate && endDate ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              Last 30 Days
+            </button>
+            <button
+              onClick={() => applyDatePreset('90d')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                startDate && endDate ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              Last 90 Days
+            </button>
+            <button
+              onClick={() => applyDatePreset('all')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                !startDate && !endDate ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              All Time
+            </button>
+          </div>
+          
+          {/* Custom Date Range */}
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="block w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                aria-label="Start Date"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="block w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                aria-label="End Date"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Period</label>
+              <select
+                value={granularity}
+                onChange={(e) => setGranularity(e.target.value as 'daily' | 'weekly' | 'monthly' | 'all-time')}
+                className="block w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                aria-label="Time Period"
+              >
+                <option value="all-time">All Time</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            {(startDate || endDate) && (
+              <button
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="px-4 py-3 text-base sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 min-h-[44px] transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -455,15 +539,15 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('overview')}
             className={`${
               activeTab === 'overview'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                ? 'border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Overview
           </button>
@@ -471,9 +555,9 @@ export default function AnalyticsPage() {
             onClick={() => setActiveTab('performance')}
             className={`${
               activeTab === 'performance'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                ? 'border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Performance
           </button>
@@ -481,9 +565,9 @@ export default function AnalyticsPage() {
             onClick={() => setActiveTab('advanced')}
             className={`${
               activeTab === 'advanced'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                ? 'border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Advanced
           </button>
@@ -509,14 +593,16 @@ export default function AnalyticsPage() {
         const CollapsibleSection = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => {
           const expanded = isExpanded(id);
           return (
-            <div className="bg-white shadow rounded-lg mb-4">
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-4 border border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => toggleSection(id)}
-                className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-t-lg"
+                {...(expanded ? { 'aria-expanded': 'true' } : { 'aria-expanded': 'false' })}
+                aria-controls={`section-${id}`}
               >
-                <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
                 <svg
-                  className={`w-5 h-5 text-gray-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                  className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -524,7 +610,7 @@ export default function AnalyticsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              {expanded && <div className="px-6 pb-6">{children}</div>}
+              {expanded && <div id={`section-${id}`} className="px-6 pb-6">{children}</div>}
             </div>
           );
         };
@@ -536,54 +622,97 @@ export default function AnalyticsPage() {
               <div>
                 {summary ? (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <div className="bg-white overflow-hidden shadow rounded-lg p-5">
-            <div className={`text-2xl font-bold ${summary.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Profit</div>
+              <svg className="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className={`text-2xl font-bold ${summary.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               ${summary.total_profit.toFixed(2)}
             </div>
-            <div className="text-sm font-medium text-gray-500">Total Profit</div>
+            {summary.total_profit !== 0 && (
+              <div className={`text-xs mt-1 ${summary.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {summary.total_profit >= 0 ? '↑' : '↓'} {Math.abs((summary.total_profit / summary.total_stake) * 100).toFixed(1)}% of stake
+              </div>
+            )}
           </div>
-          <div className="bg-white overflow-hidden shadow rounded-lg p-5">
-            <div className="text-2xl font-bold text-gray-900">{(summary.win_rate * 100).toFixed(1)}%</div>
-            <div className="text-sm font-medium text-gray-500">Win Rate</div>
-            <div className="text-xs text-gray-400 mt-1">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Win Rate</div>
+              <svg className="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{(summary.win_rate * 100).toFixed(1)}%</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {summary.won_bets}W / {summary.lost_bets}L
               {summary.pending_bets > 0 && ` / ${summary.pending_bets}P`}
             </div>
           </div>
-          <div className="bg-white overflow-hidden shadow rounded-lg p-5">
-            <div className={`text-2xl font-bold ${summary.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">ROI</div>
+              <svg className="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <div className={`text-2xl font-bold ${summary.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               {(summary.roi * 100).toFixed(1)}%
             </div>
-            <div className="text-sm font-medium text-gray-500">ROI</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Return on investment
+            </div>
           </div>
-          <div className="bg-white overflow-hidden shadow rounded-lg p-5">
-            <div className="text-2xl font-bold text-gray-900">{summary.total_bets}</div>
-            <div className="text-sm font-medium text-gray-500">Total Bets</div>
-            <div className="text-xs text-gray-400 mt-1">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-5 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Bets</div>
+              <svg className="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{summary.total_bets}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               ${summary.total_stake.toFixed(2)} staked
             </div>
           </div>
         </div>
       ) : (byLeague.length === 0 && byResponsible.length === 0 && byBetType.length === 0 && byCategory.length === 0 && timeSeries.length === 0) ? (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <p className="text-gray-500 text-center">No analytics data available. Create some bets to see your performance.</p>
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-12 mb-8 border border-gray-200 dark:border-gray-700">
+          <div className="text-center">
+            <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Analytics Data</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">Create some bets to see your performance analytics.</p>
+            <a
+              href="/bets/new"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+            >
+              Create Your First Bet
+            </a>
+          </div>
         </div>
       ) : null}
 
                 {/* Best/Worst Performers */}
                 {bestWorstPerformers ? (
-                  <div className="bg-white shadow rounded-lg p-6 mb-8">
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Best & Worst Performers</h2>
+                  <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Best & Worst Performers</h2>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {bestWorstPerformers.best_leagues.length > 0 && (
                         <div>
-                          <h3 className="text-lg font-semibold text-green-600 mb-3">Top 5 Leagues</h3>
+                          <h3 className="text-lg font-semibold text-green-600 dark:text-green-400 mb-3">Top 5 Leagues</h3>
                           <div className="space-y-2">
                             {bestWorstPerformers.best_leagues.map((league, idx) => (
-                              <div key={league.league_id} className="flex justify-between items-center p-2 bg-green-50 rounded">
-                                <span className="text-sm font-medium text-gray-900">{idx + 1}. {league.league_name}</span>
-                                <span className="text-sm font-bold text-green-600">${league.total_profit.toFixed(2)}</span>
+                              <div key={league.league_id} className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-600 dark:bg-green-500 text-white text-xs font-bold mr-2">{idx + 1}</span>
+                                  {league.league_name}
+                                </span>
+                                <span className="text-sm font-bold text-green-600 dark:text-green-400">${league.total_profit.toFixed(2)}</span>
                               </div>
                             ))}
                           </div>
@@ -592,12 +721,15 @@ export default function AnalyticsPage() {
 
                       {bestWorstPerformers.worst_leagues.length > 0 && (
                         <div>
-                          <h3 className="text-lg font-semibold text-red-600 mb-3">Bottom 5 Leagues</h3>
+                          <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-3">Bottom 5 Leagues</h3>
                           <div className="space-y-2">
                             {bestWorstPerformers.worst_leagues.map((league, idx) => (
-                              <div key={league.league_id} className="flex justify-between items-center p-2 bg-red-50 rounded">
-                                <span className="text-sm font-medium text-gray-900">{idx + 1}. {league.league_name}</span>
-                                <span className="text-sm font-bold text-red-600">${league.total_profit.toFixed(2)}</span>
+                              <div key={league.league_id} className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-600 dark:bg-red-500 text-white text-xs font-bold mr-2">{idx + 1}</span>
+                                  {league.league_name}
+                                </span>
+                                <span className="text-sm font-bold text-red-600 dark:text-red-400">${league.total_profit.toFixed(2)}</span>
                               </div>
                             ))}
                           </div>
@@ -606,12 +738,15 @@ export default function AnalyticsPage() {
 
                       {bestWorstPerformers.best_categories.length > 0 && (
                         <div>
-                          <h3 className="text-lg font-semibold text-green-600 mb-3">Top 5 Categories</h3>
+                          <h3 className="text-lg font-semibold text-green-600 dark:text-green-400 mb-3">Top 5 Categories</h3>
                           <div className="space-y-2">
                             {bestWorstPerformers.best_categories.map((category, idx) => (
-                              <div key={category.category_id} className="flex justify-between items-center p-2 bg-green-50 rounded">
-                                <span className="text-sm font-medium text-gray-900">{idx + 1}. {category.category_name}</span>
-                                <span className="text-sm font-bold text-green-600">${category.total_profit.toFixed(2)}</span>
+                              <div key={category.category_id} className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-600 dark:bg-green-500 text-white text-xs font-bold mr-2">{idx + 1}</span>
+                                  {category.category_name}
+                                </span>
+                                <span className="text-sm font-bold text-green-600 dark:text-green-400">${category.total_profit.toFixed(2)}</span>
                               </div>
                             ))}
                           </div>
@@ -623,17 +758,17 @@ export default function AnalyticsPage() {
 
                 {/* Time Series */}
                 {timeSeries.length > 0 ? (
-                  <div className="bg-white shadow rounded-lg p-6 mb-8">
+                  <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-xl font-bold text-gray-900">Performance Over Time</h2>
-                      <div className="text-sm text-gray-500">
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">Performance Over Time</h2>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
                         Showing {granularity === 'all-time' ? 'all time' : granularity} data
                       </div>
                     </div>
                     
                     {/* Profit Over Time Line Chart */}
                     <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit Trend</h3>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Profit Trend</h3>
                       <ResponsiveContainer width="100%" height={350}>
                         <LineChart
                           data={timeSeries.map((item) => ({
@@ -642,17 +777,17 @@ export default function AnalyticsPage() {
                           }))}
                           margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
                         >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
                           <XAxis
                             dataKey="date"
                             angle={-45}
                             textAnchor="end"
                             height={80}
-                            tick={{ fontSize: 12 }}
+                            tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                           />
                           <YAxis
                             tickFormatter={(value) => `$${value.toFixed(0)}`}
-                            tick={{ fontSize: 12 }}
+                            tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                           />
                           <Tooltip
                             formatter={(value: number, name: string) => {
@@ -660,9 +795,15 @@ export default function AnalyticsPage() {
                               if (name === 'stake') return [`$${value.toFixed(2)}`, 'Stake'];
                               return [value, name];
                             }}
-                            contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                            contentStyle={{ 
+                              backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                              border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                              borderRadius: '6px',
+                              color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                            }}
+                            labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
                           />
-                          <Legend />
+                          <Legend wrapperStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }} />
                           <Line
                             type="monotone"
                             dataKey="profit"
@@ -688,7 +829,7 @@ export default function AnalyticsPage() {
 
                     {/* Cumulative Profit Chart */}
                     <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-gray-700 mb-4">Cumulative Profit</h3>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Cumulative Profit</h3>
                       <ResponsiveContainer width="100%" height={250}>
                         <LineChart
                           data={timeSeries
@@ -704,21 +845,27 @@ export default function AnalyticsPage() {
                             }))}
                           margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
                         >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
                           <XAxis
                             dataKey="date"
                             angle={-45}
                             textAnchor="end"
                             height={80}
-                            tick={{ fontSize: 12 }}
+                            tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                           />
                           <YAxis
                             tickFormatter={(value) => `$${value.toFixed(0)}`}
-                            tick={{ fontSize: 12 }}
+                            tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                           />
                           <Tooltip
                             formatter={(value: number) => `$${value.toFixed(2)}`}
-                            contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                            contentStyle={{ 
+                              backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                              border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                              borderRadius: '6px',
+                              color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                            }}
+                            labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
                           />
                           <Line
                             type="monotone"
@@ -735,32 +882,32 @@ export default function AnalyticsPage() {
 
                     {/* Detailed Table */}
                     <div className="mt-8">
-                      <h3 className="text-lg font-semibold text-gray-700 mb-4">Daily Breakdown</h3>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily Breakdown</h3>
                       <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                          <thead className="bg-gray-50 dark:bg-gray-900">
                             <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stake</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Profit</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bets</th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
+                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             {timeSeries.map((data) => (
-                              <tr key={data.date}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              <tr key={data.date} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                                   {new Date(data.date).toLocaleDateString()}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   ${data.stake.toFixed(2)}
                                 </td>
                                 <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                                  data.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                                  data.profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                                 }`}>
                                   ${data.profit.toFixed(2)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   {data.bet_count}
                                 </td>
                               </tr>
@@ -774,37 +921,37 @@ export default function AnalyticsPage() {
 
                 {/* Streak Analysis */}
                 {streakAnalysis ? (
-                  <div className="bg-white shadow rounded-lg p-6 mb-8">
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Streak Analysis</h2>
+                  <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Streak Analysis</h2>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <div className="text-sm text-gray-600 mb-1">Current Streak</div>
-                        <div className={`text-2xl font-bold ${streakAnalysis.current_streak.type === 'win' ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Streak</div>
+                        <div className={`text-2xl font-bold ${streakAnalysis.current_streak.type === 'win' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {streakAnalysis.current_streak.length} {streakAnalysis.current_streak.type === 'win' ? 'Wins' : 'Losses'}
                         </div>
                         {streakAnalysis.current_streak.start_date && (
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Since {new Date(streakAnalysis.current_streak.start_date).toLocaleDateString()}
                           </div>
                         )}
                       </div>
 
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <div className="text-sm text-gray-600 mb-1">Longest Win Streak</div>
-                        <div className="text-2xl font-bold text-green-600">{streakAnalysis.longest_win_streak.length}</div>
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Longest Win Streak</div>
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">{streakAnalysis.longest_win_streak.length}</div>
                         {streakAnalysis.longest_win_streak.start_date && (
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {new Date(streakAnalysis.longest_win_streak.start_date).toLocaleDateString()} - {new Date(streakAnalysis.longest_win_streak.end_date).toLocaleDateString()}
                           </div>
                         )}
                       </div>
 
-                      <div className="bg-red-50 p-4 rounded-lg">
-                        <div className="text-sm text-gray-600 mb-1">Longest Loss Streak</div>
-                        <div className="text-2xl font-bold text-red-600">{streakAnalysis.longest_loss_streak.length}</div>
+                      <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Longest Loss Streak</div>
+                        <div className="text-2xl font-bold text-red-600 dark:text-red-400">{streakAnalysis.longest_loss_streak.length}</div>
                         {streakAnalysis.longest_loss_streak.start_date && (
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {new Date(streakAnalysis.longest_loss_streak.start_date).toLocaleDateString()} - {new Date(streakAnalysis.longest_loss_streak.end_date).toLocaleDateString()}
                           </div>
                         )}
@@ -813,16 +960,17 @@ export default function AnalyticsPage() {
 
                     {streakAnalysis.recent_bets.length > 0 && (
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-700 mb-3">Recent Bets</h3>
+                        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Recent Bets</h3>
                         <div className="flex gap-2 flex-wrap">
                           {streakAnalysis.recent_bets.map((bet, idx) => (
                             <div
                               key={idx}
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                bet.state === 'won' ? 'bg-green-100 text-green-800' :
-                                bet.state === 'lost' ? 'bg-red-100 text-red-800' :
-                                'bg-gray-100 text-gray-800'
+                              className={`px-3 py-1 rounded-full text-xs font-medium transition-transform hover:scale-110 ${
+                                bet.state === 'won' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                                bet.state === 'lost' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
+                                'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                               }`}
+                              title={`Bet ${idx + 1}: ${bet.state}`}
                             >
                               {bet.state === 'won' ? 'W' : bet.state === 'lost' ? 'L' : bet.state.charAt(0).toUpperCase()}
                             </div>
@@ -838,30 +986,36 @@ export default function AnalyticsPage() {
             {/* Performance Tab */}
             {activeTab === 'performance' && (
               <div>
-                {byLeague.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Performance by League</h2>
+                {byLeague.length > 0 ? (
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Performance by League</h2>
           
           {/* Bar Chart for Profit by League */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit by League</h3>
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Profit by League</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byLeague}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
                 <XAxis
                   dataKey="league_name"
                   angle={-45}
                   textAnchor="end"
                   height={100}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <YAxis
                   tickFormatter={(value) => `$${value.toFixed(0)}`}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip
                   formatter={(value: number) => `$${value.toFixed(2)}`}
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                  contentStyle={{ 
+                    backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                    border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                    borderRadius: '6px',
+                    color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                  }}
+                  labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
                 />
                 <Bar dataKey="total_profit" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -870,24 +1024,30 @@ export default function AnalyticsPage() {
 
           {/* ROI Chart */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">ROI by League</h3>
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">ROI by League</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byLeague}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
                 <XAxis
                   dataKey="league_name"
                   angle={-45}
                   textAnchor="end"
                   height={100}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <YAxis
                   tickFormatter={(value) => `${value.toFixed(0)}%`}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip
                   formatter={(value: number) => `${(value * 100).toFixed(1)}%`}
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                  contentStyle={{ 
+                    backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                    border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                    borderRadius: '6px',
+                    color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                  }}
+                  labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
                 />
                 <Bar dataKey="roi" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -896,75 +1056,89 @@ export default function AnalyticsPage() {
 
           {/* Detailed Table */}
           <div className="mt-8">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Detailed Breakdown</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">League</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ROI</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Win Rate</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {byLeague.map((league) => (
-                    <tr key={league.league_id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {league.league_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${league.total_stake.toFixed(2)}
-                      </td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                        league.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        ${league.total_profit.toFixed(2)}
-                      </td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                        league.roi >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {(league.roi * 100).toFixed(1)}%
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {(league.win_rate * 100).toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Detailed Breakdown</h3>
+            <div className="overflow-x-auto -mx-6 px-6">
+              <div className="inline-block min-w-full align-middle">
+                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">League</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stake</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Profit</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ROI</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Win Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {byLeague.map((league) => (
+                        <tr key={league.league_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                            {league.league_name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            ${league.total_stake.toFixed(2)}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                            league.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            ${league.total_profit.toFixed(2)}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                            league.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                          }`}>
+                            {(league.roi * 100).toFixed(1)}%
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {(league.win_rate * 100).toFixed(1)}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400 text-center">No league data available for the selected period.</p>
+        </div>
       )}
 
-      {byLegs.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Performance by Number of Legs</h2>
-          <p className="text-sm text-gray-600 mb-6">
+      {byLegs.length > 0 ? (
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Performance by Number of Legs</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
             Analyze which bet sizes (number of legs) perform best. Are 2-leg bets more profitable than 3 or 4-leg bets?
           </p>
           
           {/* Bar Chart for ROI by Legs */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">ROI by Number of Legs</h3>
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">ROI by Number of Legs</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byLegs}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
                 <XAxis
                   dataKey="num_legs"
-                  label={{ value: 'Number of Legs', position: 'insideBottom', offset: -5 }}
-                  tick={{ fontSize: 12 }}
+                  label={{ value: 'Number of Legs', position: 'insideBottom', offset: -5, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
+                  tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <YAxis
                   tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
-                  tick={{ fontSize: 12 }}
-                  label={{ value: 'ROI (%)', angle: -90, position: 'insideLeft' }}
+                  tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
+                  label={{ value: 'ROI (%)', angle: -90, position: 'insideLeft', fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip
                   formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                  contentStyle={{ 
+                    backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                    border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                    borderRadius: '6px',
+                    color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                  }}
+                  labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
                 />
                 <Bar 
                   dataKey="roi" 
@@ -977,23 +1151,29 @@ export default function AnalyticsPage() {
 
           {/* Bar Chart for Win Rate by Legs */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Win Rate by Number of Legs</h3>
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Win Rate by Number of Legs</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={byLegs}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
                 <XAxis
                   dataKey="num_legs"
-                  label={{ value: 'Number of Legs', position: 'insideBottom', offset: -5 }}
-                  tick={{ fontSize: 12 }}
+                  label={{ value: 'Number of Legs', position: 'insideBottom', offset: -5, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
+                  tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <YAxis
                   tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
-                  tick={{ fontSize: 12 }}
-                  label={{ value: 'Win Rate (%)', angle: -90, position: 'insideLeft' }}
+                  tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
+                  label={{ value: 'Win Rate (%)', angle: -90, position: 'insideLeft', fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip
                   formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                  contentStyle={{ 
+                    backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                    border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                    borderRadius: '6px',
+                    color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                  }}
+                  labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
                 />
                 <Bar dataKey="win_rate" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -1002,70 +1182,70 @@ export default function AnalyticsPage() {
 
           {/* Detailed Table */}
           <div className="mt-8">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Detailed Breakdown</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Detailed Breakdown</h3>
+            <TableWrapper>
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Legs</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Won</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lost</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Win Rate</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ROI</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Odds</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Legs</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bets</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Won</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lost</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Win Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stake</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Profit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ROI</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg Odds</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {byLegs.map((legs) => {
                     const isBestROI = byLegs.filter(l => l.bet_count > 0).every(l => l.roi <= legs.roi || l.num_legs === legs.num_legs);
                     const isBestWinRate = byLegs.filter(l => l.bet_count > 0).every(l => l.win_rate <= legs.win_rate || l.num_legs === legs.num_legs);
                     
                     return (
-                      <tr key={legs.num_legs} className={isBestROI && legs.bet_count > 0 ? 'bg-green-50' : ''}>
+                      <tr key={legs.num_legs} className={`${isBestROI && legs.bet_count > 0 ? 'bg-green-50 dark:bg-green-900/20' : ''} hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <span className="text-sm font-bold text-gray-900">{legs.num_legs}</span>
+                            <span className="text-sm font-bold text-gray-900 dark:text-white">{legs.num_legs}</span>
                             {isBestROI && legs.bet_count > 0 && (
-                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                                 Best ROI
                               </span>
                             )}
                             {isBestWinRate && !isBestROI && legs.bet_count > 0 && (
-                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                                 Best Win Rate
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {legs.bet_count}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 dark:text-green-400 font-medium">
                           {legs.won_bets}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 dark:text-red-400 font-medium">
                           {legs.lost_bets}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {(legs.win_rate * 100).toFixed(1)}%
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           ${legs.total_stake.toFixed(2)}
                         </td>
                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                          legs.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
+                          legs.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                         }`}>
                           ${legs.total_profit.toFixed(2)}
                         </td>
                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                          legs.roi >= 0 ? 'text-green-600' : 'text-red-600'
+                          legs.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                         }`}>
                           {(legs.roi * 100).toFixed(1)}%
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {legs.avg_odds.toFixed(2)}x
                         </td>
                       </tr>
@@ -1073,13 +1253,13 @@ export default function AnalyticsPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </TableWrapper>
           </div>
 
           {/* Summary Insights */}
           {byLegs.length > 0 && (
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="text-sm font-semibold text-blue-900 mb-2">💡 Insights</h4>
+            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">💡 Insights</h4>
               {(() => {
                 const bestROI = byLegs.filter(l => l.bet_count > 0).reduce((best, current) => 
                   current.roi > best.roi ? current : best, byLegs[0]
@@ -1089,7 +1269,7 @@ export default function AnalyticsPage() {
                 );
                 
                 return (
-                  <div className="text-sm text-blue-800 space-y-1">
+                  <div className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
                     {bestROI && bestROI.bet_count > 0 && (
                       <p>
                         <strong>{bestROI.num_legs}-leg bets</strong> have the best ROI at {(bestROI.roi * 100).toFixed(1)}% 
@@ -1106,6 +1286,10 @@ export default function AnalyticsPage() {
               })()}
             </div>
           )}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400 text-center">No leg count data available for the selected period.</p>
         </div>
       )}
 

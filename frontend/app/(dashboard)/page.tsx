@@ -6,6 +6,7 @@ import { AnalyticsSummary, MainBet, StreakAnalysis, BestWorstPerformers, TimeSer
 import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTheme } from '@/contexts/theme-context';
+import { InlineLoading, SummaryCardsSkeleton, CardSkeleton } from '@/components/ui/LoadingSkeleton';
 
 export default function DashboardPage() {
   const { theme } = useTheme();
@@ -102,7 +103,16 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) {
-    return <div className="text-center py-12">Loading...</div>;
+    return (
+      <div className="px-4 py-6 sm:px-0">
+        <SummaryCardsSkeleton />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+        <CardSkeleton />
+      </div>
+    );
   }
 
   if (!summary) {

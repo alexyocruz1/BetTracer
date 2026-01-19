@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api/client';
 import { ReferenceItem } from '@/types';
 import Link from 'next/link';
+import { InlineLoading, CardSkeleton } from '@/components/ui/LoadingSkeleton';
 
 interface Recommendation {
   responsible_id: string | null;
@@ -87,9 +88,14 @@ export default function PredictionsPage() {
   if (loading) {
     return (
       <div className="px-4 py-6 sm:px-0">
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading recommendations...</p>
+        <div className="mb-6">
+          <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-2 animate-pulse"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-96 animate-pulse"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <CardSkeleton key={i} />
+          ))}
         </div>
       </div>
     );

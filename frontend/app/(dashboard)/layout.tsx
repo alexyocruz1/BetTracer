@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
+import { PageLoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut, isAdmin } = useAuth();
@@ -53,11 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [user, loading, router]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+    return <PageLoadingSkeleton message="Loading dashboard..." />;
   }
 
   if (!user) {

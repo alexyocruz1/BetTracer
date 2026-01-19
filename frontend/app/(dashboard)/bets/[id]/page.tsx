@@ -10,6 +10,7 @@ import HighlightStatsImage from '@/components/HighlightStatsImage';
 import { useMLPrediction } from '@/hooks/useMLPrediction';
 import MLInsights, { LegSummary } from '@/components/bets/MLInsights';
 import { supabase } from '@/lib/supabase/client';
+import { InlineLoading, CardSkeleton } from '@/components/ui/LoadingSkeleton';
 
 export default function BetDetailPage() {
   const params = useParams();
@@ -685,7 +686,15 @@ export default function BetDetailPage() {
   };
 
   if (loading) {
-    return <div className="text-center py-12">Loading...</div>;
+    return (
+      <div className="px-4 py-6 sm:px-0">
+        <div className="mb-6">
+          <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4 animate-pulse"></div>
+        </div>
+        <CardSkeleton className="mb-6" />
+        <CardSkeleton />
+      </div>
+    );
   }
 
   if (!bet) {
