@@ -18,6 +18,126 @@ import {
 } from 'recharts';
 import MLScenarioSimulator from '@/components/analytics/MLScenarioSimulator';
 
+// Loading Skeleton Components
+const SummaryCardsSkeleton = () => (
+  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+    {[1, 2, 3, 4].map((i) => (
+      <div key={i} className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg p-5 animate-pulse">
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-2"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+      </div>
+    ))}
+  </div>
+);
+
+const SectionSkeleton = ({ title, showChart = false }: { title: string; showChart?: boolean }) => (
+  <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 animate-pulse">
+    <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-6"></div>
+    {showChart && (
+      <div className="mb-6">
+        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4"></div>
+        <div className="h-64 bg-gray-100 dark:bg-gray-900 rounded"></div>
+      </div>
+    )}
+    <div className="space-y-3">
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-4/6"></div>
+    </div>
+  </div>
+);
+
+const TableSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4"></div>
+    <div className="overflow-x-auto">
+      <div className="min-w-full">
+        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 rounded mb-2"></div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const ChartSkeleton = ({ height = 250 }: { height?: number }) => (
+  <div className="mb-6 animate-pulse">
+    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4"></div>
+    <div className="bg-gray-100 dark:bg-gray-800 rounded" style={{ height: `${height}px` }}></div>
+  </div>
+);
+
+const BestWorstSkeleton = () => (
+  <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 animate-pulse">
+    <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-6"></div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {[1, 2, 3].map((i) => (
+        <div key={i}>
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-3"></div>
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((j) => (
+              <div key={j} className="h-12 bg-gray-100 dark:bg-gray-800 rounded"></div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const StreakSkeleton = () => (
+  <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 animate-pulse">
+    <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-6"></div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 rounded-lg"></div>
+      ))}
+    </div>
+    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-3"></div>
+    <div className="flex gap-2 flex-wrap">
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <div key={i} className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+      ))}
+    </div>
+  </div>
+);
+
+const TimeSeriesSkeleton = () => (
+  <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 animate-pulse">
+    <div className="flex items-center justify-between mb-6">
+      <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-56"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+    </div>
+    <ChartSkeleton height={350} />
+    <ChartSkeleton height={250} />
+    <TableSkeleton />
+  </div>
+);
+
+const MainLoadingSkeleton = () => (
+  <div className="px-4 py-6 sm:px-0">
+    <div className="mb-6">
+      <div className="flex items-start justify-between">
+        <div className="animate-pulse">
+          <div className="h-9 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-2"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-96"></div>
+        </div>
+        <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-20 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        ))}
+      </div>
+    </div>
+    <SummaryCardsSkeleton />
+    <BestWorstSkeleton />
+    <TimeSeriesSkeleton />
+    <StreakSkeleton />
+  </div>
+);
+
 export default function AnalyticsPage() {
   const { theme } = useTheme();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -243,7 +363,7 @@ export default function AnalyticsPage() {
   // Users can manually refresh if needed
 
   if (loading) {
-    return <div className="text-center py-12">Loading...</div>;
+    return <MainLoadingSkeleton />;
   }
 
   return (
@@ -260,11 +380,11 @@ export default function AnalyticsPage() {
           <button
             onClick={() => fetchAnalytics()}
             disabled={loading}
-            className="ml-4 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0 flex items-center gap-2"
+            className="ml-4 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0 flex items-center gap-2 transition-all"
             title="Refresh analytics data"
           >
             <svg 
-              className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} 
+              className={`w-5 h-5 transition-transform ${loading ? 'animate-spin' : ''}`} 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -451,12 +571,7 @@ export default function AnalyticsPage() {
       ) : null}
 
                 {/* Best/Worst Performers */}
-                {loading ? (
-                  <div className="bg-white shadow rounded-lg p-6 mb-8">
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Best & Worst Performers</h2>
-                    <div className="text-center py-8 text-gray-500">Loading...</div>
-                  </div>
-                ) : bestWorstPerformers ? (
+                {bestWorstPerformers ? (
                   <div className="bg-white shadow rounded-lg p-6 mb-8">
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Best & Worst Performers</h2>
                     
@@ -507,12 +622,7 @@ export default function AnalyticsPage() {
                 ) : null}
 
                 {/* Time Series */}
-                {loading ? (
-                  <div className="bg-white shadow rounded-lg p-6 mb-8">
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Performance Over Time</h2>
-                    <div className="text-center py-8 text-gray-500">Loading...</div>
-                  </div>
-                ) : timeSeries.length > 0 ? (
+                {timeSeries.length > 0 ? (
                   <div className="bg-white shadow rounded-lg p-6 mb-8">
                     <div className="flex items-center justify-between mb-6">
                       <h2 className="text-xl font-bold text-gray-900">Performance Over Time</h2>
@@ -663,12 +773,7 @@ export default function AnalyticsPage() {
                 ) : null}
 
                 {/* Streak Analysis */}
-                {loading ? (
-                  <div className="bg-white shadow rounded-lg p-6 mb-8">
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Streak Analysis</h2>
-                    <div className="text-center py-8 text-gray-500">Loading...</div>
-                  </div>
-                ) : streakAnalysis ? (
+                {streakAnalysis ? (
                   <div className="bg-white shadow rounded-lg p-6 mb-8">
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Streak Analysis</h2>
                     
