@@ -189,7 +189,7 @@ export default function AnalyticsPage() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [granularity, setGranularity] = useState<'daily' | 'weekly' | 'monthly' | 'all-time'>('all-time');
-  const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'advanced'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'insights' | 'advanced'>('overview');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
@@ -540,7 +540,7 @@ export default function AnalyticsPage() {
 
       {/* Tab Navigation */}
       <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+        <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('overview')}
             className={`${
@@ -560,6 +560,16 @@ export default function AnalyticsPage() {
             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Performance
+          </button>
+          <button
+            onClick={() => setActiveTab('insights')}
+            className={`${
+              activeTab === 'insights'
+                ? 'border-blue-500 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+          >
+            Insights
           </button>
           <button
             onClick={() => setActiveTab('advanced')}
@@ -2430,717 +2440,510 @@ export default function AnalyticsPage() {
               </div>
             )}
 
-            {/* Advanced Tab - All other analytics sections */}
+            {/* Advanced Tab - Advanced analytics sections */}
             {activeTab === 'advanced' && (
               <div>
-                {/* Best/Worst Performers */}
-                {bestWorstPerformers && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Best & Worst Performers</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {bestWorstPerformers.best_leagues.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-green-600 mb-3">Top 5 Leagues</h3>
-                <div className="space-y-2">
-                  {bestWorstPerformers.best_leagues.map((league, idx) => (
-                    <div key={league.league_id} className="flex justify-between items-center p-2 bg-green-50 rounded">
-                      <span className="text-sm font-medium text-gray-900">{idx + 1}. {league.league_name}</span>
-                      <span className="text-sm font-bold text-green-600">${league.total_profit.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {bestWorstPerformers.worst_leagues.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-red-600 mb-3">Bottom 5 Leagues</h3>
-                <div className="space-y-2">
-                  {bestWorstPerformers.worst_leagues.map((league, idx) => (
-                    <div key={league.league_id} className="flex justify-between items-center p-2 bg-red-50 rounded">
-                      <span className="text-sm font-medium text-gray-900">{idx + 1}. {league.league_name}</span>
-                      <span className="text-sm font-bold text-red-600">${league.total_profit.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {bestWorstPerformers.best_categories.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-green-600 mb-3">Top 5 Categories</h3>
-                <div className="space-y-2">
-                  {bestWorstPerformers.best_categories.map((category, idx) => (
-                    <div key={category.category_id} className="flex justify-between items-center p-2 bg-green-50 rounded">
-                      <span className="text-sm font-medium text-gray-900">{idx + 1}. {category.category_name}</span>
-                      <span className="text-sm font-bold text-green-600">${category.total_profit.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-                {/* Streak Analysis */}
-                {streakAnalysis && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Streak Analysis</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Current Streak</div>
-              <div className={`text-2xl font-bold ${streakAnalysis.current_streak.type === 'win' ? 'text-green-600' : 'text-red-600'}`}>
-                {streakAnalysis.current_streak.length} {streakAnalysis.current_streak.type === 'win' ? 'Wins' : 'Losses'}
-              </div>
-              {streakAnalysis.current_streak.start_date && (
-                <div className="text-xs text-gray-500 mt-1">
-                  Since {new Date(streakAnalysis.current_streak.start_date).toLocaleDateString()}
-                </div>
-              )}
-            </div>
-
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Longest Win Streak</div>
-              <div className="text-2xl font-bold text-green-600">{streakAnalysis.longest_win_streak.length}</div>
-              {streakAnalysis.longest_win_streak.start_date && (
-                <div className="text-xs text-gray-500 mt-1">
-                  {new Date(streakAnalysis.longest_win_streak.start_date).toLocaleDateString()} - {new Date(streakAnalysis.longest_win_streak.end_date).toLocaleDateString()}
-                </div>
-              )}
-            </div>
-
-            <div className="bg-red-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Longest Loss Streak</div>
-              <div className="text-2xl font-bold text-red-600">{streakAnalysis.longest_loss_streak.length}</div>
-              {streakAnalysis.longest_loss_streak.start_date && (
-                <div className="text-xs text-gray-500 mt-1">
-                  {new Date(streakAnalysis.longest_loss_streak.start_date).toLocaleDateString()} - {new Date(streakAnalysis.longest_loss_streak.end_date).toLocaleDateString()}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {streakAnalysis.recent_bets.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-3">Recent Bets</h3>
-              <div className="flex gap-2 flex-wrap">
-                {streakAnalysis.recent_bets.map((bet, idx) => (
-                  <div
-                    key={idx}
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      bet.state === 'won' ? 'bg-green-100 text-green-800' :
-                      bet.state === 'lost' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {bet.state === 'won' ? 'W' : bet.state === 'lost' ? 'L' : bet.state.charAt(0).toUpperCase()}
+                {/* Responsible Detailed */}
+                {responsibleDetailed.length > 0 && (
+        <CollapsibleSection id="responsible-detailed" title="Detailed Analytics by Responsible">
+          {responsibleDetailed.map((responsible) => (
+            <div key={responsible.responsible_id} className="mb-8 pb-8 border-b border-gray-200 dark:border-gray-700 last:border-b-0 last:mb-0 last:pb-0">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{responsible.responsible_name}</h3>
+                
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Stake</div>
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">${responsible.summary.total_stake.toFixed(2)}</div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Profit</div>
+                    <div className={`text-lg font-bold ${responsible.summary.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      ${responsible.summary.total_profit >= 0 ? '+' : ''}{responsible.summary.total_profit.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">ROI</div>
+                    <div className={`text-lg font-bold ${responsible.summary.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {(responsible.summary.roi * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Win Rate</div>
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">{(responsible.summary.win_rate * 100).toFixed(1)}%</div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Bets</div>
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">{responsible.summary.bet_count}</div>
+                  </div>
+                </div>
 
-                {/* Team Performance */}
-                {teamPerformance.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Team Performance</h2>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Team</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">As Home</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">As Away</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {teamPerformance.slice(0, 20).map((team) => (
-                  <tr key={team.team_id}>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{team.team_name}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <div>{team.as_home.won_legs}/{team.as_home.total_legs} ({(team.as_home.win_rate * 100).toFixed(0)}%)</div>
-                      <div className="text-xs text-gray-500">${team.as_home.total_profit.toFixed(2)}</div>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div>{team.as_away.won_legs}/{team.as_away.total_legs} ({(team.as_away.win_rate * 100).toFixed(0)}%)</div>
-                      <div className="text-xs text-gray-500">${team.as_away.total_profit.toFixed(2)}</div>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div>{team.total.won_legs}/{team.total.total_legs} ({(team.total.win_rate * 100).toFixed(0)}%)</div>
-                      <div className={`text-xs font-medium ${
-                        team.total.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        ${team.total.total_profit.toFixed(2)}
+                {/* Most Profitable */}
+                <div className="mb-6">
+                  <h4 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">Most Profitable</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {responsible.most_profitable_league && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">League</div>
+                        <div className="text-base font-bold text-blue-900 dark:text-blue-300">{responsible.most_profitable_league.league_name}</div>
+                        <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                          ${responsible.most_profitable_league.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_league.total_profit.toFixed(2)} ({responsible.most_profitable_league.bet_count} bets)
+                        </div>
+                        {responsible.most_profitable_league.total_resolved > 0 && (
+                          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            {responsible.most_profitable_league.wins}/{responsible.most_profitable_league.total_resolved} {(responsible.most_profitable_league.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {teamPerformance.length > 20 && (
-              <p className="text-sm text-gray-500 mt-2">Showing top 20 teams (out of {teamPerformance.length} total)</p>
-            )}
-          </div>
-        </div>
-      )}
+                    )}
+                    {responsible.most_profitable_team && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">Team</div>
+                        <div className="text-base font-bold text-blue-900 dark:text-blue-300">{responsible.most_profitable_team.team_name}</div>
+                        <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                          ${responsible.most_profitable_team.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_team.total_profit.toFixed(2)} ({responsible.most_profitable_team.bet_count} bets)
+                        </div>
+                        {responsible.most_profitable_team.total_resolved > 0 && (
+                          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            {responsible.most_profitable_team.wins}/{responsible.most_profitable_team.total_resolved} {(responsible.most_profitable_team.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.most_profitable_category && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">Category</div>
+                        <div className="text-base font-bold text-blue-900 dark:text-blue-300">{responsible.most_profitable_category.category_name}</div>
+                        <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                          ${responsible.most_profitable_category.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_category.total_profit.toFixed(2)} ({responsible.most_profitable_category.bet_count} bets)
+                        </div>
+                        {responsible.most_profitable_category.total_resolved > 0 && (
+                          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            {responsible.most_profitable_category.wins}/{responsible.most_profitable_category.total_resolved} {(responsible.most_profitable_category.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {responsible.most_profitable_bet_type && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">Bet Type</div>
+                        <div className="text-base font-bold text-blue-900 dark:text-blue-300">{responsible.most_profitable_bet_type.bet_type_name}</div>
+                        <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                          ${responsible.most_profitable_bet_type.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_bet_type.total_profit.toFixed(2)} ({responsible.most_profitable_bet_type.bet_count} bets)
+                        </div>
+                        {responsible.most_profitable_bet_type.total_resolved > 0 && (
+                          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            {responsible.most_profitable_bet_type.wins}/{responsible.most_profitable_bet_type.total_resolved} {(responsible.most_profitable_bet_type.win_rate * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-                {/* Time Series */}
-                {timeSeries.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Performance Over Time</h2>
-            <div className="text-sm text-gray-500">
-              Showing {granularity === 'all-time' ? 'all time' : granularity} data
-            </div>
-          </div>
-          
-          {/* Profit Over Time Line Chart */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit Trend</h3>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart
-                data={timeSeries.map((item) => ({
-                  ...item,
-                  date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                }))}
-                margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="date"
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis
-                  tickFormatter={(value) => `$${value.toFixed(0)}`}
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip
-                  formatter={(value: number, name: string) => {
-                    if (name === 'profit') return [`$${value.toFixed(2)}`, 'Profit'];
-                    if (name === 'stake') return [`$${value.toFixed(2)}`, 'Stake'];
-                    return [value, name];
-                  }}
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="profit"
-                  stroke="#0ea5e9"
-                  strokeWidth={2}
-                  dot={{ fill: '#0ea5e9', r: 4 }}
-                  activeDot={{ r: 6 }}
-                  name="Profit"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="stake"
-                  stroke="#8b5cf6"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={{ fill: '#8b5cf6', r: 4 }}
-                  activeDot={{ r: 6 }}
-                  name="Stake"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+                {/* Performance by Leg Count */}
+                {responsible.performance_by_leg_count && responsible.performance_by_leg_count.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">Performance by Leg Count</h4>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-900">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Legs</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bets</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Win Rate</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Profit</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ROI</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {responsible.performance_by_leg_count.map((legStat: { num_legs: number; bet_count: number; win_rate: number; total_profit: number; roi: number; total_stake: number }) => (
+                            <tr key={`${responsible.responsible_id}-${legStat.num_legs}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                                {legStat.num_legs}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                {legStat.bet_count}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                {(legStat.win_rate * 100).toFixed(1)}%
+                              </td>
+                              <td className={`px-4 py-3 text-sm font-medium ${
+                                legStat.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                              }`}>
+                                ${legStat.total_profit.toFixed(2)}
+                              </td>
+                              <td className={`px-4 py-3 text-sm font-medium ${
+                                legStat.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                              }`}>
+                                {(legStat.roi * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
-          {/* Cumulative Profit Chart */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Cumulative Profit</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart
-                data={timeSeries
-                  .map((item) => ({
-                    ...item,
-                    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                  }))
-                  .map((item, index, array) => ({
-                    ...item,
-                    cumulativeProfit: array
-                      .slice(0, index + 1)
-                      .reduce((sum, d) => sum + d.profit, 0),
-                  }))}
-                margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="date"
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis
-                  tickFormatter={(value) => `$${value.toFixed(0)}`}
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip
-                  formatter={(value: number) => `$${value.toFixed(2)}`}
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="cumulativeProfit"
-                  stroke="#10b981"
-                  strokeWidth={3}
-                  dot={{ fill: '#10b981', r: 4 }}
-                  activeDot={{ r: 6 }}
-                  name="Cumulative Profit"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+                {/* Performance by League */}
+                {responsible.performance_by_league.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">Performance by League</h4>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-900">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">League</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Stake</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Profit</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ROI</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Win Rate</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bets</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {responsible.performance_by_league.map((league) => (
+                            <tr key={league.league_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                              <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{league.league_name}</td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">${league.total_stake.toFixed(2)}</td>
+                              <td className={`px-4 py-2 text-sm font-medium ${league.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                ${league.total_profit >= 0 ? '+' : ''}{league.total_profit.toFixed(2)}
+                              </td>
+                              <td className={`px-4 py-2 text-sm font-medium ${league.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {(league.roi * 100).toFixed(1)}%
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{(league.win_rate * 100).toFixed(1)}%</td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{league.bet_count}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
-          {/* Detailed Table */}
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Daily Breakdown</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {timeSeries.map((data) => (
-                    <tr key={data.date}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {new Date(data.date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${data.stake.toFixed(2)}
-                      </td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                        data.profit >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        ${data.profit.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {data.bet_count}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+                {/* Performance by Bet Type */}
+                {responsible.performance_by_bet_type.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">Performance by Bet Type</h4>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-900">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bet Type</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Stake</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Profit</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ROI</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Win Rate</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bets</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {responsible.performance_by_bet_type.map((betType) => (
+                            <tr key={betType.bet_type_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                              <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{betType.bet_type_name}</td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">${betType.total_stake.toFixed(2)}</td>
+                              <td className={`px-4 py-2 text-sm font-medium ${betType.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                ${betType.total_profit >= 0 ? '+' : ''}{betType.total_profit.toFixed(2)}
+                              </td>
+                              <td className={`px-4 py-2 text-sm font-medium ${betType.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {(betType.roi * 100).toFixed(1)}%
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{(betType.win_rate * 100).toFixed(1)}%</td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{betType.bet_count}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
-                {/* Period Comparison */}
-                {periodComparison && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Period Comparison</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="border rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Current Period</h3>
-              <p className="text-xs text-gray-400 mb-4">{periodComparison.current_period.start_date} to {periodComparison.current_period.end_date}</p>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Bets:</span>
-                  <span className="text-sm font-medium">{periodComparison.current_period.total_bets}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Win Rate:</span>
-                  <span className="text-sm font-medium">{(periodComparison.current_period.win_rate * 100).toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Profit:</span>
-                  <span className={`text-sm font-medium ${periodComparison.current_period.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ${periodComparison.current_period.total_profit.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">ROI:</span>
-                  <span className={`text-sm font-medium ${periodComparison.current_period.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {(periodComparison.current_period.roi * 100).toFixed(1)}%
-                  </span>
-                </div>
+                {/* Performance by Category */}
+                {responsible.performance_by_category.length > 0 && (
+                  <div>
+                    <h4 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">Performance by Category</h4>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-900">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Category</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Stake</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Profit</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ROI</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Win Rate</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bets</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {responsible.performance_by_category.map((category) => (
+                            <tr key={category.category_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                              <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{category.category_name}</td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">${category.total_stake.toFixed(2)}</td>
+                              <td className={`px-4 py-2 text-sm font-medium ${category.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                ${category.total_profit >= 0 ? '+' : ''}{category.total_profit.toFixed(2)}
+                              </td>
+                              <td className={`px-4 py-2 text-sm font-medium ${category.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                {(category.roi * 100).toFixed(1)}%
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{(category.win_rate * 100).toFixed(1)}%</td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{category.bet_count}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="border rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Previous Period</h3>
-              <p className="text-xs text-gray-400 mb-4">{periodComparison.previous_period.start_date} to {periodComparison.previous_period.end_date}</p>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Bets:</span>
-                  <span className="text-sm font-medium">{periodComparison.previous_period.total_bets}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Win Rate:</span>
-                  <span className="text-sm font-medium">{(periodComparison.previous_period.win_rate * 100).toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Profit:</span>
-                  <span className={`text-sm font-medium ${periodComparison.previous_period.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ${periodComparison.previous_period.total_profit.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">ROI:</span>
-                  <span className={`text-sm font-medium ${periodComparison.previous_period.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {(periodComparison.previous_period.roi * 100).toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className={`p-4 rounded-lg ${periodComparison.trend === 'improving' ? 'bg-green-50' : periodComparison.trend === 'declining' ? 'bg-red-50' : 'bg-gray-50'}`}>
-            <h3 className="text-sm font-semibold mb-2">Trend: {periodComparison.trend.toUpperCase()}</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">Bets Change:</span>
-                <span className={`ml-2 font-medium ${periodComparison.change.bets_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {periodComparison.change.bets_change >= 0 ? '+' : ''}{periodComparison.change.bets_change.toFixed(1)}%
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-600">Win Rate:</span>
-                <span className={`ml-2 font-medium ${periodComparison.change.win_rate_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {periodComparison.change.win_rate_change >= 0 ? '+' : ''}{(periodComparison.change.win_rate_change * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-600">Profit:</span>
-                <span className={`ml-2 font-medium ${periodComparison.change.profit_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {Math.abs(periodComparison.change.profit_change) > 1000 
-                      ? `$${periodComparison.change.profit_change >= 0 ? '+' : ''}${periodComparison.change.profit_change.toFixed(2)}`
-                      : `${periodComparison.change.profit_change >= 0 ? '+' : ''}${periodComparison.change.profit_change.toFixed(1)}%`
-                    }
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-600">ROI:</span>
-                <span className={`ml-2 font-medium ${periodComparison.change.roi_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {periodComparison.change.roi_change >= 0 ? '+' : ''}{(periodComparison.change.roi_change * 100).toFixed(1)}%
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+          ))}
+        </CollapsibleSection>
       )}
 
       {/* Stake Analysis */}
-                {/* Stake Analysis */}
                 {stakeAnalysis.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Stake Size Analysis</h2>
-          <p className="text-sm text-gray-600 mb-6">
+        <CollapsibleSection id="stake-analysis" title="Stake Size Analysis">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
             Analyze performance by bet size to identify optimal stake amounts.
           </p>
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">ROI by Stake Range</h3>
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">ROI by Stake Range</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={stakeAnalysis}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="stake_range" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value: number) => `${(value * 100).toFixed(2)}%`} />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
+                <XAxis dataKey="stake_range" tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
+                <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
+                <Tooltip 
+                  formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
+                  contentStyle={{ 
+                    backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                    border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                    borderRadius: '6px',
+                    color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                  }}
+                  labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
+                />
                 <Bar dataKey="roi" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake Range</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Win Rate</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Stake</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ROI</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Odds</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stake Range</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bets</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Win Rate</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Stake</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Profit</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ROI</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg Odds</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {stakeAnalysis.map((stake) => (
-                  <tr key={stake.stake_range}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{stake.stake_range}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{stake.total_bets}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{(stake.win_rate * 100).toFixed(1)}%</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stake.total_stake.toFixed(2)}</td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${stake.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <tr key={stake.stake_range} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{stake.stake_range}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{stake.total_bets}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(stake.win_rate * 100).toFixed(1)}%</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${stake.total_stake.toFixed(2)}</td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${stake.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       ${stake.total_profit.toFixed(2)}
                     </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${stake.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${stake.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {(stake.roi * 100).toFixed(1)}%
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{stake.avg_odds.toFixed(2)}x</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{stake.avg_odds.toFixed(2)}x</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {/* Temporal Analytics */}
-                {/* Temporal Analytics */}
-                {temporal && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Temporal Patterns</h2>
-          <p className="text-sm text-gray-600 mb-6">
-            Discover when you perform best - by day of week, hour, and month.
-          </p>
-          
-          {/* Day of Week */}
-          {temporal.by_day_of_week.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-4">Performance by Day of Week</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={temporal.by_day_of_week}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value: number) => `${(value * 100).toFixed(2)}%`} />
-                  <Bar dataKey="roi" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {/* Weekend vs Weekday */}
-          <div className="mb-6 grid grid-cols-2 gap-4">
-            <div className="border rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Weekend</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Bets:</span>
-                  <span className="font-medium">{temporal.weekend_vs_weekday.weekend.total_bets}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Win Rate:</span>
-                  <span className="font-medium">{(temporal.weekend_vs_weekday.weekend.win_rate * 100).toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">ROI:</span>
-                  <span className={`font-medium ${temporal.weekend_vs_weekday.weekend.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {(temporal.weekend_vs_weekday.weekend.roi * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Profit:</span>
-                  <span className={`font-medium ${temporal.weekend_vs_weekday.weekend.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ${temporal.weekend_vs_weekday.weekend.total_profit.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="border rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Weekday</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Bets:</span>
-                  <span className="font-medium">{temporal.weekend_vs_weekday.weekday.total_bets}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Win Rate:</span>
-                  <span className="font-medium">{(temporal.weekend_vs_weekday.weekday.win_rate * 100).toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">ROI:</span>
-                  <span className={`font-medium ${temporal.weekend_vs_weekday.weekday.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {(temporal.weekend_vs_weekday.weekday.roi * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Profit:</span>
-                  <span className={`font-medium ${temporal.weekend_vs_weekday.weekday.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ${temporal.weekend_vs_weekday.weekday.total_profit.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Risk Metrics */}
-                {/* Risk Metrics */}
                 {riskMetrics && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Risk & Volatility Metrics</h2>
+        <CollapsibleSection id="risk-metrics" title="Risk & Volatility Metrics">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Volatility</div>
-              <div className="text-lg font-bold text-gray-900">${riskMetrics.volatility.toFixed(2)}</div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Volatility</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">${riskMetrics.volatility.toFixed(2)}</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Consistency Score</div>
-              <div className="text-lg font-bold text-gray-900">{riskMetrics.consistency_score.toFixed(0)}/100</div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Consistency Score</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{riskMetrics.consistency_score.toFixed(0)}/100</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Sharpe Ratio</div>
-              <div className="text-lg font-bold text-gray-900">{riskMetrics.sharpe_ratio.toFixed(2)}</div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Sharpe Ratio</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{riskMetrics.sharpe_ratio.toFixed(2)}</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Profit Factor</div>
-              <div className="text-lg font-bold text-gray-900">{riskMetrics.profit_factor.toFixed(2)}</div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Profit Factor</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{riskMetrics.profit_factor.toFixed(2)}</div>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Avg Win</div>
-              <div className="text-lg font-bold text-green-600">${riskMetrics.average_win.toFixed(2)}</div>
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Avg Win</div>
+              <div className="text-lg font-bold text-green-600 dark:text-green-400">${riskMetrics.average_win.toFixed(2)}</div>
             </div>
-            <div className="bg-red-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Avg Loss</div>
-              <div className="text-lg font-bold text-red-600">${Math.abs(riskMetrics.average_loss).toFixed(2)}</div>
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Avg Loss</div>
+              <div className="text-lg font-bold text-red-600 dark:text-red-400">${Math.abs(riskMetrics.average_loss).toFixed(2)}</div>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Largest Win</div>
-              <div className="text-lg font-bold text-green-600">${riskMetrics.largest_win.toFixed(2)}</div>
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Largest Win</div>
+              <div className="text-lg font-bold text-green-600 dark:text-green-400">${riskMetrics.largest_win.toFixed(2)}</div>
             </div>
-            <div className="bg-red-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Largest Loss</div>
-              <div className="text-lg font-bold text-red-600">${Math.abs(riskMetrics.largest_loss).toFixed(2)}</div>
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Largest Loss</div>
+              <div className="text-lg font-bold text-red-600 dark:text-red-400">${Math.abs(riskMetrics.largest_loss).toFixed(2)}</div>
             </div>
           </div>
           {riskMetrics.max_drawdown.amount > 0 && (
-            <div className="p-4 bg-red-50 rounded-lg">
-              <h4 className="text-sm font-semibold text-red-900 mb-2">Max Drawdown</h4>
-              <div className="text-sm text-red-800">
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+              <h4 className="text-sm font-semibold text-red-900 dark:text-red-300 mb-2">Max Drawdown</h4>
+              <div className="text-sm text-red-800 dark:text-red-300">
                 <p>Amount: ${riskMetrics.max_drawdown.amount.toFixed(2)}</p>
                 <p>Duration: {riskMetrics.max_drawdown.duration_days} days</p>
                 <p>Period: {riskMetrics.max_drawdown.start_date} to {riskMetrics.max_drawdown.end_date}</p>
               </div>
             </div>
           )}
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Bankroll Analysis */}
-                {/* Bankroll Analysis */}
                 {bankroll && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Bankroll Management</h2>
+        <CollapsibleSection id="bankroll-analysis" title="Bankroll Management">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Current Bankroll</div>
-              <div className="text-2xl font-bold text-gray-900">${bankroll.current_bankroll.toFixed(2)}</div>
-              <div className={`text-sm mt-1 ${bankroll.growth_rate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Bankroll</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">${bankroll.current_bankroll.toFixed(2)}</div>
+              <div className={`text-sm mt-1 ${bankroll.growth_rate >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {bankroll.growth_rate >= 0 ? '+' : ''}{bankroll.growth_rate.toFixed(1)}% growth
               </div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Health Score</div>
-              <div className="text-2xl font-bold text-gray-900">{bankroll.health_score}/100</div>
-              <div className={`text-sm mt-1 font-medium ${bankroll.risk_level === 'low' ? 'text-green-600' : bankroll.risk_level === 'medium' ? 'text-yellow-600' : 'text-red-600'}`}>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Health Score</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{bankroll.health_score}/100</div>
+              <div className={`text-sm mt-1 font-medium ${bankroll.risk_level === 'low' ? 'text-green-600 dark:text-green-400' : bankroll.risk_level === 'medium' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
                 Risk: {bankroll.risk_level.toUpperCase()}
               </div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Kelly Criterion</div>
-              <div className="text-2xl font-bold text-gray-900">{bankroll.kelly_criterion.recommended_stake_pct.toFixed(1)}%</div>
-              <div className="text-sm mt-1 text-gray-600">
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Kelly Criterion</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{bankroll.kelly_criterion.recommended_stake_pct.toFixed(1)}%</div>
+              <div className="text-sm mt-1 text-gray-600 dark:text-gray-400">
                 Current: {bankroll.kelly_criterion.current_avg_stake_pct.toFixed(1)}%
               </div>
             </div>
           </div>
           {bankroll.bankroll_history.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-4">Bankroll History</h3>
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Bankroll History</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={bankroll.bankroll_history}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={(value) => `$${value.toFixed(0)}`} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
+                  <XAxis dataKey="date" tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
+                  <YAxis tickFormatter={(value) => `$${value.toFixed(0)}`} tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
+                  <Tooltip 
+                    formatter={(value: number) => `$${value.toFixed(2)}`}
+                    contentStyle={{ 
+                      backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                      border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                      borderRadius: '6px',
+                      color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                    }}
+                    labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
+                  />
                   <Line type="monotone" dataKey="amount" stroke="#10b981" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           )}
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Frequency Analysis */}
-                {/* Frequency Analysis */}
                 {frequency && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Betting Frequency Analysis</h2>
+        <CollapsibleSection id="frequency-analysis" title="Betting Frequency Analysis">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Avg Bets/Day</div>
-              <div className="text-lg font-bold text-gray-900">{frequency.avg_bets_per_day.toFixed(1)}</div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Avg Bets/Day</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{frequency.avg_bets_per_day.toFixed(1)}</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Avg Bets/Week</div>
-              <div className="text-lg font-bold text-gray-900">{frequency.avg_bets_per_week.toFixed(1)}</div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Avg Bets/Week</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{frequency.avg_bets_per_week.toFixed(1)}</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Activity Trend</div>
-              <div className={`text-lg font-bold ${frequency.activity_trend === 'increasing' ? 'text-green-600' : frequency.activity_trend === 'decreasing' ? 'text-red-600' : 'text-gray-600'}`}>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Activity Trend</div>
+              <div className={`text-lg font-bold ${frequency.activity_trend === 'increasing' ? 'text-green-600 dark:text-green-400' : frequency.activity_trend === 'decreasing' ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
                 {frequency.activity_trend.toUpperCase()}
               </div>
             </div>
           </div>
           {frequency.bets_per_day.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-4">Bets Per Day</h3>
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Bets Per Day</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={frequency.bets_per_day.slice(-30)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
+                  <YAxis tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                      border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                      borderRadius: '6px',
+                      color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                    }}
+                    labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
+                  />
                   <Bar dataKey="bet_count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* EV Analysis */}
-                {/* EV Analysis */}
                 {evAnalysis && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Expected Value (EV) Analysis</h2>
+        <CollapsibleSection id="ev-analysis" title="Expected Value (EV) Analysis">
           <div className="mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Overall EV</div>
-              <div className={`text-2xl font-bold ${evAnalysis.overall_ev >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Overall EV</div>
+              <div className={`text-2xl font-bold ${evAnalysis.overall_ev >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {evAnalysis.overall_ev >= 0 ? '+' : ''}{(evAnalysis.overall_ev * 100).toFixed(2)}%
               </div>
             </div>
           </div>
           {evAnalysis.ev_by_category.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-700 mb-4">EV by Category</h3>
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">EV by Category</h3>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expected ROI</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actual ROI</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">EV Difference</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Expected ROI</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actual ROI</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">EV Difference</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {evAnalysis.ev_by_category.map((cat) => (
-                      <tr key={cat.category_id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{cat.category_name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{(cat.expected_roi * 100).toFixed(1)}%</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{(cat.actual_roi * 100).toFixed(1)}%</td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${cat.ev_difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <tr key={cat.category_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{cat.category_name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(cat.expected_roi * 100).toFixed(1)}%</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(cat.actual_roi * 100).toFixed(1)}%</td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${cat.ev_difference >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {cat.ev_difference >= 0 ? '+' : ''}{(cat.ev_difference * 100).toFixed(1)}%
                         </td>
                       </tr>
@@ -3150,88 +2953,116 @@ export default function AnalyticsPage() {
               </div>
             </div>
           )}
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Recovery Analysis */}
-                {/* Recovery Analysis */}
                 {recovery && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Recovery Analysis</h2>
+        <CollapsibleSection id="recovery-analysis" title="Recovery Analysis">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Avg Recovery Time</div>
-              <div className="text-lg font-bold text-gray-900">{recovery.avg_recovery_time_days.toFixed(1)} days</div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Avg Recovery Time</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{recovery.avg_recovery_time_days.toFixed(1)} days</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Recovery Rate</div>
-              <div className="text-lg font-bold text-gray-900">{recovery.recovery_rate.toFixed(1)}%</div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Recovery Rate</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{recovery.recovery_rate.toFixed(1)}%</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Post-Loss Win Rate</div>
-              <div className="text-lg font-bold text-gray-900">{(recovery.post_loss_performance.win_rate * 100).toFixed(1)}%</div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Post-Loss Win Rate</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{(recovery.post_loss_performance.win_rate * 100).toFixed(1)}%</div>
             </div>
           </div>
           {recovery.longest_recovery_period.days > 0 && (
-            <div className="p-4 bg-yellow-50 rounded-lg">
-              <h4 className="text-sm font-semibold text-yellow-900 mb-2">Longest Recovery Period</h4>
-              <div className="text-sm text-yellow-800">
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <h4 className="text-sm font-semibold text-yellow-900 dark:text-yellow-300 mb-2">Longest Recovery Period</h4>
+              <div className="text-sm text-yellow-800 dark:text-yellow-300">
                 <p>Duration: {recovery.longest_recovery_period.days} days</p>
                 <p>Loss Amount: ${recovery.longest_recovery_period.loss_amount.toFixed(2)}</p>
                 <p>Period: {recovery.longest_recovery_period.start_date} to {recovery.longest_recovery_period.end_date}</p>
               </div>
             </div>
           )}
-        </div>
+        </CollapsibleSection>
       )}
 
-      {/* Combination Analytics */}
-                {/* Combination Analytics */}
-                {combinations && combinations.top_combinations.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Top Combinations</h2>
+                {/* Leg Analytics */}
+                {legAnalytics && legAnalytics.total_legs > 0 && (
+        <CollapsibleSection id="leg-analytics" title="Leg-Level Analytics">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Legs</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{legAnalytics.total_legs}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Won Legs</div>
+              <div className="text-lg font-bold text-green-600 dark:text-green-400">{legAnalytics.won_legs}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Lost Legs</div>
+              <div className="text-lg font-bold text-red-600 dark:text-red-400">{legAnalytics.lost_legs}</div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Leg Win Rate</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{(legAnalytics.leg_win_rate * 100).toFixed(1)}%</div>
+            </div>
+          </div>
+        </CollapsibleSection>
+      )}
+
+                {/* Odds Analysis */}
+                {oddsAnalysis.length > 0 && (
+        <CollapsibleSection id="odds-analysis" title="Odds Analysis">
+          <div className="mb-6">
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={oddsAnalysis}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
+                <XAxis dataKey="range" tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
+                <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
+                <Tooltip 
+                  formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
+                  contentStyle={{ 
+                    backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
+                    border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                    borderRadius: '6px',
+                    color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                  }}
+                  labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
+                />
+                <Bar dataKey="win_rate" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Combination</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Win Rate</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ROI</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Odds Range</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bets</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Win Rate</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Profit</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ROI</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {combinations.top_combinations.slice(0, 10).map((combo, idx) => (
-                  <tr key={idx}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {combo.factors.join(' × ')}
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {oddsAnalysis.map((odds) => (
+                  <tr key={odds.range} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{odds.range}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{odds.total_bets}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(odds.win_rate * 100).toFixed(1)}%</td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${odds.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      ${odds.total_profit.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{combo.total_bets}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{(combo.win_rate * 100).toFixed(1)}%</td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${combo.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {(combo.roi * 100).toFixed(1)}%
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${combo.total_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ${combo.total_profit.toFixed(2)}
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${odds.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {(odds.roi * 100).toFixed(1)}%
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </CollapsibleSection>
       )}
-              </div>
-            )}
-
-            {/* Advanced Tab */}
-            {activeTab === 'advanced' && (
-              <div>
-                {/* All remaining advanced analytics sections */}
-                {/* Additional sections like Odds Analysis, Leg Analytics, Temporal, Stake Analysis, 
-                    Combinations, Risk Metrics, EV Analysis, Recovery, Bankroll, Frequency, 
-                    Responsible Detailed will appear here as they are rendered */}
               </div>
             )}
           </>
