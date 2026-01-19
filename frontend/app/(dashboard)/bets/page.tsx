@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api/client';
 import { MainBet, ReferenceItem } from '@/types';
 import Link from 'next/link';
+import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
 
 export default function BetsPage() {
   const [bets, setBets] = useState<MainBet[]>([]);
