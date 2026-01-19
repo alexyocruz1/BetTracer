@@ -451,28 +451,282 @@ export default function AnalyticsPage() {
       ) : null}
 
                 {/* Best/Worst Performers */}
-                {bestWorstPerformers && (
+                {loading ? (
                   <div className="bg-white shadow rounded-lg p-6 mb-8">
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Best & Worst Performers</h2>
-                    {/* Best/Worst content will be inserted here from existing code */}
+                    <div className="text-center py-8 text-gray-500">Loading...</div>
                   </div>
-                )}
+                ) : bestWorstPerformers ? (
+                  <div className="bg-white shadow rounded-lg p-6 mb-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Best & Worst Performers</h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {bestWorstPerformers.best_leagues.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-green-600 mb-3">Top 5 Leagues</h3>
+                          <div className="space-y-2">
+                            {bestWorstPerformers.best_leagues.map((league, idx) => (
+                              <div key={league.league_id} className="flex justify-between items-center p-2 bg-green-50 rounded">
+                                <span className="text-sm font-medium text-gray-900">{idx + 1}. {league.league_name}</span>
+                                <span className="text-sm font-bold text-green-600">${league.total_profit.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {bestWorstPerformers.worst_leagues.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-red-600 mb-3">Bottom 5 Leagues</h3>
+                          <div className="space-y-2">
+                            {bestWorstPerformers.worst_leagues.map((league, idx) => (
+                              <div key={league.league_id} className="flex justify-between items-center p-2 bg-red-50 rounded">
+                                <span className="text-sm font-medium text-gray-900">{idx + 1}. {league.league_name}</span>
+                                <span className="text-sm font-bold text-red-600">${league.total_profit.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {bestWorstPerformers.best_categories.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-green-600 mb-3">Top 5 Categories</h3>
+                          <div className="space-y-2">
+                            {bestWorstPerformers.best_categories.map((category, idx) => (
+                              <div key={category.category_id} className="flex justify-between items-center p-2 bg-green-50 rounded">
+                                <span className="text-sm font-medium text-gray-900">{idx + 1}. {category.category_name}</span>
+                                <span className="text-sm font-bold text-green-600">${category.total_profit.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Time Series */}
-                {timeSeries.length > 0 && (
+                {loading ? (
                   <div className="bg-white shadow rounded-lg p-6 mb-8">
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Performance Over Time</h2>
-                    {/* Time series content will be inserted here */}
+                    <div className="text-center py-8 text-gray-500">Loading...</div>
                   </div>
-                )}
+                ) : timeSeries.length > 0 ? (
+                  <div className="bg-white shadow rounded-lg p-6 mb-8">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-xl font-bold text-gray-900">Performance Over Time</h2>
+                      <div className="text-sm text-gray-500">
+                        Showing {granularity === 'all-time' ? 'all time' : granularity} data
+                      </div>
+                    </div>
+                    
+                    {/* Profit Over Time Line Chart */}
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-4">Profit Trend</h3>
+                      <ResponsiveContainer width="100%" height={350}>
+                        <LineChart
+                          data={timeSeries.map((item) => ({
+                            ...item,
+                            date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                          }))}
+                          margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <XAxis
+                            dataKey="date"
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                            tick={{ fontSize: 12 }}
+                          />
+                          <YAxis
+                            tickFormatter={(value) => `$${value.toFixed(0)}`}
+                            tick={{ fontSize: 12 }}
+                          />
+                          <Tooltip
+                            formatter={(value: number, name: string) => {
+                              if (name === 'profit') return [`$${value.toFixed(2)}`, 'Profit'];
+                              if (name === 'stake') return [`$${value.toFixed(2)}`, 'Stake'];
+                              return [value, name];
+                            }}
+                            contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                          />
+                          <Legend />
+                          <Line
+                            type="monotone"
+                            dataKey="profit"
+                            stroke="#0ea5e9"
+                            strokeWidth={2}
+                            dot={{ fill: '#0ea5e9', r: 4 }}
+                            activeDot={{ r: 6 }}
+                            name="Profit"
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="stake"
+                            stroke="#8b5cf6"
+                            strokeWidth={2}
+                            strokeDasharray="5 5"
+                            dot={{ fill: '#8b5cf6', r: 4 }}
+                            activeDot={{ r: 6 }}
+                            name="Stake"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Cumulative Profit Chart */}
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-4">Cumulative Profit</h3>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <LineChart
+                          data={timeSeries
+                            .map((item) => ({
+                              ...item,
+                              date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                            }))
+                            .map((item, index, array) => ({
+                              ...item,
+                              cumulativeProfit: array
+                                .slice(0, index + 1)
+                                .reduce((sum, d) => sum + d.profit, 0),
+                            }))}
+                          margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <XAxis
+                            dataKey="date"
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                            tick={{ fontSize: 12 }}
+                          />
+                          <YAxis
+                            tickFormatter={(value) => `$${value.toFixed(0)}`}
+                            tick={{ fontSize: 12 }}
+                          />
+                          <Tooltip
+                            formatter={(value: number) => `$${value.toFixed(2)}`}
+                            contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="cumulativeProfit"
+                            stroke="#10b981"
+                            strokeWidth={3}
+                            dot={{ fill: '#10b981', r: 4 }}
+                            activeDot={{ r: 6 }}
+                            name="Cumulative Profit"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Detailed Table */}
+                    <div className="mt-8">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-4">Daily Breakdown</h3>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stake</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bets</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {timeSeries.map((data) => (
+                              <tr key={data.date}>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  {new Date(data.date).toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  ${data.stake.toFixed(2)}
+                                </td>
+                                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                                  data.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  ${data.profit.toFixed(2)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {data.bet_count}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Streak Analysis */}
-                {streakAnalysis && (
+                {loading ? (
                   <div className="bg-white shadow rounded-lg p-6 mb-8">
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Streak Analysis</h2>
-                    {/* Streak content will be inserted here */}
+                    <div className="text-center py-8 text-gray-500">Loading...</div>
                   </div>
-                )}
+                ) : streakAnalysis ? (
+                  <div className="bg-white shadow rounded-lg p-6 mb-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Streak Analysis</h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600 mb-1">Current Streak</div>
+                        <div className={`text-2xl font-bold ${streakAnalysis.current_streak.type === 'win' ? 'text-green-600' : 'text-red-600'}`}>
+                          {streakAnalysis.current_streak.length} {streakAnalysis.current_streak.type === 'win' ? 'Wins' : 'Losses'}
+                        </div>
+                        {streakAnalysis.current_streak.start_date && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Since {new Date(streakAnalysis.current_streak.start_date).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600 mb-1">Longest Win Streak</div>
+                        <div className="text-2xl font-bold text-green-600">{streakAnalysis.longest_win_streak.length}</div>
+                        {streakAnalysis.longest_win_streak.start_date && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {new Date(streakAnalysis.longest_win_streak.start_date).toLocaleDateString()} - {new Date(streakAnalysis.longest_win_streak.end_date).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-red-50 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600 mb-1">Longest Loss Streak</div>
+                        <div className="text-2xl font-bold text-red-600">{streakAnalysis.longest_loss_streak.length}</div>
+                        {streakAnalysis.longest_loss_streak.start_date && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {new Date(streakAnalysis.longest_loss_streak.start_date).toLocaleDateString()} - {new Date(streakAnalysis.longest_loss_streak.end_date).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {streakAnalysis.recent_bets.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-700 mb-3">Recent Bets</h3>
+                        <div className="flex gap-2 flex-wrap">
+                          {streakAnalysis.recent_bets.map((bet, idx) => (
+                            <div
+                              key={idx}
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                bet.state === 'won' ? 'bg-green-100 text-green-800' :
+                                bet.state === 'lost' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}
+                            >
+                              {bet.state === 'won' ? 'W' : bet.state === 'lost' ? 'L' : bet.state.charAt(0).toUpperCase()}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             )}
 
