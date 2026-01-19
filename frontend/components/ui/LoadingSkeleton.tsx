@@ -1,10 +1,7 @@
 'use client';
 
-import { useTheme } from '@/contexts/theme-context';
-
 // Simple loading spinner
 export const LoadingSpinner = ({ size = 'md', className = '' }: { size?: 'sm' | 'md' | 'lg'; className?: string }) => {
-  const { theme } = useTheme();
   const sizeClasses = {
     sm: 'h-4 w-4',
     md: 'h-8 w-8',
@@ -18,8 +15,6 @@ export const LoadingSpinner = ({ size = 'md', className = '' }: { size?: 'sm' | 
 
 // Full page loading skeleton
 export const PageLoadingSkeleton = ({ message = 'Loading...' }: { message?: string }) => {
-  const { theme } = useTheme();
-  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="text-center">
@@ -32,8 +27,6 @@ export const PageLoadingSkeleton = ({ message = 'Loading...' }: { message?: stri
 
 // Card loading skeleton
 export const CardSkeleton = ({ className = '' }: { className?: string }) => {
-  const { theme } = useTheme();
-  
   return (
     <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-6 animate-pulse ${className}`}>
       <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
@@ -48,8 +41,6 @@ export const CardSkeleton = ({ className = '' }: { className?: string }) => {
 
 // Table loading skeleton
 export const TableSkeleton = ({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) => {
-  const { theme } = useTheme();
-  
   return (
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
       <div className="animate-pulse">
