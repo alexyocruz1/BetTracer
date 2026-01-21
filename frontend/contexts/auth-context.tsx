@@ -263,16 +263,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       currentSessionToken = session?.access_token || null;
       currentUserId = session?.user?.id || null;
       
-      // Update admin status if we have a user and it changed
+      // Update admin status if we have a user
+      // Always fetch admin status when we have a session to ensure it's up-to-date
+      // This fixes the issue where admin tab doesn't appear on refresh
       if (session?.user) {
-        // Only fetch admin status if user ID changed to avoid unnecessary API calls
-        if (session.user.id !== currentUserId) {
-          try {
-            await fetchAdminStatus(session.user.id);
-          } catch (error) {
-            console.error('[Auth] Error fetching admin status:', error);
-            setIsAdmin(false);
-          }
+        try {
+          await fetchAdminStatus(session.user.id);
+        } catch (error) {
+          console.error('[Auth] Error fetching admin status:', error);
+          setIsAdmin(false);
         }
       } else {
         setIsAdmin(false);
@@ -383,11 +382,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                       currentUserId = refreshData.session.user?.id || null;
                       setSession(refreshData.session);
                       setUser(refreshData.session.user);
+                      // Always fetch admin status to ensure it's up-to-date
                       if (refreshData.session.user) {
-                        // Only fetch admin status if user changed
-                        if (refreshData.session.user.id !== currentUserId) {
-                          await fetchAdminStatus(refreshData.session.user.id);
-                        }
+                        await fetchAdminStatus(refreshData.session.user.id);
                       }
                     }
                   } catch (refreshErr) {
@@ -402,8 +399,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     currentUserId = currentSession.user?.id || null;
                     setSession(currentSession);
                     setUser(currentSession.user);
-                    // Don't fetch admin status if user hasn't changed - avoid unnecessary API calls
-                    if (currentSession.user && currentSession.user.id !== currentUserId) {
+                    // Always fetch admin status to ensure it's up-to-date
+                    if (currentSession.user) {
                       await fetchAdminStatus(currentSession.user.id);
                     }
                   }
@@ -415,7 +412,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   currentUserId = currentSession.user?.id || null;
                   setSession(currentSession);
                   setUser(currentSession.user);
-                  if (currentSession.user && currentSession.user.id !== currentUserId) {
+                  // Always fetch admin status to ensure it's up-to-date
+                  if (currentSession.user) {
                     await fetchAdminStatus(currentSession.user.id);
                   }
                 }
