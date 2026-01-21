@@ -393,7 +393,7 @@ export default function AdminPage() {
               </button>
             </div>
           ) : items.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               No {activeTab}s found. Add one using the form on the left.
             </div>
           ) : (
