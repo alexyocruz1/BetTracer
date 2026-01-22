@@ -821,9 +821,12 @@ export default function AnalyticsPage() {
                           <div className="space-y-2">
                             {bestWorstPerformers.best_leagues.map((league, idx) => (
                               <div key={league.league_id} className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1">
                                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-600 dark:bg-green-500 text-white text-xs font-bold mr-2">{idx + 1}</span>
                                   {league.league_name}
+                                  {league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                                    <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>⚠</span>
+                                  )}
                                 </span>
                                 <span className="text-sm font-bold text-green-600 dark:text-green-400">${league.total_profit.toFixed(2)}</span>
                               </div>
@@ -838,9 +841,12 @@ export default function AnalyticsPage() {
                           <div className="space-y-2">
                             {bestWorstPerformers.worst_leagues.map((league, idx) => (
                               <div key={league.league_id} className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1">
                                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-600 dark:bg-red-500 text-white text-xs font-bold mr-2">{idx + 1}</span>
                                   {league.league_name}
+                                  {league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                                    <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>⚠</span>
+                                  )}
                                 </span>
                                 <span className="text-sm font-bold text-red-600 dark:text-red-400">${league.total_profit.toFixed(2)}</span>
                               </div>
@@ -855,9 +861,12 @@ export default function AnalyticsPage() {
                           <div className="space-y-2">
                             {bestWorstPerformers.best_categories.map((category, idx) => (
                               <div key={category.category_id} className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1">
                                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-600 dark:bg-green-500 text-white text-xs font-bold mr-2">{idx + 1}</span>
                                   {category.category_name}
+                                  {category.bet_count < MIN_SAMPLE_SIZES.CATEGORY && (
+                                    <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${category.bet_count})`}>⚠</span>
+                                  )}
                                 </span>
                                 <span className="text-sm font-bold text-green-600 dark:text-green-400">${category.total_profit.toFixed(2)}</span>
                               </div>
@@ -1316,30 +1325,68 @@ export default function AnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {byLegs.map((legs) => {
-                    const isBestROI = byLegs.filter(l => l.bet_count > 0).every(l => l.roi <= legs.roi || l.num_legs === legs.num_legs);
-                    const isBestWinRate = byLegs.filter(l => l.bet_count > 0).every(l => l.win_rate <= legs.win_rate || l.num_legs === legs.num_legs);
+                  {(() => {
+                    // Calculate best and most reliable for comparison
+                    const bestROI = byLegs.filter(l => l.bet_count > 0).reduce((best, current) => 
+                      current.roi > best.roi ? current : best, byLegs[0]
+                    );
+                    const bestWinRate = byLegs.filter(l => l.bet_count > 0).reduce((best, current) => 
+                      current.win_rate > best.win_rate ? current : best, byLegs[0]
+                    );
+                    const reliableLegs = byLegs.filter(l => l.bet_count >= MIN_SAMPLE_SIZES.COMBINATION);
+                    const mostReliableROI = reliableLegs.length > 0
+                      ? reliableLegs.reduce((best, current) => current.roi > best.roi ? current : best, reliableLegs[0])
+                      : null;
+                    const mostReliableWinRate = reliableLegs.length > 0
+                      ? reliableLegs.reduce((best, current) => current.win_rate > best.win_rate ? current : best, reliableLegs[0])
+                      : null;
                     
-                    return (
-                      <tr key={legs.num_legs} className={`${isBestROI && legs.bet_count > 0 ? 'bg-green-50 dark:bg-green-900/20' : ''} hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">{legs.num_legs}</span>
-                            {isBestROI && legs.bet_count > 0 && (
-                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
-                                Best ROI
-                              </span>
-                            )}
-                            {isBestWinRate && !isBestROI && legs.bet_count > 0 && (
-                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                                Best Win Rate
-                              </span>
-                            )}
-                          </div>
-                        </td>
+                    return byLegs.map((legs) => {
+                      const isBestROI = legs.num_legs === bestROI?.num_legs && legs.bet_count > 0;
+                      const isBestWinRate = legs.num_legs === bestWinRate?.num_legs && legs.bet_count > 0 && !isBestROI;
+                      const isMostReliableROI = mostReliableROI && legs.num_legs === mostReliableROI.num_legs && legs.num_legs !== bestROI?.num_legs;
+                      const isMostReliableWinRate = mostReliableWinRate && legs.num_legs === mostReliableWinRate.num_legs && legs.num_legs !== bestWinRate?.num_legs && legs.num_legs !== bestROI?.num_legs;
+                      
+                      return (
+                        <tr key={legs.num_legs} className={`${isBestROI && legs.bet_count > 0 ? 'bg-green-50 dark:bg-green-900/20' : ''} hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center flex-wrap gap-1">
+                              <span className="text-sm font-bold text-gray-900 dark:text-white">{legs.num_legs}</span>
+                              {isBestROI && legs.bet_count > 0 && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 gap-1">
+                                  Best ROI
+                                  {legs.bet_count < MIN_SAMPLE_SIZES.COMBINATION && (
+                                    <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${legs.bet_count})`}>⚠</span>
+                                  )}
+                                </span>
+                              )}
+                              {isMostReliableROI && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 gap-1">
+                                  ✓ Most Reliable ROI
+                                </span>
+                              )}
+                              {isBestWinRate && !isBestROI && legs.bet_count > 0 && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 gap-1">
+                                  Best Win Rate
+                                  {legs.bet_count < MIN_SAMPLE_SIZES.COMBINATION && (
+                                    <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${legs.bet_count})`}>⚠</span>
+                                  )}
+                                </span>
+                              )}
+                              {isMostReliableWinRate && !isBestWinRate && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 gap-1">
+                                  ✓ Most Reliable Win Rate
+                                </span>
+                              )}
+                            </div>
+                          </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {legs.bet_count}
                         </td>
+                      </tr>
+                      );
+                    });
+                  })()}
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 dark:text-green-400 font-medium">
                           {legs.won_bets}
                         </td>
@@ -1389,20 +1436,46 @@ export default function AnalyticsPage() {
                   current.win_rate > best.win_rate ? current : best, byLegs[0]
                 );
                 
+                // Find most reliable (statistically significant) best
+                const reliableLegs = byLegs.filter(l => l.bet_count >= MIN_SAMPLE_SIZES.COMBINATION);
+                const mostReliableROI = reliableLegs.length > 0
+                  ? reliableLegs.reduce((best, current) => current.roi > best.roi ? current : best, reliableLegs[0])
+                  : null;
+                const mostReliableWinRate = reliableLegs.length > 0
+                  ? reliableLegs.reduce((best, current) => current.win_rate > best.win_rate ? current : best, reliableLegs[0])
+                  : null;
+                
                 return (
                   <div className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
                     {bestROI && bestROI.bet_count > 0 && (
-                      <p>
+                      <p className="flex items-center">
                         <strong>{bestROI.num_legs}-leg bets</strong> have the best ROI at {(bestROI.roi * 100).toFixed(1)}% 
                         ({bestROI.bet_count} bets, ${bestROI.total_profit.toFixed(2)} profit)
+                        {bestROI.bet_count < MIN_SAMPLE_SIZES.COMBINATION && (
+                          <span className="text-orange-600 dark:text-orange-400 ml-1" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${bestROI.bet_count})`}>⚠</span>
+                        )}
+                      </p>
+                    )}
+                    {mostReliableROI && mostReliableROI.num_legs !== bestROI?.num_legs && (
+                      <p className="flex items-center">
+                        <strong>{mostReliableROI.num_legs}-leg bets</strong> have the most reliable ROI at {(mostReliableROI.roi * 100).toFixed(1)}% 
+                        ({mostReliableROI.bet_count} bets, ${mostReliableROI.total_profit.toFixed(2)} profit)
+                        <span className="text-green-600 dark:text-green-400 ml-1" title={`High confidence (${mostReliableROI.bet_count} bets, threshold: ${MIN_SAMPLE_SIZES.COMBINATION})`}>✓</span>
                       </p>
                     )}
                     {bestWinRate && bestWinRate.bet_count > 0 && bestWinRate.num_legs !== bestROI.num_legs && (
-                      <p>
+                      <p className="flex items-center">
                         <strong>{bestWinRate.num_legs}-leg bets</strong> have the highest win rate at {(bestWinRate.win_rate * 100).toFixed(1)}%
                         {bestWinRate.bet_count < MIN_SAMPLE_SIZES.COMBINATION && (
-                          <span className="text-orange-600 ml-1" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${bestWinRate.bet_count})`}>⚠</span>
+                          <span className="text-orange-600 dark:text-orange-400 ml-1" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${bestWinRate.bet_count})`}>⚠</span>
                         )}
+                      </p>
+                    )}
+                    {mostReliableWinRate && mostReliableWinRate.num_legs !== bestWinRate?.num_legs && mostReliableWinRate.num_legs !== bestROI?.num_legs && (
+                      <p className="flex items-center">
+                        <strong>{mostReliableWinRate.num_legs}-leg bets</strong> have the most reliable win rate at {(mostReliableWinRate.win_rate * 100).toFixed(1)}%
+                        ({mostReliableWinRate.bet_count} bets)
+                        <span className="text-green-600 dark:text-green-400 ml-1" title={`High confidence (${mostReliableWinRate.bet_count} bets, threshold: ${MIN_SAMPLE_SIZES.COMBINATION})`}>✓</span>
                       </p>
                     )}
                   </div>
@@ -1521,49 +1594,89 @@ export default function AnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {byResponsible
-                    .sort((a, b) => b.roi - a.roi) // Sort by ROI descending
-                    .map((responsible, index) => {
-                      const isBestROI = index === 0 && responsible.bet_count > 0;
-                      const isBestWinRate = byResponsible
-                        .filter(r => r.bet_count > 0)
-                        .every(r => r.win_rate <= responsible.win_rate || r.responsible_id === responsible.responsible_id) 
-                        && responsible.bet_count > 0 
-                        && !isBestROI;
-                      const isBestProfit = byResponsible
-                        .filter(r => r.bet_count > 0)
-                        .every(r => r.total_profit <= responsible.total_profit || r.responsible_id === responsible.responsible_id)
-                        && responsible.bet_count > 0
-                        && !isBestROI
-                        && !isBestWinRate;
-                      
-                      return (
-                        <tr 
-                          key={responsible.responsible_id} 
-                          className={isBestROI ? 'bg-green-50' : ''}
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <span className="text-sm font-medium text-gray-900">
-                                {responsible.responsible_name}
-                              </span>
-                              {isBestROI && (
-                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                  🏆 Best ROI
+                  {(() => {
+                    // Calculate best and most reliable for comparison
+                    const bestROI = byResponsible
+                      .filter(r => r.bet_count > 0)
+                      .reduce((best, current) => current.roi > best.roi ? current : best, byResponsible[0]);
+                    const bestWinRate = byResponsible
+                      .filter(r => r.bet_count > 0)
+                      .reduce((best, current) => current.win_rate > best.win_rate ? current : best, byResponsible[0]);
+                    const bestProfit = byResponsible
+                      .filter(r => r.bet_count > 0)
+                      .reduce((best, current) => current.total_profit > best.total_profit ? current : best, byResponsible[0]);
+                    const reliableResponsibles = byResponsible.filter(r => r.bet_count >= MIN_SAMPLE_SIZES.LEAGUE);
+                    const mostReliableROI = reliableResponsibles.length > 0
+                      ? reliableResponsibles.reduce((best, current) => current.roi > best.roi ? current : best, reliableResponsibles[0])
+                      : null;
+                    const mostReliableWinRate = reliableResponsibles.length > 0
+                      ? reliableResponsibles.reduce((best, current) => current.win_rate > best.win_rate ? current : best, reliableResponsibles[0])
+                      : null;
+                    const mostReliableProfit = reliableResponsibles.length > 0
+                      ? reliableResponsibles.reduce((best, current) => current.total_profit > best.total_profit ? current : best, reliableResponsibles[0])
+                      : null;
+                    
+                    return byResponsible
+                      .sort((a, b) => b.roi - a.roi) // Sort by ROI descending
+                      .map((responsible, index) => {
+                        const isBestROI = index === 0 && responsible.bet_count > 0;
+                        const isBestWinRate = responsible.responsible_id === bestWinRate?.responsible_id && responsible.bet_count > 0 && !isBestROI;
+                        const isBestProfit = responsible.responsible_id === bestProfit?.responsible_id && responsible.bet_count > 0 && !isBestROI && !isBestWinRate;
+                        const isMostReliableROI = mostReliableROI && responsible.responsible_id === mostReliableROI.responsible_id && responsible.responsible_id !== bestROI?.responsible_id;
+                        const isMostReliableWinRate = mostReliableWinRate && responsible.responsible_id === mostReliableWinRate.responsible_id && responsible.responsible_id !== bestWinRate?.responsible_id && responsible.responsible_id !== bestROI?.responsible_id;
+                        const isMostReliableProfit = mostReliableProfit && responsible.responsible_id === mostReliableProfit.responsible_id && responsible.responsible_id !== bestProfit?.responsible_id && responsible.responsible_id !== bestROI?.responsible_id && responsible.responsible_id !== bestWinRate?.responsible_id;
+                        
+                        return (
+                          <tr 
+                            key={responsible.responsible_id} 
+                            className={isBestROI ? 'bg-green-50' : ''}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center flex-wrap gap-1">
+                                <span className="text-sm font-medium text-gray-900">
+                                  {responsible.responsible_name}
                                 </span>
-                              )}
-                              {isBestWinRate && (
-                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                  ⭐ Best Win Rate
-                                </span>
-                              )}
-                              {isBestProfit && (
-                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                                  💰 Most Profitable
-                                </span>
-                              )}
-                            </div>
-                          </td>
+                                {isBestROI && (
+                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 gap-1">
+                                    🏆 Best ROI
+                                    {responsible.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                                      <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${responsible.bet_count})`}>⚠</span>
+                                    )}
+                                  </span>
+                                )}
+                                {isMostReliableROI && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 gap-1">
+                                    ✓ Most Reliable ROI
+                                  </span>
+                                )}
+                                {isBestWinRate && (
+                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 gap-1">
+                                    ⭐ Best Win Rate
+                                    {responsible.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                                      <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${responsible.bet_count})`}>⚠</span>
+                                    )}
+                                  </span>
+                                )}
+                                {isMostReliableWinRate && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 gap-1">
+                                    ✓ Most Reliable Win Rate
+                                  </span>
+                                )}
+                                {isBestProfit && (
+                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 gap-1">
+                                    💰 Most Profitable
+                                    {responsible.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                                      <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${responsible.bet_count})`}>⚠</span>
+                                    )}
+                                  </span>
+                                )}
+                                {isMostReliableProfit && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 gap-1">
+                                    ✓ Most Reliable Profit
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {responsible.bet_count}
                           </td>
@@ -1606,27 +1719,66 @@ export default function AnalyticsPage() {
                   .filter(r => r.bet_count > 0)
                   .reduce((best, current) => current.total_profit > best.total_profit ? current : best, byResponsible[0]);
                 
+                // Find most reliable (statistically significant) best
+                const reliableResponsibles = byResponsible.filter(r => r.bet_count >= MIN_SAMPLE_SIZES.LEAGUE);
+                const mostReliableROI = reliableResponsibles.length > 0
+                  ? reliableResponsibles.reduce((best, current) => current.roi > best.roi ? current : best, reliableResponsibles[0])
+                  : null;
+                const mostReliableWinRate = reliableResponsibles.length > 0
+                  ? reliableResponsibles.reduce((best, current) => current.win_rate > best.win_rate ? current : best, reliableResponsibles[0])
+                  : null;
+                const mostReliableProfit = reliableResponsibles.length > 0
+                  ? reliableResponsibles.reduce((best, current) => current.total_profit > best.total_profit ? current : best, reliableResponsibles[0])
+                  : null;
+                
                 return (
                   <div className="text-sm text-blue-800 space-y-1">
                     {bestROI && bestROI.bet_count > 0 && (
-                      <p>
+                      <p className="flex items-center">
                         <strong>{bestROI.responsible_name}</strong> has the best ROI at {(bestROI.roi * 100).toFixed(1)}% 
                         ({bestROI.bet_count} bets, ${bestROI.total_profit.toFixed(2)} profit)
-                      </p>
-                    )}
-                    {bestWinRate && bestWinRate.bet_count > 0 && bestWinRate.responsible_id !== bestROI.responsible_id && (
-                      <p>
-                        <strong>{bestWinRate.responsible_name}</strong> has the highest win rate at {(bestWinRate.win_rate * 100).toFixed(1)}%
-                        ({bestWinRate.bet_count} bets)
-                        {bestWinRate.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
-                          <span className="text-orange-600 ml-1" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${bestWinRate.bet_count})`}>⚠</span>
+                        {bestROI.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                          <span className="text-orange-600 dark:text-orange-400 ml-1" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${bestROI.bet_count})`}>⚠</span>
                         )}
                       </p>
                     )}
+                    {mostReliableROI && mostReliableROI.responsible_id !== bestROI?.responsible_id && (
+                      <p className="flex items-center">
+                        <strong>{mostReliableROI.responsible_name}</strong> has the most reliable ROI at {(mostReliableROI.roi * 100).toFixed(1)}% 
+                        ({mostReliableROI.bet_count} bets, ${mostReliableROI.total_profit.toFixed(2)} profit)
+                        <span className="text-green-600 dark:text-green-400 ml-1" title={`High confidence (${mostReliableROI.bet_count} bets, threshold: ${MIN_SAMPLE_SIZES.LEAGUE})`}>✓</span>
+                      </p>
+                    )}
+                    {bestWinRate && bestWinRate.bet_count > 0 && bestWinRate.responsible_id !== bestROI.responsible_id && (
+                      <p className="flex items-center">
+                        <strong>{bestWinRate.responsible_name}</strong> has the highest win rate at {(bestWinRate.win_rate * 100).toFixed(1)}%
+                        ({bestWinRate.bet_count} bets)
+                        {bestWinRate.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                          <span className="text-orange-600 dark:text-orange-400 ml-1" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${bestWinRate.bet_count})`}>⚠</span>
+                        )}
+                      </p>
+                    )}
+                    {mostReliableWinRate && mostReliableWinRate.responsible_id !== bestWinRate?.responsible_id && mostReliableWinRate.responsible_id !== bestROI?.responsible_id && (
+                      <p className="flex items-center">
+                        <strong>{mostReliableWinRate.responsible_name}</strong> has the most reliable win rate at {(mostReliableWinRate.win_rate * 100).toFixed(1)}%
+                        ({mostReliableWinRate.bet_count} bets)
+                        <span className="text-green-600 dark:text-green-400 ml-1" title={`High confidence (${mostReliableWinRate.bet_count} bets, threshold: ${MIN_SAMPLE_SIZES.LEAGUE})`}>✓</span>
+                      </p>
+                    )}
                     {bestProfit && bestProfit.bet_count > 0 && bestProfit.responsible_id !== bestROI.responsible_id && bestProfit.responsible_id !== bestWinRate.responsible_id && (
-                      <p>
+                      <p className="flex items-center">
                         <strong>{bestProfit.responsible_name}</strong> is the most profitable at ${bestProfit.total_profit.toFixed(2)}
                         ({bestProfit.bet_count} bets, {(bestProfit.roi * 100).toFixed(1)}% ROI)
+                        {bestProfit.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                          <span className="text-orange-600 dark:text-orange-400 ml-1" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${bestProfit.bet_count})`}>⚠</span>
+                        )}
+                      </p>
+                    )}
+                    {mostReliableProfit && mostReliableProfit.responsible_id !== bestProfit?.responsible_id && mostReliableProfit.responsible_id !== bestROI?.responsible_id && mostReliableProfit.responsible_id !== bestWinRate?.responsible_id && (
+                      <p className="flex items-center">
+                        <strong>{mostReliableProfit.responsible_name}</strong> is the most reliable profitable at ${mostReliableProfit.total_profit.toFixed(2)}
+                        ({mostReliableProfit.bet_count} bets, {(mostReliableProfit.roi * 100).toFixed(1)}% ROI)
+                        <span className="text-green-600 dark:text-green-400 ml-1" title={`High confidence (${mostReliableProfit.bet_count} bets, threshold: ${MIN_SAMPLE_SIZES.LEAGUE})`}>✓</span>
                       </p>
                     )}
                   </div>
@@ -1677,11 +1829,21 @@ export default function AnalyticsPage() {
 
                 {/* Most Profitable */}
                 <div className="mb-6">
-                  <h4 className="text-md font-semibold text-gray-700 mb-3">Most Profitable</h4>
+                  <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-1">
+                    Most Profitable
+                    {responsible.most_profitable_league && responsible.most_profitable_league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                      <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets`}>⚠</span>
+                    )}
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {responsible.most_profitable_league && (
                       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <div className="text-sm text-blue-600 font-medium mb-1">League</div>
+                        <div className="text-sm text-blue-600 font-medium mb-1 flex items-center gap-1">
+                          League
+                          {responsible.most_profitable_league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                            <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${responsible.most_profitable_league.bet_count})`}>⚠</span>
+                          )}
+                        </div>
                         <div className="text-base font-bold text-blue-900">{responsible.most_profitable_league.league_name}</div>
                         <div className="text-sm text-blue-700 mt-1">
                           ${responsible.most_profitable_league.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_league.total_profit.toFixed(2)} ({responsible.most_profitable_league.bet_count} bets)
@@ -1698,7 +1860,12 @@ export default function AnalyticsPage() {
                     )}
                     {responsible.most_profitable_team && (
                       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <div className="text-sm text-blue-600 font-medium mb-1">Team</div>
+                        <div className="text-sm text-blue-600 font-medium mb-1 flex items-center gap-1">
+                          Team
+                          {responsible.most_profitable_team.bet_count < MIN_SAMPLE_SIZES.TEAM && (
+                            <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.TEAM} bets (currently ${responsible.most_profitable_team.bet_count})`}>⚠</span>
+                          )}
+                        </div>
                         <div className="text-base font-bold text-blue-900">{responsible.most_profitable_team.team_name}</div>
                         <div className="text-sm text-blue-700 mt-1">
                           ${responsible.most_profitable_team.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_team.total_profit.toFixed(2)} ({responsible.most_profitable_team.bet_count} bets)
@@ -1715,7 +1882,12 @@ export default function AnalyticsPage() {
                     )}
                     {responsible.most_profitable_category && (
                       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <div className="text-sm text-blue-600 font-medium mb-1">Category</div>
+                        <div className="text-sm text-blue-600 font-medium mb-1 flex items-center gap-1">
+                          Category
+                          {responsible.most_profitable_category.bet_count < MIN_SAMPLE_SIZES.CATEGORY && (
+                            <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${responsible.most_profitable_category.bet_count})`}>⚠</span>
+                          )}
+                        </div>
                         <div className="text-base font-bold text-blue-900">{responsible.most_profitable_category.category_name}</div>
                         <div className="text-sm text-blue-700 mt-1">
                           ${responsible.most_profitable_category.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_category.total_profit.toFixed(2)} ({responsible.most_profitable_category.bet_count} bets)
@@ -1732,7 +1904,12 @@ export default function AnalyticsPage() {
                     )}
                     {responsible.most_profitable_bet_type && (
                       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <div className="text-sm text-blue-600 font-medium mb-1">Bet Type</div>
+                        <div className="text-sm text-blue-600 font-medium mb-1 flex items-center gap-1">
+                          Bet Type
+                          {responsible.most_profitable_bet_type.bet_count < MIN_SAMPLE_SIZES.BET_TYPE && (
+                            <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.BET_TYPE} bets (currently ${responsible.most_profitable_bet_type.bet_count})`}>⚠</span>
+                          )}
+                        </div>
                         <div className="text-base font-bold text-blue-900">{responsible.most_profitable_bet_type.bet_type_name}</div>
                         <div className="text-sm text-blue-700 mt-1">
                           ${responsible.most_profitable_bet_type.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_bet_type.total_profit.toFixed(2)} ({responsible.most_profitable_bet_type.bet_count} bets)
@@ -1749,7 +1926,12 @@ export default function AnalyticsPage() {
                     )}
                     {responsible.most_profitable_day && (
                       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <div className="text-sm text-blue-600 font-medium mb-1">Day</div>
+                        <div className="text-sm text-blue-600 font-medium mb-1 flex items-center gap-1">
+                          Day
+                          {responsible.most_profitable_day.bet_count < MIN_SAMPLE_SIZES.DAY && (
+                            <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.DAY} bets (currently ${responsible.most_profitable_day.bet_count})`}>⚠</span>
+                          )}
+                        </div>
                         <div className="text-base font-bold text-blue-900">{responsible.most_profitable_day.day}</div>
                         <div className="text-sm text-blue-700 mt-1">
                           ${responsible.most_profitable_day.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_day.total_profit.toFixed(2)} ({responsible.most_profitable_day.bet_count} bets)
@@ -1855,7 +2037,12 @@ export default function AnalyticsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {responsible.worst_profitable_league && (
                       <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                        <div className="text-sm text-red-600 font-medium mb-1">League</div>
+                        <div className="text-sm text-red-600 font-medium mb-1 flex items-center gap-1">
+                          League
+                          {responsible.worst_profitable_league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                            <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${responsible.worst_profitable_league.bet_count})`}>⚠</span>
+                          )}
+                        </div>
                         <div className="text-base font-bold text-red-900">{responsible.worst_profitable_league.league_name}</div>
                         <div className="text-sm text-red-700 mt-1">
                           ${responsible.worst_profitable_league.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_league.total_profit.toFixed(2)} ({responsible.worst_profitable_league.bet_count} bets)
@@ -1872,7 +2059,12 @@ export default function AnalyticsPage() {
                     )}
                     {responsible.worst_profitable_team && (
                       <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                        <div className="text-sm text-red-600 font-medium mb-1">Team</div>
+                        <div className="text-sm text-red-600 font-medium mb-1 flex items-center gap-1">
+                          Team
+                          {responsible.worst_profitable_team.bet_count < MIN_SAMPLE_SIZES.TEAM && (
+                            <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.TEAM} bets (currently ${responsible.worst_profitable_team.bet_count})`}>⚠</span>
+                          )}
+                        </div>
                         <div className="text-base font-bold text-red-900">{responsible.worst_profitable_team.team_name}</div>
                         <div className="text-sm text-red-700 mt-1">
                           ${responsible.worst_profitable_team.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_team.total_profit.toFixed(2)} ({responsible.worst_profitable_team.bet_count} bets)
@@ -1889,7 +2081,12 @@ export default function AnalyticsPage() {
                     )}
                     {responsible.worst_profitable_category && (
                       <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                        <div className="text-sm text-red-600 font-medium mb-1">Category</div>
+                        <div className="text-sm text-red-600 font-medium mb-1 flex items-center gap-1">
+                          Category
+                          {responsible.worst_profitable_category.bet_count < MIN_SAMPLE_SIZES.CATEGORY && (
+                            <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${responsible.worst_profitable_category.bet_count})`}>⚠</span>
+                          )}
+                        </div>
                         <div className="text-base font-bold text-red-900">{responsible.worst_profitable_category.category_name}</div>
                         <div className="text-sm text-red-700 mt-1">
                           ${responsible.worst_profitable_category.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_category.total_profit.toFixed(2)} ({responsible.worst_profitable_category.bet_count} bets)
@@ -1906,7 +2103,12 @@ export default function AnalyticsPage() {
                     )}
                     {responsible.worst_profitable_bet_type && (
                       <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                        <div className="text-sm text-red-600 font-medium mb-1">Bet Type</div>
+                        <div className="text-sm text-red-600 font-medium mb-1 flex items-center gap-1">
+                          Bet Type
+                          {responsible.worst_profitable_bet_type.bet_count < MIN_SAMPLE_SIZES.BET_TYPE && (
+                            <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.BET_TYPE} bets (currently ${responsible.worst_profitable_bet_type.bet_count})`}>⚠</span>
+                          )}
+                        </div>
                         <div className="text-base font-bold text-red-900">{responsible.worst_profitable_bet_type.bet_type_name}</div>
                         <div className="text-sm text-red-700 mt-1">
                           ${responsible.worst_profitable_bet_type.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_bet_type.total_profit.toFixed(2)} ({responsible.worst_profitable_bet_type.bet_count} bets)
@@ -1923,7 +2125,12 @@ export default function AnalyticsPage() {
                     )}
                     {responsible.worst_profitable_day && (
                       <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                        <div className="text-sm text-red-600 font-medium mb-1">Day</div>
+                        <div className="text-sm text-red-600 font-medium mb-1 flex items-center gap-1">
+                          Day
+                          {responsible.worst_profitable_day.bet_count < MIN_SAMPLE_SIZES.DAY && (
+                            <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.DAY} bets (currently ${responsible.worst_profitable_day.bet_count})`}>⚠</span>
+                          )}
+                        </div>
                         <div className="text-base font-bold text-red-900">{responsible.worst_profitable_day.day}</div>
                         <div className="text-sm text-red-700 mt-1">
                           ${responsible.worst_profitable_day.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_day.total_profit.toFixed(2)} ({responsible.worst_profitable_day.bet_count} bets)
@@ -1943,7 +2150,12 @@ export default function AnalyticsPage() {
 
                 {/* Leg-Level Analytics - Best Win Rate */}
                 <div className="mb-6">
-                  <h4 className="text-md font-semibold text-gray-700 mb-1">Leg-Level: Best Win Rate</h4>
+                  <h4 className="text-md font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    Leg-Level: Best Win Rate
+                    {responsible.leg_best_win_rate_league && responsible.leg_best_win_rate_league.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                      <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs`}>⚠</span>
+                    )}
+                  </h4>
                   <p className="text-xs text-gray-500 mb-3">Based on individual leg results (won/lost), not bet outcomes</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {responsible.leg_best_win_rate_league && (
@@ -2109,7 +2321,12 @@ export default function AnalyticsPage() {
 
                 {/* Leg-Level Analytics - Worst Win Rate */}
                 <div className="mb-6">
-                  <h4 className="text-md font-semibold text-gray-700 mb-1">Leg-Level: Worst Win Rate</h4>
+                  <h4 className="text-md font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    Leg-Level: Worst Win Rate
+                    {responsible.leg_worst_win_rate_league && responsible.leg_worst_win_rate_league.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                      <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs`}>⚠</span>
+                    )}
+                  </h4>
                   <p className="text-xs text-gray-500 mb-3">Lowest leg win rates to avoid</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {responsible.leg_worst_win_rate_league && (
@@ -2710,7 +2927,12 @@ export default function AnalyticsPage() {
                             {bestWorstPerformers.best_leagues.map((league, index) => (
                               <div key={league.league_id} className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-green-900 dark:text-green-300">{index + 1}. {league.league_name}</span>
+                                  <span className="text-sm font-medium text-green-900 dark:text-green-300 flex items-center gap-1">
+                                    {index + 1}. {league.league_name}
+                                    {league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                                      <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>⚠</span>
+                                    )}
+                                  </span>
                                   <span className="text-sm font-bold text-green-700 dark:text-green-400">${league.total_profit.toFixed(2)}</span>
                                 </div>
                                 <div className="text-xs text-green-700 dark:text-green-400 mt-1">
@@ -2730,7 +2952,12 @@ export default function AnalyticsPage() {
                             {bestWorstPerformers.worst_leagues.map((league, index) => (
                               <div key={league.league_id} className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-red-900 dark:text-red-300">{index + 1}. {league.league_name}</span>
+                                  <span className="text-sm font-medium text-red-900 dark:text-red-300 flex items-center gap-1">
+                                    {index + 1}. {league.league_name}
+                                    {league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                                      <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>⚠</span>
+                                    )}
+                                  </span>
                                   <span className="text-sm font-bold text-red-700 dark:text-red-400">${league.total_profit.toFixed(2)}</span>
                                 </div>
                                 <div className="text-xs text-red-700 dark:text-red-400 mt-1">
@@ -2750,7 +2977,12 @@ export default function AnalyticsPage() {
                             {bestWorstPerformers.best_bet_types.map((betType, index) => (
                               <div key={betType.bet_type_id} className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-blue-900 dark:text-blue-300">{index + 1}. {betType.bet_type_name}</span>
+                                  <span className="text-sm font-medium text-blue-900 dark:text-blue-300 flex items-center gap-1">
+                                    {index + 1}. {betType.bet_type_name}
+                                    {betType.bet_count < MIN_SAMPLE_SIZES.BET_TYPE && (
+                                      <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.BET_TYPE} bets (currently ${betType.bet_count})`}>⚠</span>
+                                    )}
+                                  </span>
                                   <span className="text-sm font-bold text-blue-700 dark:text-blue-400">${betType.total_profit.toFixed(2)}</span>
                                 </div>
                                 <div className="text-xs text-blue-700 dark:text-blue-400 mt-1">
@@ -2772,7 +3004,12 @@ export default function AnalyticsPage() {
                             {bestWorstPerformers.best_categories.map((category, index) => (
                               <div key={category.category_id} className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-purple-900 dark:text-purple-300">{index + 1}. {category.category_name}</span>
+                                  <span className="text-sm font-medium text-purple-900 dark:text-purple-300 flex items-center gap-1">
+                                    {index + 1}. {category.category_name}
+                                    {category.bet_count < MIN_SAMPLE_SIZES.CATEGORY && (
+                                      <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${category.bet_count})`}>⚠</span>
+                                    )}
+                                  </span>
                                   <span className="text-sm font-bold text-purple-700 dark:text-purple-400">${category.total_profit.toFixed(2)}</span>
                                 </div>
                                 <div className="text-xs text-purple-700 dark:text-purple-400 mt-1">
@@ -2792,7 +3029,12 @@ export default function AnalyticsPage() {
                             {bestWorstPerformers.worst_categories.map((category, index) => (
                               <div key={category.category_id} className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-orange-900 dark:text-orange-300">{index + 1}. {category.category_name}</span>
+                                  <span className="text-sm font-medium text-orange-900 dark:text-orange-300 flex items-center gap-1">
+                                    {index + 1}. {category.category_name}
+                                    {category.bet_count < MIN_SAMPLE_SIZES.CATEGORY && (
+                                      <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${category.bet_count})`}>⚠</span>
+                                    )}
+                                  </span>
                                   <span className="text-sm font-bold text-orange-700 dark:text-orange-400">${category.total_profit.toFixed(2)}</span>
                                 </div>
                                 <div className="text-xs text-orange-700 dark:text-orange-400 mt-1">
@@ -2901,13 +3143,43 @@ export default function AnalyticsPage() {
                         const bestROI = byLegs.filter(l => l.bet_count > 0).reduce((best, current) => 
                           current.roi > best.roi ? current : best, byLegs[0]
                         );
-                        return bestROI && bestROI.bet_count >= MIN_SAMPLE_SIZES.COMBINATION && (
-                          <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                            <div className="text-sm font-semibold text-purple-900 dark:text-purple-300 mb-1">🎯 Optimal Bet Size</div>
-                            <div className="text-sm text-purple-800 dark:text-purple-300">
-                              <strong>{bestROI.num_legs}-leg bets</strong> are performing best with {(bestROI.roi * 100).toFixed(1)}% ROI ({bestROI.bet_count} bets).
-                            </div>
-                          </div>
+                        const reliableLegs = byLegs.filter(l => l.bet_count >= MIN_SAMPLE_SIZES.COMBINATION);
+                        const mostReliableROI = reliableLegs.length > 0
+                          ? reliableLegs.reduce((best, current) => current.roi > best.roi ? current : best, reliableLegs[0])
+                          : null;
+                        
+                        return (
+                          <>
+                            {bestROI && bestROI.bet_count > 0 && bestROI.bet_count >= MIN_SAMPLE_SIZES.COMBINATION && (
+                              <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                                <div className="text-sm font-semibold text-purple-900 dark:text-purple-300 mb-1">🎯 Optimal Bet Size</div>
+                                <div className="text-sm text-purple-800 dark:text-purple-300">
+                                  <strong>{bestROI.num_legs}-leg bets</strong> are performing best with {(bestROI.roi * 100).toFixed(1)}% ROI ({bestROI.bet_count} bets).
+                                </div>
+                              </div>
+                            )}
+                            {bestROI && bestROI.bet_count > 0 && bestROI.bet_count < MIN_SAMPLE_SIZES.COMBINATION && (
+                              <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                                <div className="text-sm font-semibold text-purple-900 dark:text-purple-300 mb-1 flex items-center gap-1">
+                                  🎯 Optimal Bet Size
+                                  <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${bestROI.bet_count})`}>⚠</span>
+                                </div>
+                                <div className="text-sm text-purple-800 dark:text-purple-300">
+                                  <strong>{bestROI.num_legs}-leg bets</strong> are performing best with {(bestROI.roi * 100).toFixed(1)}% ROI ({bestROI.bet_count} bets).
+                                </div>
+                              </div>
+                            )}
+                            {mostReliableROI && mostReliableROI.num_legs !== bestROI?.num_legs && (
+                              <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                                <div className="text-sm font-semibold text-emerald-900 dark:text-emerald-300 mb-1 flex items-center gap-1">
+                                  ✓ Most Reliable Optimal Bet Size
+                                </div>
+                                <div className="text-sm text-emerald-800 dark:text-emerald-300">
+                                  <strong>{mostReliableROI.num_legs}-leg bets</strong> have the most reliable ROI at {(mostReliableROI.roi * 100).toFixed(1)}% ({mostReliableROI.bet_count} bets).
+                                </div>
+                              </div>
+                            )}
+                          </>
                         );
                       })()}
                     </div>
