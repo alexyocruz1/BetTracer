@@ -1167,7 +1167,7 @@ export class AnalyticsService {
         // Track leagues
         if (leg.league_id) {
           if (!responsibleData.leagueMap.has(leg.league_id)) {
-            responsibleData.            leagueMap.set(leg.league_id, {
+            responsibleData.leagueMap.set(leg.league_id, {
               league_id: leg.league_id,
               league_name: '',
               profit: 0,
@@ -1193,7 +1193,7 @@ export class AnalyticsService {
         // Track teams (home and away) with profit tracking
         if (leg.home_team_id) {
           if (!responsibleData.teamMap.has(leg.home_team_id)) {
-            responsibleData.            teamMap.set(leg.home_team_id, {
+            responsibleData.teamMap.set(leg.home_team_id, {
               team_id: leg.home_team_id,
               team_name: '',
               profit: 0,
@@ -1217,7 +1217,7 @@ export class AnalyticsService {
         }
         if (leg.away_team_id) {
           if (!responsibleData.teamMap.has(leg.away_team_id)) {
-            responsibleData.            teamMap.set(leg.away_team_id, {
+            responsibleData.teamMap.set(leg.away_team_id, {
               team_id: leg.away_team_id,
               team_name: '',
               profit: 0,
@@ -1243,7 +1243,7 @@ export class AnalyticsService {
         // Track bet types
         if (leg.bet_type_id) {
           if (!responsibleData.betTypeMap.has(leg.bet_type_id)) {
-            responsibleData.            betTypeMap.set(leg.bet_type_id, {
+            responsibleData.betTypeMap.set(leg.bet_type_id, {
               bet_type_id: leg.bet_type_id,
               bet_type_name: '',
               profit: 0,
@@ -1269,7 +1269,7 @@ export class AnalyticsService {
         // Track categories
         if (leg.category_id) {
           if (!responsibleData.categoryMap.has(leg.category_id)) {
-            responsibleData.            categoryMap.set(leg.category_id, {
+            responsibleData.categoryMap.set(leg.category_id, {
               category_id: leg.category_id,
               category_name: '',
               profit: 0,
@@ -1300,7 +1300,7 @@ export class AnalyticsService {
         const dayOfWeek = betDate.getDay();
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         if (!responsibleData.dayMap.has(dayOfWeek)) {
-          responsibleData.            dayMap.set(dayOfWeek, {
+          responsibleData.dayMap.set(dayOfWeek, {
               day: dayNames[dayOfWeek],
               day_number: dayOfWeek,
               profit: 0,
@@ -1325,7 +1325,7 @@ export class AnalyticsService {
         // Track hour of day
         const hour = betDate.getHours();
         if (!responsibleData.hourMap.has(hour)) {
-          responsibleData.            hourMap.set(hour, {
+          responsibleData.hourMap.set(hour, {
               hour,
               profit: 0,
               bet_count: 0,
@@ -1352,7 +1352,7 @@ export class AnalyticsService {
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         const monthKey = `${year}-${month}`;
         if (!responsibleData.monthMap.has(monthKey)) {
-          responsibleData.            monthMap.set(monthKey, {
+          responsibleData.monthMap.set(monthKey, {
               month: monthNames[month],
               month_number: month + 1,
               year,
@@ -1396,7 +1396,7 @@ export class AnalyticsService {
           if (rangeLabel) {
             if (!responsibleData.oddsRangeMap.has(rangeLabel)) {
               const range = oddsRanges.find(r => r.label === rangeLabel)!;
-              responsibleData.              oddsRangeMap.set(rangeLabel, {
+              responsibleData.oddsRangeMap.set(rangeLabel, {
                 range: rangeLabel,
                 min_odds: range.min,
                 max_odds: range.max === Infinity ? 999 : range.max,
