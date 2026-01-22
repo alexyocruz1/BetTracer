@@ -11,8 +11,11 @@ class ApiClient {
       baseURL: API_URL,
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
-      timeout: 60000, // 60 second timeout (increased to account for Render sleep time and slow responses)
+      timeout: 90000, // 90 second timeout (increased to account for Render sleep time and slow responses)
     });
 
     // Add auth token to requests

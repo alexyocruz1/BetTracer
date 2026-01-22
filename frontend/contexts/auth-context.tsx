@@ -170,12 +170,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 currentUserId = refreshData.session.user?.id || null;
                 
                 if (refreshData.session.user) {
-                  try {
-                    await fetchAdminStatus(refreshData.session.user.id);
-                  } catch (error) {
+                  // Fetch admin status immediately without waiting
+                  fetchAdminStatus(refreshData.session.user.id).catch((error) => {
                     console.error('[Auth] Error fetching admin status:', error);
                     setIsAdmin(false);
-                  }
+                  });
                 } else {
                   setIsAdmin(false);
                 }
@@ -210,12 +209,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           currentUserId = session.user?.id || null;
           
           if (session.user) {
-            try {
-              await fetchAdminStatus(session.user.id);
-            } catch (error) {
+            // Fetch admin status immediately without waiting
+            fetchAdminStatus(session.user.id).catch((error) => {
               console.error('[Auth] Error fetching admin status:', error);
               setIsAdmin(false);
-            }
+            });
           } else {
             setIsAdmin(false);
           }
@@ -267,12 +265,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Always fetch admin status when we have a session to ensure it's up-to-date
       // This fixes the issue where admin tab doesn't appear on refresh
       if (session?.user) {
-        try {
-          await fetchAdminStatus(session.user.id);
-        } catch (error) {
+        // Fetch admin status immediately and don't wait for it to complete
+        // This ensures the UI updates as soon as possible
+        fetchAdminStatus(session.user.id).catch((error) => {
           console.error('[Auth] Error fetching admin status:', error);
           setIsAdmin(false);
-        }
+        });
       } else {
         setIsAdmin(false);
       }

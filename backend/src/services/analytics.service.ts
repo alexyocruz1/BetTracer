@@ -1080,26 +1080,32 @@ export class AnalyticsService {
     startDate?: string,
     endDate?: string
   ): Promise<ResponsibleDetailedAnalytics[]> {
-    // Get all bets with legs
-    let betsQuery = this.supabase
-      .from('main_bets')
-      .select('*, legs(*)')
-      .eq('user_id', userId)
-      .is('deleted_at', null);
+    try {
+      // Get all bets with legs
+      let betsQuery = this.supabase
+        .from('main_bets')
+        .select('*, legs(*)')
+        .eq('user_id', userId)
+        .is('deleted_at', null);
 
-    if (startDate) {
-      betsQuery = betsQuery.gte('date', startDate);
-    }
+      if (startDate) {
+        betsQuery = betsQuery.gte('date', startDate);
+      }
 
-    if (endDate) {
-      betsQuery = betsQuery.lte('date', endDate);
-    }
+      if (endDate) {
+        betsQuery = betsQuery.lte('date', endDate);
+      }
 
-    const { data: bets, error } = await betsQuery;
+      const { data: bets, error } = await betsQuery;
 
-    if (error) {
-      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch responsible detailed analytics', 500);
-    }
+      if (error) {
+        console.error('[AnalyticsService] Error fetching bets for responsible detailed analytics:', error);
+        throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch responsible detailed analytics', 500);
+      }
+
+      if (!bets || bets.length === 0) {
+        return [];
+      }
 
     // Calculate total bets and legs for dynamic thresholds
     const totalBets = bets?.length || 0;
@@ -1595,14 +1601,19 @@ export class AnalyticsService {
       const batchSize = 100;
       for (let i = 0; i < referenceIdsArray.length; i += batchSize) {
         const batch = referenceIdsArray.slice(i, i + batchSize);
-        const { data: referenceItems } = await this.supabase
+        const { data: referenceItems, error: refError } = await this.supabase
           .from('reference_items')
           .select('id, name')
           .in('id', batch);
         
-        if (referenceItems) {
+        if (refError) {
+          console.error('[AnalyticsService] Error fetching reference items:', refError);
+          // Continue without reference items - names will be 'Unknown'
+        } else if (referenceItems) {
           referenceItems.forEach(item => {
-            referenceItemsMap.set(item.id, item.name);
+            if (item && item.id && item.name) {
+              referenceItemsMap.set(item.id, item.name);
+            }
           });
         }
       }
@@ -1786,26 +1797,27 @@ export class AnalyticsService {
             }, null as any)
         : null;
 
-      const bestROILeague = leagueDataArray.length > 0
-        ? leagueDataArray.filter(l => l.stake > 0).reduce((best, current) => {
+      const filteredLeaguesWithStake = leagueDataArray.filter(l => l.stake > 0);
+      const bestROILeague = filteredLeaguesWithStake.length > 0
+        ? filteredLeaguesWithStake.reduce((best, current) => {
             const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
             const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
             // If ROI is equal, prefer the one with more stake (more data points)
             if (currentROI > bestROI) return current;
             if (currentROI === bestROI && current.stake > best.stake) return current;
             return best;
-          }, leagueDataArray[0])
+          })
         : null;
 
-      const worstROILeague = leagueDataArray.length > 0
-        ? leagueDataArray.filter(l => l.stake > 0).reduce((worst, current) => {
+      const worstROILeague = filteredLeaguesWithStake.length > 0
+        ? filteredLeaguesWithStake.reduce((worst, current) => {
             const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
             const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
             // If ROI is equal, prefer the one with more stake (more data points)
             if (currentROI < worstROI) return current;
             if (currentROI === worstROI && current.stake > worst.stake) return current;
             return worst;
-          }, leagueDataArray[0])
+          })
         : null;
 
       // Find worst performers (opposite of most profitable)
@@ -2499,6 +2511,15 @@ export class AnalyticsService {
     }
 
     return results;
+    } catch (error: any) {
+      console.error('[AnalyticsService] Error in getResponsibleDetailedAnalytics:', error);
+      // Re-throw if it's already a createError
+      if (error.statusCode) {
+        throw error;
+      }
+      // Otherwise wrap in a generic error
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, `Failed to get responsible detailed analytics: ${error.message || 'Unknown error'}`, 500);
+    }
   }
 
   async getByLegs(

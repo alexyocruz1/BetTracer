@@ -20,18 +20,12 @@ export default function DashboardPage() {
   useEffect(() => {
     let cancelled = false;
     let requestCompleted = false;
+    let retryCount = 0;
+    const MAX_RETRIES = 2;
 
-    // Safety timeout to prevent infinite hanging
-    const timeoutId = setTimeout(() => {
-      if (!requestCompleted && !cancelled) {
-        requestCompleted = true;
-        console.error('[Dashboard] Request timeout - forcing completion');
-        setSummary(null);
-        setLoading(false);
-      }
-    }, 60000); // 60 second safety timeout (increased to account for Render sleep time)
-
-    const fetchDashboardData = async () => {
+    const fetchWithRetry = async () => {
+      if (cancelled) return;
+      
       try {
         // Fetch all dashboard data in parallel
         // Calculate date 30 days ago
@@ -39,12 +33,109 @@ export default function DashboardPage() {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const startDate = thirtyDaysAgo.toISOString().split('T')[0];
 
+        // Add cache-busting timestamp for critical requests
+        const cacheBuster = `?t=${Date.now()}`;
+        const summaryUrl = `/api/analytics/summary${cacheBuster}`;
+        const betsUrl = `/api/bets?limit=5&offset=0&t=${Date.now()}`;
+        const streakUrl = `/api/analytics/streak-analysis${cacheBuster}`;
+        const bestWorstUrl = `/api/analytics/best-worst-performers${cacheBuster}`;
+        const timeSeriesUrl = `/api/analytics/time-series?granularity=daily&start_date=${startDate}&t=${Date.now()}`;
+
         const [summaryRes, betsRes, streakRes, bestWorstRes, timeSeriesRes] = await Promise.allSettled([
-          apiClient.get<{ data: AnalyticsSummary }>('/api/analytics/summary'),
-          apiClient.get<{ data: { bets: MainBet[]; total: number; totalPages: number } }>('/api/bets?limit=5&offset=0'),
-          apiClient.get<{ data: StreakAnalysis }>('/api/analytics/streak-analysis'),
-          apiClient.get<{ data: BestWorstPerformers }>('/api/analytics/best-worst-performers'),
-          apiClient.get<{ data: TimeSeriesData[] }>(`/api/analytics/time-series?granularity=daily&start_date=${startDate}`),
+          apiClient.get<{ data: AnalyticsSummary }>(summaryUrl),
+          apiClient.get<{ data: { bets: MainBet[]; total: number; totalPages: number } }>(betsUrl),
+          apiClient.get<{ data: StreakAnalysis }>(streakUrl),
+          apiClient.get<{ data: BestWorstPerformers }>(bestWorstUrl),
+          apiClient.get<{ data: TimeSeriesData[] }>(timeSeriesUrl),
+        ]);
+
+        if (requestCompleted || cancelled) return;
+
+        if (summaryRes.status === 'fulfilled') {
+          setSummary(summaryRes.value.data.data);
+        }
+        if (betsRes.status === 'fulfilled') {
+          setRecentBets(betsRes.value.data.data.bets || []);
+        }
+        if (streakRes.status === 'fulfilled') {
+          setStreakAnalysis(streakRes.value.data.data);
+        }
+        if (bestWorstRes.status === 'fulfilled') {
+          setBestWorst(bestWorstRes.value.data.data);
+        }
+        if (timeSeriesRes.status === 'fulfilled') {
+          const rawData = timeSeriesRes.value.data.data || [];
+          // Calculate cumulative profit for the chart
+          let cumulative = 0;
+          const chartData = rawData.map((item) => {
+            cumulative += item.profit;
+            return {
+              ...item,
+              cumulative_profit: cumulative,
+            };
+          });
+          setTimeSeries(chartData);
+        }
+
+        requestCompleted = true;
+        setLoading(false);
+      } catch (error: any) {
+        if (cancelled) return;
+        
+        // Check if it's a timeout or network error
+        const isTimeout = error.message?.includes('timeout') || error.code === 'ECONNABORTED';
+        const isNetworkError = !error.response && error.message;
+        
+        if ((isTimeout || isNetworkError) && retryCount < MAX_RETRIES) {
+          retryCount++;
+          console.warn(`[Dashboard] Request failed (attempt ${retryCount}/${MAX_RETRIES + 1}), retrying in 3 seconds...`);
+          // Wait 3 seconds before retry
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          return fetchWithRetry();
+        }
+        
+        // All retries exhausted or non-retryable error
+        console.error('[Dashboard] Failed to fetch dashboard data after retries:', error);
+        setSummary(null);
+        setLoading(false);
+        requestCompleted = true;
+      }
+    };
+
+    // Safety timeout to prevent infinite hanging
+    const timeoutId = setTimeout(() => {
+      if (!requestCompleted && !cancelled) {
+        requestCompleted = true;
+        console.error('[Dashboard] Request timeout after 90 seconds - backend may be waking up. Please refresh if needed.');
+        setSummary(null);
+        setLoading(false);
+      }
+    }, 90000); // Increased to 90 seconds to account for Render sleep time
+
+    fetchWithRetry();
+      if (cancelled) return;
+      
+      try {
+        // Fetch all dashboard data in parallel
+        // Calculate date 30 days ago
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+
+        // Add cache-busting timestamp for critical requests
+        const cacheBuster = `?t=${Date.now()}`;
+        const summaryUrl = `/api/analytics/summary${cacheBuster}`;
+        const betsUrl = `/api/bets?limit=5&offset=0&t=${Date.now()}`;
+        const streakUrl = `/api/analytics/streak-analysis${cacheBuster}`;
+        const bestWorstUrl = `/api/analytics/best-worst-performers${cacheBuster}`;
+        const timeSeriesUrl = `/api/analytics/time-series?granularity=daily&start_date=${startDate}&t=${Date.now()}`;
+
+        const [summaryRes, betsRes, streakRes, bestWorstRes, timeSeriesRes] = await Promise.allSettled([
+          apiClient.get<{ data: AnalyticsSummary }>(summaryUrl),
+          apiClient.get<{ data: { bets: MainBet[]; total: number; totalPages: number } }>(betsUrl),
+          apiClient.get<{ data: StreakAnalysis }>(streakUrl),
+          apiClient.get<{ data: BestWorstPerformers }>(bestWorstUrl),
+          apiClient.get<{ data: TimeSeriesData[] }>(timeSeriesUrl),
         ]);
 
         if (requestCompleted || cancelled) return;
@@ -78,23 +169,29 @@ export default function DashboardPage() {
         requestCompleted = true;
         clearTimeout(timeoutId);
         setLoading(false);
-      } catch (error) {
-        if (requestCompleted || cancelled) return;
+      } catch (error: any) {
+        if (cancelled) return;
         
+        // Check if it's a timeout or network error
+        const isTimeout = error.message?.includes('timeout') || error.code === 'ECONNABORTED';
+        const isNetworkError = !error.response && error.message;
+        
+        if ((isTimeout || isNetworkError) && retryCount < MAX_RETRIES) {
+          retryCount++;
+          console.warn(`[Dashboard] Request failed (attempt ${retryCount}/${MAX_RETRIES + 1}), retrying in 3 seconds...`);
+          // Wait 3 seconds before retry
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          return fetchWithRetry();
+        }
+        
+        // All retries exhausted or non-retryable error
+        console.error('[Dashboard] Failed to fetch dashboard data after retries:', error);
+        setSummary(null);
+        setLoading(false);
         requestCompleted = true;
         clearTimeout(timeoutId);
-        console.error('Failed to fetch dashboard data:', error);
-        setLoading(false);
-      } finally {
-        // Ensure loading is always set to false, even if timeout already fired
-        if (!cancelled && !requestCompleted) {
-          clearTimeout(timeoutId);
-          setLoading(false);
-        }
       }
     };
-    
-    fetchDashboardData();
     
     return () => {
       cancelled = true;
