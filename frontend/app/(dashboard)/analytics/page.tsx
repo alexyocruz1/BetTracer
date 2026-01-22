@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiClient } from '@/lib/api/client';
 import { AnalyticsSummary, AnalyticsByLeague, AnalyticsByResponsible, AnalyticsByBetType, AnalyticsByCategory, TimeSeriesData, LegAnalytics, OddsAnalysis, TeamPerformance, BestWorstPerformers, StreakAnalysis, ResponsibleDetailedAnalytics, AnalyticsByLegs, TemporalAnalytics, StakeAnalysis, CombinationAnalytics, RiskMetrics, PeriodComparison, EVAnalysis, RecoveryAnalysis, BankrollAnalysis, FrequencyAnalysis } from '@/types';
 import { useTheme } from '@/contexts/theme-context';
@@ -161,18 +161,33 @@ const TableWrapper = ({ children, className = '' }: { children: React.ReactNode;
   </div>
 );
 
-// Helper functions for sample size and confidence indicators
-const MIN_SAMPLE_SIZES = {
-  TEAM: 5,
-  LEAGUE: 5,
-  CATEGORY: 5,
-  BET_TYPE: 5,
-  DAY: 3,
-  HOUR: 3,
-  MONTH: 3,
-  ODDS_RANGE: 3,
-  COMBINATION: 3,
-  LEG_LEVEL: 10,
+// Calculate dynamic thresholds based on dataset size
+// Must match backend getMinSampleSizes logic
+const getMinSampleSizes = (totalBets: number, totalLegs: number) => {
+  // Bet-level thresholds: Scale from 2 (small dataset) to 7 (large dataset)
+  // Formula: min(7, max(2, Math.ceil(totalBets / 30)))
+  const betLevelThreshold = Math.min(7, Math.max(2, Math.ceil(totalBets / 30)));
+  
+  // Time-based thresholds: Scale from 1 (small) to 3 (large)
+  // Lower because there are only 7 days, 24 hours, 12 months
+  const timeBasedThreshold = Math.min(3, Math.max(1, Math.ceil(totalBets / 50)));
+  
+  // Leg-level thresholds: Scale from 5 (small dataset) to 15 (large dataset)
+  // Formula: min(15, max(5, Math.ceil(totalLegs / 30)))
+  const legLevelThreshold = Math.min(15, Math.max(5, Math.ceil(totalLegs / 30)));
+
+  return {
+    TEAM: betLevelThreshold,
+    LEAGUE: betLevelThreshold,
+    CATEGORY: betLevelThreshold,
+    BET_TYPE: betLevelThreshold,
+    DAY: timeBasedThreshold,
+    HOUR: timeBasedThreshold,
+    MONTH: timeBasedThreshold,
+    ODDS_RANGE: timeBasedThreshold,
+    COMBINATION: timeBasedThreshold,
+    LEG_LEVEL: legLevelThreshold,
+  };
 };
 
 const getConfidenceLevel = (sampleSize: number, minThreshold: number): 'high' | 'moderate' | 'low' => {
@@ -247,6 +262,13 @@ export default function AnalyticsPage() {
   const [byBetType, setByBetType] = useState<AnalyticsByBetType[]>([]);
   const [byCategory, setByCategory] = useState<AnalyticsByCategory[]>([]);
   const [legAnalytics, setLegAnalytics] = useState<LegAnalytics | null>(null);
+  
+  // Calculate dynamic thresholds based on current dataset size
+  const MIN_SAMPLE_SIZES = useMemo(() => {
+    const totalBets = summary?.total_bets || 0;
+    const totalLegs = legAnalytics?.total_legs || 0;
+    return getMinSampleSizes(totalBets, totalLegs);
+  }, [summary?.total_bets, legAnalytics?.total_legs]);
   const [oddsAnalysis, setOddsAnalysis] = useState<OddsAnalysis[]>([]);
   const [teamPerformance, setTeamPerformance] = useState<TeamPerformance[]>([]);
   const [bestWorstPerformers, setBestWorstPerformers] = useState<BestWorstPerformers | null>(null);
@@ -391,6 +413,10 @@ export default function AnalyticsPage() {
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
           console.error(`Failed to fetch ${requests[index].name}:`, result.reason);
+          // Log detailed error for insights-related endpoints
+          if (requests[index].name === 'bestWorst' || requests[index].name === 'streak') {
+            console.error(`Insights tab error - ${requests[index].name}:`, result.reason);
+          }
         }
       });
       
@@ -2664,6 +2690,245 @@ export default function AnalyticsPage() {
             )}
 
             {/* Advanced Tab - Advanced analytics sections */}
+            {activeTab === 'insights' && (
+              <div>
+                {loading ? (
+                  <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+                    <p className="text-gray-500 dark:text-gray-400 text-center">Loading insights...</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Best/Worst Performers */}
+                    {bestWorstPerformers && (bestWorstPerformers.best_leagues.length > 0 || bestWorstPerformers.worst_leagues.length > 0 || bestWorstPerformers.best_bet_types.length > 0 || bestWorstPerformers.best_categories.length > 0 || bestWorstPerformers.worst_categories.length > 0) && (
+                  <CollapsibleSection id="best-worst-performers" title="Best & Worst Performers">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Best Leagues */}
+                      {bestWorstPerformers.best_leagues.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-green-700 dark:text-green-400 mb-3">🏆 Best Leagues</h3>
+                          <div className="space-y-2">
+                            {bestWorstPerformers.best_leagues.map((league, index) => (
+                              <div key={league.league_id} className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-green-900 dark:text-green-300">{index + 1}. {league.league_name}</span>
+                                  <span className="text-sm font-bold text-green-700 dark:text-green-400">${league.total_profit.toFixed(2)}</span>
+                                </div>
+                                <div className="text-xs text-green-700 dark:text-green-400 mt-1">
+                                  {league.bet_count} bets · {(league.roi * 100).toFixed(1)}% ROI · {(league.win_rate * 100).toFixed(1)}% win rate
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Worst Leagues */}
+                      {bestWorstPerformers.worst_leagues.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-3">📉 Worst Leagues</h3>
+                          <div className="space-y-2">
+                            {bestWorstPerformers.worst_leagues.map((league, index) => (
+                              <div key={league.league_id} className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-red-900 dark:text-red-300">{index + 1}. {league.league_name}</span>
+                                  <span className="text-sm font-bold text-red-700 dark:text-red-400">${league.total_profit.toFixed(2)}</span>
+                                </div>
+                                <div className="text-xs text-red-700 dark:text-red-400 mt-1">
+                                  {league.bet_count} bets · {(league.roi * 100).toFixed(1)}% ROI · {(league.win_rate * 100).toFixed(1)}% win rate
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Best Bet Types */}
+                      {bestWorstPerformers.best_bet_types.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-3">⭐ Best Bet Types</h3>
+                          <div className="space-y-2">
+                            {bestWorstPerformers.best_bet_types.map((betType, index) => (
+                              <div key={betType.bet_type_id} className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-blue-900 dark:text-blue-300">{index + 1}. {betType.bet_type_name}</span>
+                                  <span className="text-sm font-bold text-blue-700 dark:text-blue-400">${betType.total_profit.toFixed(2)}</span>
+                                </div>
+                                <div className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                                  {betType.bet_count} bets · {(betType.roi * 100).toFixed(1)}% ROI · {(betType.win_rate * 100).toFixed(1)}% win rate
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                      {/* Best Categories */}
+                      {bestWorstPerformers.best_categories.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400 mb-3">🎯 Best Categories</h3>
+                          <div className="space-y-2">
+                            {bestWorstPerformers.best_categories.map((category, index) => (
+                              <div key={category.category_id} className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-purple-900 dark:text-purple-300">{index + 1}. {category.category_name}</span>
+                                  <span className="text-sm font-bold text-purple-700 dark:text-purple-400">${category.total_profit.toFixed(2)}</span>
+                                </div>
+                                <div className="text-xs text-purple-700 dark:text-purple-400 mt-1">
+                                  {category.bet_count} bets · {(category.roi * 100).toFixed(1)}% ROI · {(category.win_rate * 100).toFixed(1)}% win rate
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Worst Categories */}
+                      {bestWorstPerformers.worst_categories.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-orange-700 dark:text-orange-400 mb-3">⚠️ Worst Categories</h3>
+                          <div className="space-y-2">
+                            {bestWorstPerformers.worst_categories.map((category, index) => (
+                              <div key={category.category_id} className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-orange-900 dark:text-orange-300">{index + 1}. {category.category_name}</span>
+                                  <span className="text-sm font-bold text-orange-700 dark:text-orange-400">${category.total_profit.toFixed(2)}</span>
+                                </div>
+                                <div className="text-xs text-orange-700 dark:text-orange-400 mt-1">
+                                  {category.bet_count} bets · {(category.roi * 100).toFixed(1)}% ROI · {(category.win_rate * 100).toFixed(1)}% win rate
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleSection>
+                )}
+
+                {/* Streak Analysis */}
+                {streakAnalysis && streakAnalysis.current_streak && streakAnalysis.longest_win_streak && streakAnalysis.longest_loss_streak && (
+                  <CollapsibleSection id="streak-analysis" title="Streak Analysis">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                      <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Streak</div>
+                        <div className={`text-2xl font-bold ${streakAnalysis.current_streak.type === 'win' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {streakAnalysis.current_streak.length} {streakAnalysis.current_streak.type === 'win' ? 'Wins' : 'Losses'}
+                        </div>
+                        {streakAnalysis.current_streak.start_date && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Since {new Date(streakAnalysis.current_streak.start_date).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Longest Win Streak</div>
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          {streakAnalysis.longest_win_streak.length} Wins
+                        </div>
+                        {streakAnalysis.longest_win_streak.start_date && streakAnalysis.longest_win_streak.end_date && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {new Date(streakAnalysis.longest_win_streak.start_date).toLocaleDateString()} - {new Date(streakAnalysis.longest_win_streak.end_date).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Longest Loss Streak</div>
+                        <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                          {streakAnalysis.longest_loss_streak.length} Losses
+                        </div>
+                        {streakAnalysis.longest_loss_streak.start_date && streakAnalysis.longest_loss_streak.end_date && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {new Date(streakAnalysis.longest_loss_streak.start_date).toLocaleDateString()} - {new Date(streakAnalysis.longest_loss_streak.end_date).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {streakAnalysis.recent_bets && streakAnalysis.recent_bets.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Recent Bet Results</h3>
+                        <div className="flex gap-2 flex-wrap">
+                          {streakAnalysis.recent_bets.map((bet, index) => (
+                            <div
+                              key={index}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                                bet.state === 'won' ? 'bg-green-500 text-white' :
+                                bet.state === 'lost' ? 'bg-red-500 text-white' :
+                                bet.state === 'pending' ? 'bg-yellow-500 text-white' :
+                                'bg-gray-500 text-white'
+                              }`}
+                              title={`${new Date(bet.date).toLocaleDateString()}: ${bet.state}${bet.profit_loss !== null ? ` (${bet.profit_loss >= 0 ? '+' : ''}$${bet.profit_loss.toFixed(2)})` : ''}`}
+                            >
+                              {bet.state === 'won' ? 'W' : bet.state === 'lost' ? 'L' : bet.state === 'pending' ? 'P' : 'V'}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CollapsibleSection>
+                )}
+
+                {/* Key Insights Summary */}
+                {summary && summary.total_bets > 0 && (
+                  <CollapsibleSection id="key-insights" title="Key Insights">
+                    <div className="space-y-4">
+                      {summary.win_rate > 0.5 && (
+                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                          <div className="text-sm font-semibold text-green-900 dark:text-green-300 mb-1">✅ Positive Win Rate</div>
+                          <div className="text-sm text-green-800 dark:text-green-300">
+                            Your overall win rate is {(summary.win_rate * 100).toFixed(1)}% ({summary.won_bets}W / {summary.lost_bets}L), which is above 50%.
+                          </div>
+                        </div>
+                      )}
+                      {summary.roi > 0 && (
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <div className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-1">💰 Profitable</div>
+                          <div className="text-sm text-blue-800 dark:text-blue-300">
+                            You're generating a positive ROI of {(summary.roi * 100).toFixed(1)}% with ${summary.total_profit.toFixed(2)} profit on ${summary.total_stake.toFixed(2)} staked.
+                          </div>
+                        </div>
+                      )}
+                      {summary.roi < 0 && (
+                        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                          <div className="text-sm font-semibold text-red-900 dark:text-red-300 mb-1">⚠️ Negative ROI</div>
+                          <div className="text-sm text-red-800 dark:text-red-300">
+                            Your current ROI is {(summary.roi * 100).toFixed(1)}% with ${Math.abs(summary.total_profit).toFixed(2)} in losses. Consider reviewing your betting strategy.
+                          </div>
+                        </div>
+                      )}
+                      {byLegs.length > 0 && (() => {
+                        const bestROI = byLegs.filter(l => l.bet_count > 0).reduce((best, current) => 
+                          current.roi > best.roi ? current : best, byLegs[0]
+                        );
+                        return bestROI && bestROI.bet_count >= MIN_SAMPLE_SIZES.COMBINATION && (
+                          <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                            <div className="text-sm font-semibold text-purple-900 dark:text-purple-300 mb-1">🎯 Optimal Bet Size</div>
+                            <div className="text-sm text-purple-800 dark:text-purple-300">
+                              <strong>{bestROI.num_legs}-leg bets</strong> are performing best with {(bestROI.roi * 100).toFixed(1)}% ROI ({bestROI.bet_count} bets).
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </CollapsibleSection>
+                )}
+
+                    {/* No insights message */}
+                    {!loading && (!bestWorstPerformers || (bestWorstPerformers.best_leagues?.length === 0 && bestWorstPerformers.worst_leagues?.length === 0 && bestWorstPerformers.best_bet_types?.length === 0 && bestWorstPerformers.best_categories?.length === 0 && bestWorstPerformers.worst_categories?.length === 0)) && 
+                     !streakAnalysis && 
+                     (!summary || summary.total_bets === 0) && (
+                      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+                        <p className="text-gray-500 dark:text-gray-400 text-center">
+                          No insights available yet. Start placing bets to see insights about your performance.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             {activeTab === 'advanced' && (
               <div>
                 {/* Responsible Detailed */}

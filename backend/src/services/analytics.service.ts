@@ -28,19 +28,47 @@ import { createError, errorCodes } from '../utils/errors';
 export class AnalyticsService {
   constructor(private supabase: SupabaseClient) {}
 
-  // Minimum sample size thresholds for statistical significance
-  private readonly MIN_SAMPLE_SIZES = {
-    TEAM: 5,
-    LEAGUE: 5,
-    CATEGORY: 5,
-    BET_TYPE: 5,
-    DAY: 3,
-    HOUR: 3,
-    MONTH: 3,
-    ODDS_RANGE: 3,
-    COMBINATION: 3,
-    LEG_LEVEL: 10, // More granular, needs more data
-  };
+  // Calculate dynamic thresholds based on dataset size
+  // Thresholds scale with total bets/legs to balance insight availability with statistical quality
+  private getMinSampleSizes(totalBets: number, totalLegs: number): {
+    TEAM: number;
+    LEAGUE: number;
+    CATEGORY: number;
+    BET_TYPE: number;
+    DAY: number;
+    HOUR: number;
+    MONTH: number;
+    ODDS_RANGE: number;
+    COMBINATION: number;
+    LEG_LEVEL: number;
+  } {
+    // Bet-level thresholds: Scale from 2 (small dataset) to 7 (large dataset)
+    // Formula: min(7, max(2, Math.ceil(totalBets / 30)))
+    // This means: 2 for <60 bets, 3 for 60-90, 4 for 90-120, 5 for 120-150, etc., up to 7
+    const betLevelThreshold = Math.min(7, Math.max(2, Math.ceil(totalBets / 30)));
+    
+    // Time-based thresholds: Scale from 1 (small) to 3 (large)
+    // Lower because there are only 7 days, 24 hours, 12 months
+    const timeBasedThreshold = Math.min(3, Math.max(1, Math.ceil(totalBets / 50)));
+    
+    // Leg-level thresholds: Scale from 5 (small dataset) to 15 (large dataset)
+    // Formula: min(15, max(5, Math.ceil(totalLegs / 30)))
+    // This means: 5 for <150 legs, 6 for 150-180, 7 for 180-210, etc., up to 15
+    const legLevelThreshold = Math.min(15, Math.max(5, Math.ceil(totalLegs / 30)));
+
+    return {
+      TEAM: betLevelThreshold,
+      LEAGUE: betLevelThreshold,
+      CATEGORY: betLevelThreshold,
+      BET_TYPE: betLevelThreshold,
+      DAY: timeBasedThreshold,
+      HOUR: timeBasedThreshold,
+      MONTH: timeBasedThreshold,
+      ODDS_RANGE: timeBasedThreshold,
+      COMBINATION: timeBasedThreshold,
+      LEG_LEVEL: legLevelThreshold,
+    };
+  }
 
   // Helper function to determine confidence level based on sample size
   private getConfidenceLevel(sampleSize: number, minThreshold: number): 'high' | 'moderate' | 'low' {
@@ -1073,6 +1101,11 @@ export class AnalyticsService {
       throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch responsible detailed analytics', 500);
     }
 
+    // Calculate total bets and legs for dynamic thresholds
+    const totalBets = bets?.length || 0;
+    const totalLegs = bets?.reduce((sum, bet) => sum + (bet.legs?.length || 0), 0) || 0;
+    const minSampleSizes = this.getMinSampleSizes(totalBets, totalLegs);
+
     // Group legs by responsible_id
     const responsibleMap = new Map<string, {
       responsible_id: string;
@@ -1729,7 +1762,7 @@ export class AnalyticsService {
       // Find best/worst win rate and ROI (only consider statistically significant samples)
       const bestWinRateLeague = leagueDataArray.length > 0
         ? leagueDataArray
-            .filter(l => l.total > 0 && this.isStatisticallySignificant(l.total, this.MIN_SAMPLE_SIZES.LEAGUE))
+            .filter(l => l.total > 0 && this.isStatisticallySignificant(l.total, minSampleSizes.LEAGUE))
             .reduce((best, current) => {
               const currentWR = current.total > 0 ? current.won / current.total : 0;
               const bestWR = best.total > 0 ? best.won / best.total : 0;
@@ -1742,7 +1775,7 @@ export class AnalyticsService {
 
       const worstWinRateLeague = leagueDataArray.length > 0
         ? leagueDataArray
-            .filter(l => l.total > 0 && this.isStatisticallySignificant(l.total, this.MIN_SAMPLE_SIZES.LEAGUE))
+            .filter(l => l.total > 0 && this.isStatisticallySignificant(l.total, minSampleSizes.LEAGUE))
             .reduce((worst, current) => {
               const currentWR = current.total > 0 ? current.won / current.total : 0;
               const worstWR = worst.total > 0 ? worst.won / worst.total : 0;
@@ -1820,7 +1853,7 @@ export class AnalyticsService {
       const hourDataArray = Array.from(data.hourMap.values());
       const bestHour = hourDataArray.length > 0
         ? hourDataArray
-            .filter(h => this.isStatisticallySignificant(h.total, this.MIN_SAMPLE_SIZES.HOUR))
+            .filter(h => this.isStatisticallySignificant(h.total, minSampleSizes.HOUR))
             .reduce((best, current) => {
               const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
               const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
@@ -1832,7 +1865,7 @@ export class AnalyticsService {
 
       const worstHour = hourDataArray.length > 0
         ? hourDataArray
-            .filter(h => this.isStatisticallySignificant(h.total, this.MIN_SAMPLE_SIZES.HOUR))
+            .filter(h => this.isStatisticallySignificant(h.total, minSampleSizes.HOUR))
             .reduce((worst, current) => {
               const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
               const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
@@ -1846,7 +1879,7 @@ export class AnalyticsService {
       const monthDataArray = Array.from(data.monthMap.values());
       const bestMonth = monthDataArray.length > 0
         ? monthDataArray
-            .filter(m => this.isStatisticallySignificant(m.total, this.MIN_SAMPLE_SIZES.MONTH))
+            .filter(m => this.isStatisticallySignificant(m.total, minSampleSizes.MONTH))
             .reduce((best, current) => {
               const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
               const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
@@ -1858,7 +1891,7 @@ export class AnalyticsService {
 
       const worstMonth = monthDataArray.length > 0
         ? monthDataArray
-            .filter(m => this.isStatisticallySignificant(m.total, this.MIN_SAMPLE_SIZES.MONTH))
+            .filter(m => this.isStatisticallySignificant(m.total, minSampleSizes.MONTH))
             .reduce((worst, current) => {
               const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
               const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
@@ -1872,7 +1905,7 @@ export class AnalyticsService {
       const oddsRangeDataArray = Array.from(data.oddsRangeMap.values());
       const bestOddsRange = oddsRangeDataArray.length > 0
         ? oddsRangeDataArray
-            .filter(o => this.isStatisticallySignificant(o.total, this.MIN_SAMPLE_SIZES.ODDS_RANGE))
+            .filter(o => this.isStatisticallySignificant(o.total, minSampleSizes.ODDS_RANGE))
             .reduce((best, current) => {
               const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
               const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
@@ -1884,7 +1917,7 @@ export class AnalyticsService {
 
       const worstOddsRange = oddsRangeDataArray.length > 0
         ? oddsRangeDataArray
-            .filter(o => this.isStatisticallySignificant(o.total, this.MIN_SAMPLE_SIZES.ODDS_RANGE))
+            .filter(o => this.isStatisticallySignificant(o.total, minSampleSizes.ODDS_RANGE))
             .reduce((worst, current) => {
               const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
               const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
@@ -1906,7 +1939,7 @@ export class AnalyticsService {
 
       const bestLegWinRateLeague = legLeagueDataArray.length > 0
         ? legLeagueDataArray
-            .filter(l => l.total_resolved > 0 && this.isStatisticallySignificant(l.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .filter(l => l.total_resolved > 0 && this.isStatisticallySignificant(l.total_resolved, minSampleSizes.LEG_LEVEL))
             .reduce((best, current) => {
               const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
               const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
@@ -1919,7 +1952,7 @@ export class AnalyticsService {
 
       const worstLegWinRateLeague = legLeagueDataArray.length > 0
         ? legLeagueDataArray
-            .filter(l => l.total_resolved > 0 && this.isStatisticallySignificant(l.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .filter(l => l.total_resolved > 0 && this.isStatisticallySignificant(l.total_resolved, minSampleSizes.LEG_LEVEL))
             .reduce((worst, current) => {
               const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
               const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
@@ -1944,7 +1977,7 @@ export class AnalyticsService {
 
       const bestLegWinRateTeam = legTeamDataArray.length > 0
         ? legTeamDataArray
-            .filter(t => t.total_resolved > 0 && this.isStatisticallySignificant(t.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .filter(t => t.total_resolved > 0 && this.isStatisticallySignificant(t.total_resolved, minSampleSizes.LEG_LEVEL))
             .reduce((best, current) => {
               const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
               const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
@@ -1957,7 +1990,7 @@ export class AnalyticsService {
 
       const worstLegWinRateTeam = legTeamDataArray.length > 0
         ? legTeamDataArray
-            .filter(t => t.total_resolved > 0 && this.isStatisticallySignificant(t.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .filter(t => t.total_resolved > 0 && this.isStatisticallySignificant(t.total_resolved, minSampleSizes.LEG_LEVEL))
             .reduce((worst, current) => {
               const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
               const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
@@ -1982,7 +2015,7 @@ export class AnalyticsService {
 
       const bestLegWinRateCategory = legCategoryDataArray.length > 0
         ? legCategoryDataArray
-            .filter(c => c.total_resolved > 0 && this.isStatisticallySignificant(c.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .filter(c => c.total_resolved > 0 && this.isStatisticallySignificant(c.total_resolved, minSampleSizes.LEG_LEVEL))
             .reduce((best, current) => {
               const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
               const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
@@ -1995,7 +2028,7 @@ export class AnalyticsService {
 
       const worstLegWinRateCategory = legCategoryDataArray.length > 0
         ? legCategoryDataArray
-            .filter(c => c.total_resolved > 0 && this.isStatisticallySignificant(c.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .filter(c => c.total_resolved > 0 && this.isStatisticallySignificant(c.total_resolved, minSampleSizes.LEG_LEVEL))
             .reduce((worst, current) => {
               const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
               const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
@@ -2020,7 +2053,7 @@ export class AnalyticsService {
 
       const bestLegWinRateBetType = legBetTypeDataArray.length > 0
         ? legBetTypeDataArray
-            .filter(bt => bt.total_resolved > 0 && this.isStatisticallySignificant(bt.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .filter(bt => bt.total_resolved > 0 && this.isStatisticallySignificant(bt.total_resolved, minSampleSizes.LEG_LEVEL))
             .reduce((best, current) => {
               const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
               const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
@@ -2033,7 +2066,7 @@ export class AnalyticsService {
 
       const worstLegWinRateBetType = legBetTypeDataArray.length > 0
         ? legBetTypeDataArray
-            .filter(bt => bt.total_resolved > 0 && this.isStatisticallySignificant(bt.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .filter(bt => bt.total_resolved > 0 && this.isStatisticallySignificant(bt.total_resolved, minSampleSizes.LEG_LEVEL))
             .reduce((worst, current) => {
               const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
               const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
@@ -2054,7 +2087,7 @@ export class AnalyticsService {
       const legDayDataArray = Array.from(data.legDayMap.values());
       const bestLegWinRateDay = legDayDataArray.length > 0
         ? legDayDataArray
-            .filter(d => d.total_resolved > 0 && this.isStatisticallySignificant(d.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .filter(d => d.total_resolved > 0 && this.isStatisticallySignificant(d.total_resolved, minSampleSizes.LEG_LEVEL))
             .reduce((best, current) => {
               const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
               const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
@@ -2067,7 +2100,7 @@ export class AnalyticsService {
 
       const worstLegWinRateDay = legDayDataArray.length > 0
         ? legDayDataArray
-            .filter(d => d.total_resolved > 0 && this.isStatisticallySignificant(d.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .filter(d => d.total_resolved > 0 && this.isStatisticallySignificant(d.total_resolved, minSampleSizes.LEG_LEVEL))
             .reduce((worst, current) => {
               const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
               const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
