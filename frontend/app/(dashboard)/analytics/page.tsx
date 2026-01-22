@@ -161,6 +161,83 @@ const TableWrapper = ({ children, className = '' }: { children: React.ReactNode;
   </div>
 );
 
+// Helper functions for sample size and confidence indicators
+const MIN_SAMPLE_SIZES = {
+  TEAM: 5,
+  LEAGUE: 5,
+  CATEGORY: 5,
+  BET_TYPE: 5,
+  DAY: 3,
+  HOUR: 3,
+  MONTH: 3,
+  ODDS_RANGE: 3,
+  COMBINATION: 3,
+  LEG_LEVEL: 10,
+};
+
+const getConfidenceLevel = (sampleSize: number, minThreshold: number): 'high' | 'moderate' | 'low' => {
+  if (sampleSize >= minThreshold * 2) return 'high';
+  if (sampleSize >= minThreshold) return 'moderate';
+  return 'low';
+};
+
+const getConfidenceBadge = (sampleSize: number, minThreshold: number) => {
+  const confidence = getConfidenceLevel(sampleSize, minThreshold);
+  const isSignificant = sampleSize >= minThreshold;
+  
+  if (confidence === 'high') {
+    return { 
+      text: '✓', 
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-50 dark:bg-green-900/20',
+      tooltip: `High confidence (${sampleSize} samples, threshold: ${minThreshold})`
+    };
+  } else if (confidence === 'moderate') {
+    return { 
+      text: '~', 
+      color: 'text-yellow-600 dark:text-yellow-400',
+      bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
+      tooltip: `Moderate confidence (${sampleSize} samples, threshold: ${minThreshold})`
+    };
+  } else {
+    return { 
+      text: '⚠', 
+      color: 'text-orange-600 dark:text-orange-400',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+      tooltip: `Low confidence - need at least ${minThreshold} samples (currently ${sampleSize})`
+    };
+  }
+};
+
+// Component for displaying win rate with sample size
+const WinRateDisplay = ({ 
+  winRate, 
+  sampleSize, 
+  minThreshold, 
+  className = '' 
+}: { 
+  winRate: number; 
+  sampleSize: number; 
+  minThreshold: number;
+  className?: string;
+}) => {
+  const badge = getConfidenceBadge(sampleSize, minThreshold);
+  const isSignificant = sampleSize >= minThreshold;
+  
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      <span>{(winRate * 100).toFixed(1)}%</span>
+      <span className="text-xs text-gray-500 dark:text-gray-400">({sampleSize})</span>
+      <span 
+        className={`text-xs ${badge.color} cursor-help`}
+        title={badge.tooltip}
+      >
+        {badge.text}
+      </span>
+    </div>
+  );
+};
+
 export default function AnalyticsPage() {
   const { theme } = useTheme();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -1100,7 +1177,11 @@ export default function AnalyticsPage() {
                             {(league.roi * 100).toFixed(1)}%
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {(league.win_rate * 100).toFixed(1)}%
+                            <WinRateDisplay 
+                              winRate={league.win_rate} 
+                              sampleSize={league.bet_count}
+                              minThreshold={MIN_SAMPLE_SIZES.LEAGUE}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -1240,7 +1321,11 @@ export default function AnalyticsPage() {
                           {legs.lost_bets}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {(legs.win_rate * 100).toFixed(1)}%
+                          <WinRateDisplay 
+                            winRate={legs.win_rate} 
+                            sampleSize={legs.bet_count}
+                            minThreshold={MIN_SAMPLE_SIZES.COMBINATION}
+                          />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           ${legs.total_stake.toFixed(2)}
@@ -1289,6 +1374,9 @@ export default function AnalyticsPage() {
                     {bestWinRate && bestWinRate.bet_count > 0 && bestWinRate.num_legs !== bestROI.num_legs && (
                       <p>
                         <strong>{bestWinRate.num_legs}-leg bets</strong> have the highest win rate at {(bestWinRate.win_rate * 100).toFixed(1)}%
+                        {bestWinRate.bet_count < MIN_SAMPLE_SIZES.COMBINATION && (
+                          <span className="text-orange-600 ml-1" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${bestWinRate.bet_count})`}>⚠</span>
+                        )}
                       </p>
                     )}
                   </div>
@@ -1504,6 +1592,9 @@ export default function AnalyticsPage() {
                       <p>
                         <strong>{bestWinRate.responsible_name}</strong> has the highest win rate at {(bestWinRate.win_rate * 100).toFixed(1)}%
                         ({bestWinRate.bet_count} bets)
+                        {bestWinRate.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                          <span className="text-orange-600 ml-1" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${bestWinRate.bet_count})`}>⚠</span>
+                        )}
                       </p>
                     )}
                     {bestProfit && bestProfit.bet_count > 0 && bestProfit.responsible_id !== bestROI.responsible_id && bestProfit.responsible_id !== bestWinRate.responsible_id && (
@@ -1570,8 +1661,11 @@ export default function AnalyticsPage() {
                           ${responsible.most_profitable_league.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_league.total_profit.toFixed(2)} ({responsible.most_profitable_league.bet_count} bets)
                         </div>
                         {responsible.most_profitable_league.total_resolved > 0 && (
-                          <div className="text-xs text-blue-600 mt-1">
+                          <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                             {responsible.most_profitable_league.wins}/{responsible.most_profitable_league.total_resolved} {(responsible.most_profitable_league.win_rate * 100).toFixed(0)}%
+                            {responsible.most_profitable_league.total_resolved < MIN_SAMPLE_SIZES.LEAGUE && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} resolved bets (currently ${responsible.most_profitable_league.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1584,8 +1678,11 @@ export default function AnalyticsPage() {
                           ${responsible.most_profitable_team.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_team.total_profit.toFixed(2)} ({responsible.most_profitable_team.bet_count} bets)
                         </div>
                         {responsible.most_profitable_team.total_resolved > 0 && (
-                          <div className="text-xs text-blue-600 mt-1">
+                          <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                             {responsible.most_profitable_team.wins}/{responsible.most_profitable_team.total_resolved} {(responsible.most_profitable_team.win_rate * 100).toFixed(0)}%
+                            {responsible.most_profitable_team.total_resolved < MIN_SAMPLE_SIZES.TEAM && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.TEAM} resolved bets (currently ${responsible.most_profitable_team.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1598,8 +1695,11 @@ export default function AnalyticsPage() {
                           ${responsible.most_profitable_category.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_category.total_profit.toFixed(2)} ({responsible.most_profitable_category.bet_count} bets)
                         </div>
                         {responsible.most_profitable_category.total_resolved > 0 && (
-                          <div className="text-xs text-blue-600 mt-1">
+                          <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                             {responsible.most_profitable_category.wins}/{responsible.most_profitable_category.total_resolved} {(responsible.most_profitable_category.win_rate * 100).toFixed(0)}%
+                            {responsible.most_profitable_category.total_resolved < MIN_SAMPLE_SIZES.CATEGORY && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} resolved bets (currently ${responsible.most_profitable_category.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1612,8 +1712,11 @@ export default function AnalyticsPage() {
                           ${responsible.most_profitable_bet_type.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_bet_type.total_profit.toFixed(2)} ({responsible.most_profitable_bet_type.bet_count} bets)
                         </div>
                         {responsible.most_profitable_bet_type.total_resolved > 0 && (
-                          <div className="text-xs text-blue-600 mt-1">
+                          <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                             {responsible.most_profitable_bet_type.wins}/{responsible.most_profitable_bet_type.total_resolved} {(responsible.most_profitable_bet_type.win_rate * 100).toFixed(0)}%
+                            {responsible.most_profitable_bet_type.total_resolved < MIN_SAMPLE_SIZES.BET_TYPE && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.BET_TYPE} resolved bets (currently ${responsible.most_profitable_bet_type.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1626,8 +1729,11 @@ export default function AnalyticsPage() {
                           ${responsible.most_profitable_day.total_profit >= 0 ? '+' : ''}{responsible.most_profitable_day.total_profit.toFixed(2)} ({responsible.most_profitable_day.bet_count} bets)
                         </div>
                         {responsible.most_profitable_day.total_resolved > 0 && (
-                          <div className="text-xs text-blue-600 mt-1">
+                          <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                             {responsible.most_profitable_day.wins}/{responsible.most_profitable_day.total_resolved} {(responsible.most_profitable_day.win_rate * 100).toFixed(0)}%
+                            {responsible.most_profitable_day.total_resolved < MIN_SAMPLE_SIZES.DAY && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.DAY} resolved bets (currently ${responsible.most_profitable_day.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1645,8 +1751,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-purple-900">{responsible.favorite_league.league_name}</div>
                         <div className="text-sm text-purple-700 mt-1">{responsible.favorite_league.bet_count} bets</div>
                         {responsible.favorite_league.total_resolved > 0 && (
-                          <div className="text-xs text-purple-600 mt-1">
+                          <div className="text-xs text-purple-600 mt-1 flex items-center gap-1">
                             {responsible.favorite_league.wins}/{responsible.favorite_league.total_resolved} {(responsible.favorite_league.win_rate * 100).toFixed(0)}%
+                            {responsible.favorite_league.total_resolved < MIN_SAMPLE_SIZES.LEAGUE && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} resolved bets (currently ${responsible.favorite_league.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1657,8 +1766,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-purple-900">{responsible.favorite_team.team_name}</div>
                         <div className="text-sm text-purple-700 mt-1">{responsible.favorite_team.bet_count} bets</div>
                         {responsible.favorite_team.total_resolved > 0 && (
-                          <div className="text-xs text-purple-600 mt-1">
+                          <div className="text-xs text-purple-600 mt-1 flex items-center gap-1">
                             {responsible.favorite_team.wins}/{responsible.favorite_team.total_resolved} {(responsible.favorite_team.win_rate * 100).toFixed(0)}%
+                            {responsible.favorite_team.total_resolved < MIN_SAMPLE_SIZES.TEAM && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.TEAM} resolved bets (currently ${responsible.favorite_team.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1669,8 +1781,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-purple-900">{responsible.favorite_category.category_name}</div>
                         <div className="text-sm text-purple-700 mt-1">{responsible.favorite_category.bet_count} bets</div>
                         {responsible.favorite_category.total_resolved > 0 && (
-                          <div className="text-xs text-purple-600 mt-1">
+                          <div className="text-xs text-purple-600 mt-1 flex items-center gap-1">
                             {responsible.favorite_category.wins}/{responsible.favorite_category.total_resolved} {(responsible.favorite_category.win_rate * 100).toFixed(0)}%
+                            {responsible.favorite_category.total_resolved < MIN_SAMPLE_SIZES.CATEGORY && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} resolved bets (currently ${responsible.favorite_category.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1681,8 +1796,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-purple-900">{responsible.favorite_bet_type.bet_type_name}</div>
                         <div className="text-sm text-purple-700 mt-1">{responsible.favorite_bet_type.bet_count} bets</div>
                         {responsible.favorite_bet_type.total_resolved > 0 && (
-                          <div className="text-xs text-purple-600 mt-1">
+                          <div className="text-xs text-purple-600 mt-1 flex items-center gap-1">
                             {responsible.favorite_bet_type.wins}/{responsible.favorite_bet_type.total_resolved} {(responsible.favorite_bet_type.win_rate * 100).toFixed(0)}%
+                            {responsible.favorite_bet_type.total_resolved < MIN_SAMPLE_SIZES.BET_TYPE && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.BET_TYPE} resolved bets (currently ${responsible.favorite_bet_type.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1693,8 +1811,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-purple-900">{responsible.favorite_day.day}</div>
                         <div className="text-sm text-purple-700 mt-1">{responsible.favorite_day.bet_count} bets</div>
                         {responsible.favorite_day.total_resolved > 0 && (
-                          <div className="text-xs text-purple-600 mt-1">
+                          <div className="text-xs text-purple-600 mt-1 flex items-center gap-1">
                             {responsible.favorite_day.wins}/{responsible.favorite_day.total_resolved} {(responsible.favorite_day.win_rate * 100).toFixed(0)}%
+                            {responsible.favorite_day.total_resolved < MIN_SAMPLE_SIZES.DAY && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.DAY} resolved bets (currently ${responsible.favorite_day.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1714,8 +1835,11 @@ export default function AnalyticsPage() {
                           ${responsible.worst_profitable_league.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_league.total_profit.toFixed(2)} ({responsible.worst_profitable_league.bet_count} bets)
                         </div>
                         {responsible.worst_profitable_league.total_resolved > 0 && (
-                          <div className="text-xs text-red-600 mt-1">
+                          <div className="text-xs text-red-600 mt-1 flex items-center gap-1">
                             {responsible.worst_profitable_league.wins}/{responsible.worst_profitable_league.total_resolved} {(responsible.worst_profitable_league.win_rate * 100).toFixed(0)}%
+                            {responsible.worst_profitable_league.total_resolved < MIN_SAMPLE_SIZES.LEAGUE && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} resolved bets (currently ${responsible.worst_profitable_league.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1728,8 +1852,11 @@ export default function AnalyticsPage() {
                           ${responsible.worst_profitable_team.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_team.total_profit.toFixed(2)} ({responsible.worst_profitable_team.bet_count} bets)
                         </div>
                         {responsible.worst_profitable_team.total_resolved > 0 && (
-                          <div className="text-xs text-red-600 mt-1">
+                          <div className="text-xs text-red-600 mt-1 flex items-center gap-1">
                             {responsible.worst_profitable_team.wins}/{responsible.worst_profitable_team.total_resolved} {(responsible.worst_profitable_team.win_rate * 100).toFixed(0)}%
+                            {responsible.worst_profitable_team.total_resolved < MIN_SAMPLE_SIZES.TEAM && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.TEAM} resolved bets (currently ${responsible.worst_profitable_team.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1742,8 +1869,11 @@ export default function AnalyticsPage() {
                           ${responsible.worst_profitable_category.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_category.total_profit.toFixed(2)} ({responsible.worst_profitable_category.bet_count} bets)
                         </div>
                         {responsible.worst_profitable_category.total_resolved > 0 && (
-                          <div className="text-xs text-red-600 mt-1">
+                          <div className="text-xs text-red-600 mt-1 flex items-center gap-1">
                             {responsible.worst_profitable_category.wins}/{responsible.worst_profitable_category.total_resolved} {(responsible.worst_profitable_category.win_rate * 100).toFixed(0)}%
+                            {responsible.worst_profitable_category.total_resolved < MIN_SAMPLE_SIZES.CATEGORY && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} resolved bets (currently ${responsible.worst_profitable_category.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1756,8 +1886,11 @@ export default function AnalyticsPage() {
                           ${responsible.worst_profitable_bet_type.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_bet_type.total_profit.toFixed(2)} ({responsible.worst_profitable_bet_type.bet_count} bets)
                         </div>
                         {responsible.worst_profitable_bet_type.total_resolved > 0 && (
-                          <div className="text-xs text-red-600 mt-1">
+                          <div className="text-xs text-red-600 mt-1 flex items-center gap-1">
                             {responsible.worst_profitable_bet_type.wins}/{responsible.worst_profitable_bet_type.total_resolved} {(responsible.worst_profitable_bet_type.win_rate * 100).toFixed(0)}%
+                            {responsible.worst_profitable_bet_type.total_resolved < MIN_SAMPLE_SIZES.BET_TYPE && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.BET_TYPE} resolved bets (currently ${responsible.worst_profitable_bet_type.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1770,8 +1903,11 @@ export default function AnalyticsPage() {
                           ${responsible.worst_profitable_day.total_profit >= 0 ? '+' : ''}{responsible.worst_profitable_day.total_profit.toFixed(2)} ({responsible.worst_profitable_day.bet_count} bets)
                         </div>
                         {responsible.worst_profitable_day.total_resolved > 0 && (
-                          <div className="text-xs text-red-600 mt-1">
+                          <div className="text-xs text-red-600 mt-1 flex items-center gap-1">
                             {responsible.worst_profitable_day.wins}/{responsible.worst_profitable_day.total_resolved} {(responsible.worst_profitable_day.win_rate * 100).toFixed(0)}%
+                            {responsible.worst_profitable_day.total_resolved < MIN_SAMPLE_SIZES.DAY && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.DAY} resolved bets (currently ${responsible.worst_profitable_day.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1790,8 +1926,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-emerald-900">{responsible.leg_best_win_rate_league.league_name}</div>
                         <div className="text-sm text-emerald-700 mt-1">{responsible.leg_best_win_rate_league.leg_count} legs</div>
                         {responsible.leg_best_win_rate_league.total_resolved > 0 && (
-                          <div className="text-xs text-emerald-600 mt-1">
+                          <div className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                             {responsible.leg_best_win_rate_league.wins}/{responsible.leg_best_win_rate_league.total_resolved} {(responsible.leg_best_win_rate_league.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_best_win_rate_league.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_best_win_rate_league.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1802,8 +1941,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-emerald-900">{responsible.leg_best_win_rate_team.team_name}</div>
                         <div className="text-sm text-emerald-700 mt-1">{responsible.leg_best_win_rate_team.leg_count} legs</div>
                         {responsible.leg_best_win_rate_team.total_resolved > 0 && (
-                          <div className="text-xs text-emerald-600 mt-1">
+                          <div className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                             {responsible.leg_best_win_rate_team.wins}/{responsible.leg_best_win_rate_team.total_resolved} {(responsible.leg_best_win_rate_team.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_best_win_rate_team.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_best_win_rate_team.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1814,8 +1956,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-emerald-900">{responsible.leg_best_win_rate_category.category_name}</div>
                         <div className="text-sm text-emerald-700 mt-1">{responsible.leg_best_win_rate_category.leg_count} legs</div>
                         {responsible.leg_best_win_rate_category.total_resolved > 0 && (
-                          <div className="text-xs text-emerald-600 mt-1">
+                          <div className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                             {responsible.leg_best_win_rate_category.wins}/{responsible.leg_best_win_rate_category.total_resolved} {(responsible.leg_best_win_rate_category.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_best_win_rate_category.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_best_win_rate_category.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1826,8 +1971,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-emerald-900">{responsible.leg_best_win_rate_bet_type.bet_type_name}</div>
                         <div className="text-sm text-emerald-700 mt-1">{responsible.leg_best_win_rate_bet_type.leg_count} legs</div>
                         {responsible.leg_best_win_rate_bet_type.total_resolved > 0 && (
-                          <div className="text-xs text-emerald-600 mt-1">
+                          <div className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                             {responsible.leg_best_win_rate_bet_type.wins}/{responsible.leg_best_win_rate_bet_type.total_resolved} {(responsible.leg_best_win_rate_bet_type.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_best_win_rate_bet_type.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_best_win_rate_bet_type.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1838,8 +1986,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-emerald-900">{responsible.leg_best_win_rate_day.day}</div>
                         <div className="text-sm text-emerald-700 mt-1">{responsible.leg_best_win_rate_day.leg_count} legs</div>
                         {responsible.leg_best_win_rate_day.total_resolved > 0 && (
-                          <div className="text-xs text-emerald-600 mt-1">
+                          <div className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                             {responsible.leg_best_win_rate_day.wins}/{responsible.leg_best_win_rate_day.total_resolved} {(responsible.leg_best_win_rate_day.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_best_win_rate_day.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_best_win_rate_day.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1858,8 +2009,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-indigo-900">{responsible.leg_favorite_league.league_name}</div>
                         <div className="text-sm text-indigo-700 mt-1">{responsible.leg_favorite_league.leg_count} legs</div>
                         {responsible.leg_favorite_league.total_resolved > 0 && (
-                          <div className="text-xs text-indigo-600 mt-1">
+                          <div className="text-xs text-indigo-600 mt-1 flex items-center gap-1">
                             {responsible.leg_favorite_league.wins}/{responsible.leg_favorite_league.total_resolved} {(responsible.leg_favorite_league.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_favorite_league.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_favorite_league.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1870,8 +2024,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-indigo-900">{responsible.leg_favorite_team.team_name}</div>
                         <div className="text-sm text-indigo-700 mt-1">{responsible.leg_favorite_team.leg_count} legs</div>
                         {responsible.leg_favorite_team.total_resolved > 0 && (
-                          <div className="text-xs text-indigo-600 mt-1">
+                          <div className="text-xs text-indigo-600 mt-1 flex items-center gap-1">
                             {responsible.leg_favorite_team.wins}/{responsible.leg_favorite_team.total_resolved} {(responsible.leg_favorite_team.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_favorite_team.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_favorite_team.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1882,8 +2039,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-indigo-900">{responsible.leg_favorite_category.category_name}</div>
                         <div className="text-sm text-indigo-700 mt-1">{responsible.leg_favorite_category.leg_count} legs</div>
                         {responsible.leg_favorite_category.total_resolved > 0 && (
-                          <div className="text-xs text-indigo-600 mt-1">
+                          <div className="text-xs text-indigo-600 mt-1 flex items-center gap-1">
                             {responsible.leg_favorite_category.wins}/{responsible.leg_favorite_category.total_resolved} {(responsible.leg_favorite_category.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_favorite_category.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_favorite_category.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1894,8 +2054,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-indigo-900">{responsible.leg_favorite_bet_type.bet_type_name}</div>
                         <div className="text-sm text-indigo-700 mt-1">{responsible.leg_favorite_bet_type.leg_count} legs</div>
                         {responsible.leg_favorite_bet_type.total_resolved > 0 && (
-                          <div className="text-xs text-indigo-600 mt-1">
+                          <div className="text-xs text-indigo-600 mt-1 flex items-center gap-1">
                             {responsible.leg_favorite_bet_type.wins}/{responsible.leg_favorite_bet_type.total_resolved} {(responsible.leg_favorite_bet_type.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_favorite_bet_type.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_favorite_bet_type.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1906,8 +2069,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-indigo-900">{responsible.leg_favorite_day.day}</div>
                         <div className="text-sm text-indigo-700 mt-1">{responsible.leg_favorite_day.leg_count} legs</div>
                         {responsible.leg_favorite_day.total_resolved > 0 && (
-                          <div className="text-xs text-indigo-600 mt-1">
+                          <div className="text-xs text-indigo-600 mt-1 flex items-center gap-1">
                             {responsible.leg_favorite_day.wins}/{responsible.leg_favorite_day.total_resolved} {(responsible.leg_favorite_day.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_favorite_day.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_favorite_day.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1926,8 +2092,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-orange-900">{responsible.leg_worst_win_rate_league.league_name}</div>
                         <div className="text-sm text-orange-700 mt-1">{responsible.leg_worst_win_rate_league.leg_count} legs</div>
                         {responsible.leg_worst_win_rate_league.total_resolved > 0 && (
-                          <div className="text-xs text-orange-600 mt-1">
+                          <div className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                             {responsible.leg_worst_win_rate_league.wins}/{responsible.leg_worst_win_rate_league.total_resolved} {(responsible.leg_worst_win_rate_league.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_worst_win_rate_league.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_worst_win_rate_league.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1938,8 +2107,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-orange-900">{responsible.leg_worst_win_rate_team.team_name}</div>
                         <div className="text-sm text-orange-700 mt-1">{responsible.leg_worst_win_rate_team.leg_count} legs</div>
                         {responsible.leg_worst_win_rate_team.total_resolved > 0 && (
-                          <div className="text-xs text-orange-600 mt-1">
+                          <div className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                             {responsible.leg_worst_win_rate_team.wins}/{responsible.leg_worst_win_rate_team.total_resolved} {(responsible.leg_worst_win_rate_team.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_worst_win_rate_team.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_worst_win_rate_team.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1950,8 +2122,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-orange-900">{responsible.leg_worst_win_rate_category.category_name}</div>
                         <div className="text-sm text-orange-700 mt-1">{responsible.leg_worst_win_rate_category.leg_count} legs</div>
                         {responsible.leg_worst_win_rate_category.total_resolved > 0 && (
-                          <div className="text-xs text-orange-600 mt-1">
+                          <div className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                             {responsible.leg_worst_win_rate_category.wins}/{responsible.leg_worst_win_rate_category.total_resolved} {(responsible.leg_worst_win_rate_category.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_worst_win_rate_category.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_worst_win_rate_category.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1962,8 +2137,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-orange-900">{responsible.leg_worst_win_rate_bet_type.bet_type_name}</div>
                         <div className="text-sm text-orange-700 mt-1">{responsible.leg_worst_win_rate_bet_type.leg_count} legs</div>
                         {responsible.leg_worst_win_rate_bet_type.total_resolved > 0 && (
-                          <div className="text-xs text-orange-600 mt-1">
+                          <div className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                             {responsible.leg_worst_win_rate_bet_type.wins}/{responsible.leg_worst_win_rate_bet_type.total_resolved} {(responsible.leg_worst_win_rate_bet_type.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_worst_win_rate_bet_type.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_worst_win_rate_bet_type.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1974,8 +2152,11 @@ export default function AnalyticsPage() {
                         <div className="text-base font-bold text-orange-900">{responsible.leg_worst_win_rate_day.day}</div>
                         <div className="text-sm text-orange-700 mt-1">{responsible.leg_worst_win_rate_day.leg_count} legs</div>
                         {responsible.leg_worst_win_rate_day.total_resolved > 0 && (
-                          <div className="text-xs text-orange-600 mt-1">
+                          <div className="text-xs text-orange-600 mt-1 flex items-center gap-1">
                             {responsible.leg_worst_win_rate_day.wins}/{responsible.leg_worst_win_rate_day.total_resolved} {(responsible.leg_worst_win_rate_day.win_rate * 100).toFixed(0)}%
+                            {responsible.leg_worst_win_rate_day.total_resolved < MIN_SAMPLE_SIZES.LEG_LEVEL && (
+                              <span className="text-orange-600" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEG_LEVEL} resolved legs (currently ${responsible.leg_worst_win_rate_day.total_resolved})`}>⚠</span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2025,7 +2206,11 @@ export default function AnalyticsPage() {
                               {legStat.bet_count}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-500">
-                              {(legStat.win_rate * 100).toFixed(1)}%
+                              <WinRateDisplay 
+                                winRate={legStat.win_rate} 
+                                sampleSize={legStat.bet_count}
+                                minThreshold={MIN_SAMPLE_SIZES.COMBINATION}
+                              />
                             </td>
                             <td className={`px-4 py-3 text-sm font-medium ${
                               legStat.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
@@ -2072,7 +2257,13 @@ export default function AnalyticsPage() {
                               <td className={`px-4 py-2 text-sm font-medium ${league.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {(league.roi * 100).toFixed(1)}%
                               </td>
-                              <td className="px-4 py-2 text-sm text-gray-500">{(league.win_rate * 100).toFixed(1)}%</td>
+                              <td className="px-4 py-2 text-sm text-gray-500">
+                                <WinRateDisplay 
+                                  winRate={league.win_rate} 
+                                  sampleSize={league.bet_count}
+                                  minThreshold={MIN_SAMPLE_SIZES.LEAGUE}
+                                />
+                              </td>
                               <td className="px-4 py-2 text-sm text-gray-500">{league.bet_count}</td>
                             </tr>
                           ))}
@@ -2109,7 +2300,13 @@ export default function AnalyticsPage() {
                               <td className={`px-4 py-2 text-sm font-medium ${betType.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {(betType.roi * 100).toFixed(1)}%
                               </td>
-                              <td className="px-4 py-2 text-sm text-gray-500">{(betType.win_rate * 100).toFixed(1)}%</td>
+                              <td className="px-4 py-2 text-sm text-gray-500">
+                                <WinRateDisplay 
+                                  winRate={betType.win_rate} 
+                                  sampleSize={betType.bet_count}
+                                  minThreshold={MIN_SAMPLE_SIZES.BET_TYPE}
+                                />
+                              </td>
                               <td className="px-4 py-2 text-sm text-gray-500">{betType.bet_count}</td>
                             </tr>
                           ))}
@@ -2146,7 +2343,13 @@ export default function AnalyticsPage() {
                               <td className={`px-4 py-2 text-sm font-medium ${category.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {(category.roi * 100).toFixed(1)}%
                               </td>
-                              <td className="px-4 py-2 text-sm text-gray-500">{(category.win_rate * 100).toFixed(1)}%</td>
+                              <td className="px-4 py-2 text-sm text-gray-500">
+                                <WinRateDisplay 
+                                  winRate={category.win_rate} 
+                                  sampleSize={category.bet_count}
+                                  minThreshold={MIN_SAMPLE_SIZES.CATEGORY}
+                                />
+                              </td>
                               <td className="px-4 py-2 text-sm text-gray-500">{category.bet_count}</td>
                             </tr>
                           ))}
@@ -2226,7 +2429,11 @@ export default function AnalyticsPage() {
                         {(betType.roi * 100).toFixed(1)}%
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {(betType.win_rate * 100).toFixed(1)}%
+                        <WinRateDisplay 
+                          winRate={betType.win_rate} 
+                          sampleSize={betType.bet_count}
+                          minThreshold={MIN_SAMPLE_SIZES.BET_TYPE}
+                        />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {betType.bet_count}
@@ -2308,7 +2515,11 @@ export default function AnalyticsPage() {
                         {(category.roi * 100).toFixed(1)}%
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {(category.win_rate * 100).toFixed(1)}%
+                        <WinRateDisplay 
+                          winRate={category.win_rate} 
+                          sampleSize={category.bet_count}
+                          minThreshold={MIN_SAMPLE_SIZES.CATEGORY}
+                        />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {category.bet_count}
@@ -2365,7 +2576,13 @@ export default function AnalyticsPage() {
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.league_name}</td>
                         <td className="px-4 py-3 text-sm text-gray-500">{item.total_legs}</td>
                         <td className="px-4 py-3 text-sm text-gray-500">{item.won_legs}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{(item.win_rate * 100).toFixed(1)}%</td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          <WinRateDisplay 
+                            winRate={item.win_rate} 
+                            sampleSize={item.total_legs}
+                            minThreshold={MIN_SAMPLE_SIZES.LEG_LEVEL}
+                          />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -2429,7 +2646,13 @@ export default function AnalyticsPage() {
                     }`}>
                       {(item.roi * 100).toFixed(1)}%
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{(item.win_rate * 100).toFixed(1)}%</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      <WinRateDisplay 
+                        winRate={item.win_rate} 
+                        sampleSize={item.total_bets}
+                        minThreshold={MIN_SAMPLE_SIZES.ODDS_RANGE}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -2567,7 +2790,11 @@ export default function AnalyticsPage() {
                                 {legStat.bet_count}
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                {(legStat.win_rate * 100).toFixed(1)}%
+                                <WinRateDisplay 
+                                  winRate={legStat.win_rate} 
+                                  sampleSize={legStat.bet_count}
+                                  minThreshold={MIN_SAMPLE_SIZES.COMBINATION}
+                                />
                               </td>
                               <td className={`px-4 py-3 text-sm font-medium ${
                                 legStat.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
@@ -2651,7 +2878,13 @@ export default function AnalyticsPage() {
                               <td className={`px-4 py-2 text-sm font-medium ${betType.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {(betType.roi * 100).toFixed(1)}%
                               </td>
-                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{(betType.win_rate * 100).toFixed(1)}%</td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                                <WinRateDisplay 
+                                  winRate={betType.win_rate} 
+                                  sampleSize={betType.bet_count}
+                                  minThreshold={MIN_SAMPLE_SIZES.BET_TYPE}
+                                />
+                              </td>
                               <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{betType.bet_count}</td>
                             </tr>
                           ))}
@@ -2688,7 +2921,13 @@ export default function AnalyticsPage() {
                               <td className={`px-4 py-2 text-sm font-medium ${category.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {(category.roi * 100).toFixed(1)}%
                               </td>
-                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{(category.win_rate * 100).toFixed(1)}%</td>
+                              <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                                <WinRateDisplay 
+                                  winRate={category.win_rate} 
+                                  sampleSize={category.bet_count}
+                                  minThreshold={MIN_SAMPLE_SIZES.CATEGORY}
+                                />
+                              </td>
                               <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{category.bet_count}</td>
                             </tr>
                           ))}
@@ -2748,7 +2987,13 @@ export default function AnalyticsPage() {
                   <tr key={stake.stake_range} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{stake.stake_range}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{stake.total_bets}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(stake.win_rate * 100).toFixed(1)}%</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <WinRateDisplay 
+                        winRate={stake.win_rate} 
+                        sampleSize={stake.total_bets}
+                        minThreshold={MIN_SAMPLE_SIZES.COMBINATION}
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">${stake.total_stake.toFixed(2)}</td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${stake.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       ${stake.total_profit.toFixed(2)}
@@ -3049,7 +3294,13 @@ export default function AnalyticsPage() {
                   <tr key={odds.range} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{odds.range}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{odds.total_bets}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{(odds.win_rate * 100).toFixed(1)}%</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <WinRateDisplay 
+                        winRate={odds.win_rate} 
+                        sampleSize={odds.total_bets}
+                        minThreshold={MIN_SAMPLE_SIZES.ODDS_RANGE}
+                      />
+                    </td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${odds.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       ${odds.total_profit.toFixed(2)}
                     </td>

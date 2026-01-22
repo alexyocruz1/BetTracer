@@ -28,6 +28,32 @@ import { createError, errorCodes } from '../utils/errors';
 export class AnalyticsService {
   constructor(private supabase: SupabaseClient) {}
 
+  // Minimum sample size thresholds for statistical significance
+  private readonly MIN_SAMPLE_SIZES = {
+    TEAM: 5,
+    LEAGUE: 5,
+    CATEGORY: 5,
+    BET_TYPE: 5,
+    DAY: 3,
+    HOUR: 3,
+    MONTH: 3,
+    ODDS_RANGE: 3,
+    COMBINATION: 3,
+    LEG_LEVEL: 10, // More granular, needs more data
+  };
+
+  // Helper function to determine confidence level based on sample size
+  private getConfidenceLevel(sampleSize: number, minThreshold: number): 'high' | 'moderate' | 'low' {
+    if (sampleSize >= minThreshold * 2) return 'high';
+    if (sampleSize >= minThreshold) return 'moderate';
+    return 'low';
+  }
+
+  // Helper function to check if sample size is statistically significant
+  private isStatisticallySignificant(sampleSize: number, minThreshold: number): boolean {
+    return sampleSize >= minThreshold;
+  }
+
   // Helper function to calculate effective odds excluding voided legs
   private calculateEffectiveOdds(bet: any): number {
     if (!bet.legs || bet.legs.length === 0) {
@@ -1700,27 +1726,31 @@ export class AnalyticsService {
           )
         : null;
 
-      // Find best/worst win rate and ROI
+      // Find best/worst win rate and ROI (only consider statistically significant samples)
       const bestWinRateLeague = leagueDataArray.length > 0
-        ? leagueDataArray.filter(l => l.total > 0).reduce((best, current) => {
-            const currentWR = current.total > 0 ? current.won / current.total : 0;
-            const bestWR = best.total > 0 ? best.won / best.total : 0;
-            // If win rates are equal, prefer the one with more resolved bets (more data points)
-            if (currentWR > bestWR) return current;
-            if (currentWR === bestWR && current.total > best.total) return current;
-            return best;
-          }, leagueDataArray[0])
+        ? leagueDataArray
+            .filter(l => l.total > 0 && this.isStatisticallySignificant(l.total, this.MIN_SAMPLE_SIZES.LEAGUE))
+            .reduce((best, current) => {
+              const currentWR = current.total > 0 ? current.won / current.total : 0;
+              const bestWR = best.total > 0 ? best.won / best.total : 0;
+              // If win rates are equal, prefer the one with more resolved bets (more data points)
+              if (currentWR > bestWR) return current;
+              if (currentWR === bestWR && current.total > best.total) return current;
+              return best;
+            }, null as any)
         : null;
 
       const worstWinRateLeague = leagueDataArray.length > 0
-        ? leagueDataArray.filter(l => l.total > 0).reduce((worst, current) => {
-            const currentWR = current.total > 0 ? current.won / current.total : 0;
-            const worstWR = worst.total > 0 ? worst.won / worst.total : 0;
-            // If win rates are equal, prefer the one with more resolved bets (more data points)
-            if (currentWR < worstWR) return current;
-            if (currentWR === worstWR && current.total > worst.total) return current;
-            return worst;
-          }, leagueDataArray[0])
+        ? leagueDataArray
+            .filter(l => l.total > 0 && this.isStatisticallySignificant(l.total, this.MIN_SAMPLE_SIZES.LEAGUE))
+            .reduce((worst, current) => {
+              const currentWR = current.total > 0 ? current.won / current.total : 0;
+              const worstWR = worst.total > 0 ? worst.won / worst.total : 0;
+              // If win rates are equal, prefer the one with more resolved bets (more data points)
+              if (currentWR < worstWR) return current;
+              if (currentWR === worstWR && current.total > worst.total) return current;
+              return worst;
+            }, null as any)
         : null;
 
       const bestROILeague = leagueDataArray.length > 0
@@ -1786,70 +1816,82 @@ export class AnalyticsService {
           })
         : null;
 
-      // Get hour data and find best/worst
+      // Get hour data and find best/worst (only consider statistically significant samples)
       const hourDataArray = Array.from(data.hourMap.values());
       const bestHour = hourDataArray.length > 0
-        ? hourDataArray.reduce((best, current) => {
-            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
-            const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
-            if (currentROI > bestROI) return current;
-            if (currentROI === bestROI && current.bet_count > best.bet_count) return current;
-            return best;
-          })
+        ? hourDataArray
+            .filter(h => this.isStatisticallySignificant(h.total, this.MIN_SAMPLE_SIZES.HOUR))
+            .reduce((best, current) => {
+              const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+              const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
+              if (currentROI > bestROI) return current;
+              if (currentROI === bestROI && current.bet_count > best.bet_count) return current;
+              return best;
+            }, null as any)
         : null;
 
       const worstHour = hourDataArray.length > 0
-        ? hourDataArray.reduce((worst, current) => {
-            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
-            const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
-            if (currentROI < worstROI) return current;
-            if (currentROI === worstROI && current.bet_count > worst.bet_count) return current;
-            return worst;
-          })
+        ? hourDataArray
+            .filter(h => this.isStatisticallySignificant(h.total, this.MIN_SAMPLE_SIZES.HOUR))
+            .reduce((worst, current) => {
+              const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+              const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
+              if (currentROI < worstROI) return current;
+              if (currentROI === worstROI && current.bet_count > worst.bet_count) return current;
+              return worst;
+            }, null as any)
         : null;
 
-      // Get month data and find best/worst
+      // Get month data and find best/worst (only consider statistically significant samples)
       const monthDataArray = Array.from(data.monthMap.values());
       const bestMonth = monthDataArray.length > 0
-        ? monthDataArray.reduce((best, current) => {
-            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
-            const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
-            if (currentROI > bestROI) return current;
-            if (currentROI === bestROI && current.bet_count > best.bet_count) return current;
-            return best;
-          })
+        ? monthDataArray
+            .filter(m => this.isStatisticallySignificant(m.total, this.MIN_SAMPLE_SIZES.MONTH))
+            .reduce((best, current) => {
+              const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+              const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
+              if (currentROI > bestROI) return current;
+              if (currentROI === bestROI && current.bet_count > best.bet_count) return current;
+              return best;
+            }, null as any)
         : null;
 
       const worstMonth = monthDataArray.length > 0
-        ? monthDataArray.reduce((worst, current) => {
-            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
-            const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
-            if (currentROI < worstROI) return current;
-            if (currentROI === worstROI && current.bet_count > worst.bet_count) return current;
-            return worst;
-          })
+        ? monthDataArray
+            .filter(m => this.isStatisticallySignificant(m.total, this.MIN_SAMPLE_SIZES.MONTH))
+            .reduce((worst, current) => {
+              const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+              const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
+              if (currentROI < worstROI) return current;
+              if (currentROI === worstROI && current.bet_count > worst.bet_count) return current;
+              return worst;
+            }, null as any)
         : null;
 
-      // Get odds range data and find best/worst
+      // Get odds range data and find best/worst (only consider statistically significant samples)
       const oddsRangeDataArray = Array.from(data.oddsRangeMap.values());
       const bestOddsRange = oddsRangeDataArray.length > 0
-        ? oddsRangeDataArray.reduce((best, current) => {
-            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
-            const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
-            if (currentROI > bestROI) return current;
-            if (currentROI === bestROI && current.bet_count > best.bet_count) return current;
-            return best;
-          })
+        ? oddsRangeDataArray
+            .filter(o => this.isStatisticallySignificant(o.total, this.MIN_SAMPLE_SIZES.ODDS_RANGE))
+            .reduce((best, current) => {
+              const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+              const bestROI = best.stake > 0 ? best.profit / best.stake : 0;
+              if (currentROI > bestROI) return current;
+              if (currentROI === bestROI && current.bet_count > best.bet_count) return current;
+              return best;
+            }, null as any)
         : null;
 
       const worstOddsRange = oddsRangeDataArray.length > 0
-        ? oddsRangeDataArray.reduce((worst, current) => {
-            const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
-            const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
-            if (currentROI < worstROI) return current;
-            if (currentROI === worstROI && current.bet_count > worst.bet_count) return current;
-            return worst;
-          })
+        ? oddsRangeDataArray
+            .filter(o => this.isStatisticallySignificant(o.total, this.MIN_SAMPLE_SIZES.ODDS_RANGE))
+            .reduce((worst, current) => {
+              const currentROI = current.stake > 0 ? current.profit / current.stake : 0;
+              const worstROI = worst.stake > 0 ? worst.profit / worst.stake : 0;
+              if (currentROI < worstROI) return current;
+              if (currentROI === worstROI && current.bet_count > worst.bet_count) return current;
+              return worst;
+            }, null as any)
         : null;
 
       // ============================================================
@@ -1863,25 +1905,29 @@ export class AnalyticsService {
       });
 
       const bestLegWinRateLeague = legLeagueDataArray.length > 0
-        ? legLeagueDataArray.filter(l => l.total_resolved > 0).reduce((best, current) => {
-            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
-            const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
-            // If win rates are equal, prefer the one with more legs (more data points)
-            if (currentWR > bestWR) return current;
-            if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
-            return best;
-          }, legLeagueDataArray[0])
+        ? legLeagueDataArray
+            .filter(l => l.total_resolved > 0 && this.isStatisticallySignificant(l.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .reduce((best, current) => {
+              const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+              const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
+              // If win rates are equal, prefer the one with more legs (more data points)
+              if (currentWR > bestWR) return current;
+              if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
+              return best;
+            }, null as any)
         : null;
 
       const worstLegWinRateLeague = legLeagueDataArray.length > 0
-        ? legLeagueDataArray.filter(l => l.total_resolved > 0).reduce((worst, current) => {
-            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
-            const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
-            // If win rates are equal, prefer the one with more legs (more data points)
-            if (currentWR < worstWR) return current;
-            if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
-            return worst;
-          }, legLeagueDataArray[0])
+        ? legLeagueDataArray
+            .filter(l => l.total_resolved > 0 && this.isStatisticallySignificant(l.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .reduce((worst, current) => {
+              const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+              const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
+              // If win rates are equal, prefer the one with more legs (more data points)
+              if (currentWR < worstWR) return current;
+              if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
+              return worst;
+            }, null as any)
         : null;
 
       const favoriteLegLeague = legLeagueDataArray.length > 0
@@ -1897,25 +1943,29 @@ export class AnalyticsService {
       });
 
       const bestLegWinRateTeam = legTeamDataArray.length > 0
-        ? legTeamDataArray.filter(t => t.total_resolved > 0).reduce((best, current) => {
-            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
-            const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
-            // If win rates are equal, prefer the one with more legs (more data points)
-            if (currentWR > bestWR) return current;
-            if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
-            return best;
-          }, legTeamDataArray[0])
+        ? legTeamDataArray
+            .filter(t => t.total_resolved > 0 && this.isStatisticallySignificant(t.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .reduce((best, current) => {
+              const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+              const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
+              // If win rates are equal, prefer the one with more legs (more data points)
+              if (currentWR > bestWR) return current;
+              if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
+              return best;
+            }, null as any)
         : null;
 
       const worstLegWinRateTeam = legTeamDataArray.length > 0
-        ? legTeamDataArray.filter(t => t.total_resolved > 0).reduce((worst, current) => {
-            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
-            const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
-            // If win rates are equal, prefer the one with more legs (more data points)
-            if (currentWR < worstWR) return current;
-            if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
-            return worst;
-          }, legTeamDataArray[0])
+        ? legTeamDataArray
+            .filter(t => t.total_resolved > 0 && this.isStatisticallySignificant(t.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .reduce((worst, current) => {
+              const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+              const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
+              // If win rates are equal, prefer the one with more legs (more data points)
+              if (currentWR < worstWR) return current;
+              if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
+              return worst;
+            }, null as any)
         : null;
 
       const favoriteLegTeam = legTeamDataArray.length > 0
@@ -1931,25 +1981,29 @@ export class AnalyticsService {
       });
 
       const bestLegWinRateCategory = legCategoryDataArray.length > 0
-        ? legCategoryDataArray.filter(c => c.total_resolved > 0).reduce((best, current) => {
-            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
-            const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
-            // If win rates are equal, prefer the one with more legs (more data points)
-            if (currentWR > bestWR) return current;
-            if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
-            return best;
-          }, legCategoryDataArray[0])
+        ? legCategoryDataArray
+            .filter(c => c.total_resolved > 0 && this.isStatisticallySignificant(c.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .reduce((best, current) => {
+              const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+              const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
+              // If win rates are equal, prefer the one with more legs (more data points)
+              if (currentWR > bestWR) return current;
+              if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
+              return best;
+            }, null as any)
         : null;
 
       const worstLegWinRateCategory = legCategoryDataArray.length > 0
-        ? legCategoryDataArray.filter(c => c.total_resolved > 0).reduce((worst, current) => {
-            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
-            const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
-            // If win rates are equal, prefer the one with more legs (more data points)
-            if (currentWR < worstWR) return current;
-            if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
-            return worst;
-          }, legCategoryDataArray[0])
+        ? legCategoryDataArray
+            .filter(c => c.total_resolved > 0 && this.isStatisticallySignificant(c.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .reduce((worst, current) => {
+              const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+              const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
+              // If win rates are equal, prefer the one with more legs (more data points)
+              if (currentWR < worstWR) return current;
+              if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
+              return worst;
+            }, null as any)
         : null;
 
       const favoriteLegCategory = legCategoryDataArray.length > 0
@@ -1965,25 +2019,29 @@ export class AnalyticsService {
       });
 
       const bestLegWinRateBetType = legBetTypeDataArray.length > 0
-        ? legBetTypeDataArray.filter(bt => bt.total_resolved > 0).reduce((best, current) => {
-            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
-            const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
-            // If win rates are equal, prefer the one with more legs (more data points)
-            if (currentWR > bestWR) return current;
-            if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
-            return best;
-          }, legBetTypeDataArray[0])
+        ? legBetTypeDataArray
+            .filter(bt => bt.total_resolved > 0 && this.isStatisticallySignificant(bt.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .reduce((best, current) => {
+              const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+              const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
+              // If win rates are equal, prefer the one with more legs (more data points)
+              if (currentWR > bestWR) return current;
+              if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
+              return best;
+            }, null as any)
         : null;
 
       const worstLegWinRateBetType = legBetTypeDataArray.length > 0
-        ? legBetTypeDataArray.filter(bt => bt.total_resolved > 0).reduce((worst, current) => {
-            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
-            const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
-            // If win rates are equal, prefer the one with more legs (more data points)
-            if (currentWR < worstWR) return current;
-            if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
-            return worst;
-          }, legBetTypeDataArray[0])
+        ? legBetTypeDataArray
+            .filter(bt => bt.total_resolved > 0 && this.isStatisticallySignificant(bt.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .reduce((worst, current) => {
+              const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+              const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
+              // If win rates are equal, prefer the one with more legs (more data points)
+              if (currentWR < worstWR) return current;
+              if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
+              return worst;
+            }, null as any)
         : null;
 
       const favoriteLegBetType = legBetTypeDataArray.length > 0
@@ -1995,25 +2053,29 @@ export class AnalyticsService {
       // Get leg-level day data
       const legDayDataArray = Array.from(data.legDayMap.values());
       const bestLegWinRateDay = legDayDataArray.length > 0
-        ? legDayDataArray.filter(d => d.total_resolved > 0).reduce((best, current) => {
-            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
-            const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
-            // If win rates are equal, prefer the one with more legs (more data points)
-            if (currentWR > bestWR) return current;
-            if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
-            return best;
-          }, legDayDataArray[0])
+        ? legDayDataArray
+            .filter(d => d.total_resolved > 0 && this.isStatisticallySignificant(d.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .reduce((best, current) => {
+              const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+              const bestWR = best.total_resolved > 0 ? best.won_legs / best.total_resolved : 0;
+              // If win rates are equal, prefer the one with more legs (more data points)
+              if (currentWR > bestWR) return current;
+              if (currentWR === bestWR && current.leg_count > best.leg_count) return current;
+              return best;
+            }, null as any)
         : null;
 
       const worstLegWinRateDay = legDayDataArray.length > 0
-        ? legDayDataArray.filter(d => d.total_resolved > 0).reduce((worst, current) => {
-            const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
-            const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
-            // If win rates are equal, prefer the one with more legs (more data points)
-            if (currentWR < worstWR) return current;
-            if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
-            return worst;
-          }, legDayDataArray[0])
+        ? legDayDataArray
+            .filter(d => d.total_resolved > 0 && this.isStatisticallySignificant(d.total_resolved, this.MIN_SAMPLE_SIZES.LEG_LEVEL))
+            .reduce((worst, current) => {
+              const currentWR = current.total_resolved > 0 ? current.won_legs / current.total_resolved : 0;
+              const worstWR = worst.total_resolved > 0 ? worst.won_legs / worst.total_resolved : 0;
+              // If win rates are equal, prefer the one with more legs (more data points)
+              if (currentWR < worstWR) return current;
+              if (currentWR === worstWR && current.leg_count > worst.leg_count) return current;
+              return worst;
+            }, null as any)
         : null;
 
       const favoriteLegDay = legDayDataArray.length > 0
