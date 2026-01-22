@@ -1695,7 +1695,8 @@ export default function AnalyticsPage() {
                           </td>
                         </tr>
                       );
-                    })}
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
