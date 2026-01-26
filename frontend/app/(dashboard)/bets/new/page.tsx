@@ -58,6 +58,8 @@ export default function NewBetPage() {
       }),
     ])
   );
+  // Local state for stake input to preserve decimal point while typing
+  const [stakeInput, setStakeInput] = useState<string>('');
 
   useEffect(() => {
     fetchReferenceItems();
@@ -368,8 +370,9 @@ export default function NewBetPage() {
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">New Bet</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Date</label>
+          <label htmlFor="bet-date" className="block text-sm font-medium text-gray-700">Date</label>
           <input
+            id="bet-date"
             type="datetime-local"
             value={(() => {
               // Convert ISO string to local datetime-local format
@@ -397,6 +400,7 @@ export default function NewBetPage() {
                 setFormData({ ...formData, date: localDate.toISOString() });
               }
             }}
+            placeholder="Select date and time"
             className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2.5 text-base sm:text-sm min-h-[44px]"
             required
           />
@@ -407,12 +411,30 @@ export default function NewBetPage() {
             type="text"
             inputMode="decimal"
             pattern="[0-9]*\.?[0-9]*"
-            value={formData.stake.toString()}
+            value={stakeInput}
             onChange={(e) => {
               const value = e.target.value;
-              // Allow empty string or valid decimal numbers
+              // Allow empty string or valid decimal numbers (including trailing decimal point)
               if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                setFormData({ ...formData, stake: parseFloat(value) || 0 });
+                setStakeInput(value);
+                // Update formData with parsed number, but allow 0 if empty or just a decimal point
+                const numValue = value === '' || value === '.' ? 0 : parseFloat(value);
+                if (!isNaN(numValue)) {
+                  setFormData({ ...formData, stake: numValue });
+                }
+              }
+            }}
+            onBlur={() => {
+              // On blur, clean up the display if it's just a decimal point or empty
+              if (stakeInput === '' || stakeInput === '.') {
+                setStakeInput('0');
+                setFormData({ ...formData, stake: 0 });
+              } else {
+                // Format to remove trailing decimal point if no digits after it
+                const numValue = parseFloat(stakeInput);
+                if (!isNaN(numValue)) {
+                  setStakeInput(numValue.toString());
+                }
               }
             }}
             placeholder="10.00"
