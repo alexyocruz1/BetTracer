@@ -60,6 +60,11 @@ export default function NewBetPage() {
   );
   // Local state for stake input to preserve decimal point while typing
   const [stakeInput, setStakeInput] = useState<string>('');
+  // Bulk apply helpers for legs
+  const [bulkLeagueId, setBulkLeagueId] = useState<string>('');
+  const [bulkBetTypeId, setBulkBetTypeId] = useState<string>('');
+  const [bulkCategoryId, setBulkCategoryId] = useState<string>('');
+  const [bulkResponsibleId, setBulkResponsibleId] = useState<string>('');
 
   useEffect(() => {
     fetchReferenceItems();
@@ -418,6 +423,21 @@ export default function NewBetPage() {
     setLegAmericanOdds((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const applyBulkFieldsToAllLegs = () => {
+    if (!formData.legs.length) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      legs: prev.legs.map((leg) => ({
+        ...leg,
+        ...(bulkLeagueId ? { league_id: bulkLeagueId } : {}),
+        ...(bulkBetTypeId ? { bet_type_id: bulkBetTypeId } : {}),
+        ...(bulkCategoryId ? { category_id: bulkCategoryId } : {}),
+        ...(bulkResponsibleId ? { responsible_id: bulkResponsibleId } : {}),
+      })),
+    }));
+  };
+
   return (
     <div className="px-4 py-6 sm:px-0">
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">New Bet</h1>
@@ -553,6 +573,52 @@ export default function NewBetPage() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Legs</label>
+          {formData.legs.length > 0 && (
+            <div className="mt-2 mb-4 p-3 rounded-md border border-dashed border-gray-300 bg-gray-50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                <p className="text-xs font-medium text-gray-700">
+                  Quick fill: apply the same league, bet type, category, and responsible to all legs.
+                </p>
+                <button
+                  type="button"
+                  onClick={applyBulkFieldsToAllLegs}
+                  className="inline-flex items-center justify-center px-3 py-1.5 border border-primary-200 text-xs font-medium rounded-md text-primary-700 bg-white hover:bg-primary-50 min-h-[32px]"
+                >
+                  Apply to all legs
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <SearchableSelect
+                  options={leagues}
+                  value={bulkLeagueId}
+                  onChange={(value) => setBulkLeagueId(value || '')}
+                  placeholder="Choose league..."
+                  label="League (all legs)"
+                />
+                <SearchableSelect
+                  options={betTypes}
+                  value={bulkBetTypeId}
+                  onChange={(value) => setBulkBetTypeId(value || '')}
+                  placeholder="Choose bet type..."
+                  label="Bet Type (all legs)"
+                />
+                <SearchableSelect
+                  options={categories}
+                  value={bulkCategoryId}
+                  onChange={(value) => setBulkCategoryId(value || '')}
+                  placeholder="Choose category..."
+                  label="Category (all legs)"
+                />
+                <SearchableSelect
+                  options={responsibles}
+                  value={bulkResponsibleId}
+                  onChange={(value) => setBulkResponsibleId(value || '')}
+                  placeholder="Choose responsible..."
+                  label="Responsible (all legs)"
+                />
+              </div>
+            </div>
+          )}
           {formData.legs.map((leg, index) => (
             <div key={index} className="mt-4 p-4 border border-gray-300 rounded-md">
               <div className="flex justify-between mb-2">
