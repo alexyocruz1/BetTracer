@@ -867,7 +867,10 @@ export default function BetDetailPage() {
         <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              <label
+                id="content-mode-label"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block"
+              >
                 Content Mode
               </label>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -883,8 +886,8 @@ export default function BetDetailPage() {
                 className={`relative inline-flex h-8 w-16 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
                   tiktokSafeMode ? 'bg-green-600' : 'bg-gray-300'
                 }`}
-                role="switch"
-                aria-checked={tiktokSafeMode}
+                aria-labelledby="content-mode-label"
+                aria-label={tiktokSafeMode ? 'Disable TikTok Safe Mode' : 'Enable TikTok Safe Mode'}
               >
                 <span
                   className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
@@ -934,14 +937,23 @@ export default function BetDetailPage() {
           </button>
         </div>
       </div>
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <button
+            onClick={() => router.back()}
+            className="text-primary-600 hover:text-primary-800 mb-2 sm:mb-4 min-h-[44px] flex items-center"
+          >
+            ← Back to Bets
+          </button>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Bet Details</h1>
+        </div>
         <button
-          onClick={() => router.back()}
-          className="text-primary-600 hover:text-primary-800 mb-4 min-h-[44px] flex items-center"
+          type="button"
+          onClick={() => router.push(`/bets/new?copyFrom=${bet.id}`)}
+          className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 min-h-[44px]"
         >
-          ← Back to Bets
+          Copy Bet
         </button>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Bet Details</h1>
       </div>
 
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 sm:p-6 mb-6">

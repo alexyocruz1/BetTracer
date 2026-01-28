@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api/client';
-import { ReferenceItem, CreateBetRequest, MLPredictRequest } from '@/types';
+import { ReferenceItem, CreateBetRequest, CreateLegRequest, MainBet, MLPredictRequest } from '@/types';
 import {
   decimalToAmerican,
   americanToDecimal,
@@ -67,8 +67,61 @@ export default function NewBetPage() {
     // Reference items are fetched once on mount
   }, []);
 
-  // Handle query parameters from recommendations
+  // Handle query parameters (recommendations, copy from existing bet, etc.)
   useEffect(() => {
+    const copyFrom = searchParams.get('copyFrom');
+
+    // Handle "copy bet" flow - prefill legs with home/away teams from an existing bet
+    if (copyFrom) {
+      const initializeFromCopiedBet = async () => {
+        try {
+          const response = await apiClient.get<{ data: MainBet }>(`/api/bets/${copyFrom}`);
+          const originalBet = response.data.data;
+
+          if (originalBet?.legs && originalBet.legs.length > 0) {
+            const newLegs: CreateLegRequest[] = originalBet.legs.map((leg) => ({
+              home_team_id: leg.home_team_id,
+              away_team_id: leg.away_team_id,
+              odd: 1,
+              result_state: 'pending',
+            }));
+
+            setFormData((prev) => ({
+              ...prev,
+              // Keep current date default; start with fresh stake/odds
+              stake: 0,
+              odds: undefined,
+              state: 'pending',
+              legs: newLegs,
+            }));
+
+            // Reset stake input and leg odds displays for the new bet
+            setStakeInput('');
+            setLegDecimalOdds(newLegs.map(() => '1.00'));
+            setLegAmericanOdds(
+              newLegs.map(() => {
+                const american = decimalToAmerican(1);
+                return american ? formatAmericanOdds(american) : '';
+              })
+            );
+          } else {
+            console.warn('Copied bet has no legs to initialize from:', copyFrom);
+          }
+
+          // Clear the copyFrom query param after applying
+          const newSearchParams = new URLSearchParams(searchParams.toString());
+          newSearchParams.delete('copyFrom');
+          router.replace(`/bets/new?${newSearchParams.toString()}`);
+        } catch (error) {
+          console.error('Failed to initialize new bet from copied bet:', error);
+        }
+      };
+
+      void initializeFromCopiedBet();
+      return;
+    }
+
+    // Handle recommendation-based query params
     const leagueId = searchParams.get('league');
     const betTypeId = searchParams.get('betType');
     const categoryId = searchParams.get('category');
