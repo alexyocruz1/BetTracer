@@ -61,6 +61,8 @@ export default function NewBetPage() {
   // Local state for stake input to preserve decimal point while typing
   const [stakeInput, setStakeInput] = useState<string>('');
   // Bulk apply helpers for legs
+  const [bulkHomeTeamId, setBulkHomeTeamId] = useState<string>('');
+  const [bulkAwayTeamId, setBulkAwayTeamId] = useState<string>('');
   const [bulkLeagueId, setBulkLeagueId] = useState<string>('');
   const [bulkBetTypeId, setBulkBetTypeId] = useState<string>('');
   const [bulkCategoryId, setBulkCategoryId] = useState<string>('');
@@ -430,6 +432,8 @@ export default function NewBetPage() {
       ...prev,
       legs: prev.legs.map((leg) => ({
         ...leg,
+        ...(bulkHomeTeamId ? { home_team_id: bulkHomeTeamId } : {}),
+        ...(bulkAwayTeamId ? { away_team_id: bulkAwayTeamId } : {}),
         ...(bulkLeagueId ? { league_id: bulkLeagueId } : {}),
         ...(bulkBetTypeId ? { bet_type_id: bulkBetTypeId } : {}),
         ...(bulkCategoryId ? { category_id: bulkCategoryId } : {}),
@@ -577,7 +581,7 @@ export default function NewBetPage() {
             <div className="mt-2 mb-4 p-3 rounded-md border border-dashed border-gray-300 bg-gray-50">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                 <p className="text-xs font-medium text-gray-700">
-                  Quick fill: apply the same league, bet type, category, and responsible to all legs.
+                  Quick fill: apply the same teams, league, bet type, category, and responsible to all legs.
                 </p>
                 <button
                   type="button"
@@ -587,7 +591,21 @@ export default function NewBetPage() {
                   Apply to all legs
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+                <SearchableSelect
+                  options={teams}
+                  value={bulkHomeTeamId}
+                  onChange={(value) => setBulkHomeTeamId(value || '')}
+                  placeholder="Choose home team..."
+                  label="Home Team (all legs)"
+                />
+                <SearchableSelect
+                  options={teams}
+                  value={bulkAwayTeamId}
+                  onChange={(value) => setBulkAwayTeamId(value || '')}
+                  placeholder="Choose away team..."
+                  label="Away Team (all legs)"
+                />
                 <SearchableSelect
                   options={leagues}
                   value={bulkLeagueId}
