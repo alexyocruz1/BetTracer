@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { apiClient } from '@/lib/api/client';
 import { AnalyticsSummary, AnalyticsByLeague, AnalyticsByResponsible, AnalyticsByBetType, AnalyticsByCategory, TimeSeriesData, LegAnalytics, OddsAnalysis, TeamPerformance, BestWorstPerformers, StreakAnalysis, ResponsibleDetailedAnalytics, AnalyticsByLegs, TemporalAnalytics, StakeAnalysis, CombinationAnalytics, RiskMetrics, PeriodComparison, EVAnalysis, RecoveryAnalysis, BankrollAnalysis, FrequencyAnalysis } from '@/types';
 import { useTheme } from '@/contexts/theme-context';
@@ -224,6 +224,47 @@ const getConfidenceBadge = (sampleSize: number, minThreshold: number) => {
   }
 };
 
+// Touch-friendly tooltip: shows content on click/tap so it works on mobile/tablet (native title only shows on hover).
+const TouchFriendlyTooltip = ({ content, children, className = '' }: { content: string; children: React.ReactNode; className?: string }) => {
+  const [visible, setVisible] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    const close = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (ref.current && !ref.current.contains(target)) setVisible(false);
+    };
+    document.addEventListener('click', close, true);
+    document.addEventListener('touchstart', close, { passive: true, capture: true });
+    return () => {
+      document.removeEventListener('click', close, true);
+      document.removeEventListener('touchstart', close, true);
+    };
+  }, [visible]);
+
+  return (
+    <span
+      ref={ref}
+      className={`relative inline-block ${className}`}
+      onClick={(e) => { e.stopPropagation(); setVisible((v) => !v); }}
+      role="button"
+      tabIndex={0}
+      aria-label={content}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVisible((v) => !v); } }}
+    >
+      {children}
+      {visible && (
+        <span
+          className="absolute left-1/2 -translate-x-1/2 bottom-full z-50 mb-1 px-2 py-1.5 text-xs font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg max-w-[min(280px,90vw)] whitespace-normal text-left pointer-events-none"
+        >
+          {content}
+        </span>
+      )}
+    </span>
+  );
+};
+
 // Component for displaying win rate with sample size
 const WinRateDisplay = ({ 
   winRate, 
@@ -243,12 +284,11 @@ const WinRateDisplay = ({
     <div className={`flex items-center gap-1 ${className}`}>
       <span>{(winRate * 100).toFixed(1)}%</span>
       <span className="text-xs text-gray-500 dark:text-gray-400">({sampleSize})</span>
-      <span 
-        className={`text-xs ${badge.color} cursor-help`}
-        title={badge.tooltip}
-      >
-        {badge.text}
-      </span>
+      <TouchFriendlyTooltip content={badge.tooltip} className="cursor-help">
+        <span className={`text-xs ${badge.color}`} title={badge.tooltip}>
+          {badge.text}
+        </span>
+      </TouchFriendlyTooltip>
     </div>
   );
 };
@@ -825,7 +865,9 @@ export default function AnalyticsPage() {
                                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-600 dark:bg-green-500 text-white text-xs font-bold mr-2">{idx + 1}</span>
                                   {league.league_name}
                                   {league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
-                                    <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>⚠</span>
+                                    <TouchFriendlyTooltip content={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>
+                                      <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>⚠</span>
+                                    </TouchFriendlyTooltip>
                                   )}
                                 </span>
                                 <span className="text-sm font-bold text-green-600 dark:text-green-400">${league.total_profit.toFixed(2)}</span>
@@ -845,7 +887,9 @@ export default function AnalyticsPage() {
                                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-600 dark:bg-red-500 text-white text-xs font-bold mr-2">{idx + 1}</span>
                                   {league.league_name}
                                   {league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
-                                    <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>⚠</span>
+                                    <TouchFriendlyTooltip content={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>
+                                      <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>⚠</span>
+                                    </TouchFriendlyTooltip>
                                   )}
                                 </span>
                                 <span className="text-sm font-bold text-red-600 dark:text-red-400">${league.total_profit.toFixed(2)}</span>
@@ -865,7 +909,9 @@ export default function AnalyticsPage() {
                                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-600 dark:bg-green-500 text-white text-xs font-bold mr-2">{idx + 1}</span>
                                   {category.category_name}
                                   {category.bet_count < MIN_SAMPLE_SIZES.CATEGORY && (
-                                    <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${category.bet_count})`}>⚠</span>
+                                    <TouchFriendlyTooltip content={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${category.bet_count})`}>
+                                      <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${category.bet_count})`}>⚠</span>
+                                    </TouchFriendlyTooltip>
                                   )}
                                 </span>
                                 <span className="text-sm font-bold text-green-600 dark:text-green-400">${category.total_profit.toFixed(2)}</span>
@@ -912,6 +958,7 @@ export default function AnalyticsPage() {
                             tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                           />
                           <Tooltip
+                            trigger="click"
                             formatter={(value: number, name: string) => {
                               if (name === 'profit') return [`$${value.toFixed(2)}`, 'Profit'];
                               if (name === 'stake') return [`$${value.toFixed(2)}`, 'Stake'];
@@ -980,10 +1027,11 @@ export default function AnalyticsPage() {
                             tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                           />
                           <Tooltip
+                            trigger="click"
                             formatter={(value: number) => `$${value.toFixed(2)}`}
-                            contentStyle={{ 
-                              backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
-                              border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                            contentStyle={{
+                              backgroundColor: theme === 'dark' ? '#1f2937' : '#fff',
+                              border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,
                               borderRadius: '6px',
                               color: theme === 'dark' ? '#f3f4f6' : '#111827'
                             }}
@@ -1130,10 +1178,11 @@ export default function AnalyticsPage() {
                   tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip
+                  trigger="click"
                   formatter={(value: number) => `$${value.toFixed(2)}`}
-                  contentStyle={{ 
-                    backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
-                    border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
+                  contentStyle={{
+                    backgroundColor: theme === 'dark' ? '#1f2937' : '#fff',
+                    border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,
                     borderRadius: '6px',
                     color: theme === 'dark' ? '#f3f4f6' : '#111827'
                   }}
@@ -1162,6 +1211,7 @@ export default function AnalyticsPage() {
                   tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip
+                  trigger="click"
                   formatter={(value: number) => `${(value * 100).toFixed(1)}%`}
                   contentStyle={{ 
                     backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
@@ -1257,6 +1307,7 @@ export default function AnalyticsPage() {
                   label={{ value: 'ROI (%)', angle: -90, position: 'insideLeft', fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip
+                  trigger="click"
                   formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
                   contentStyle={{ 
                     backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
@@ -1292,6 +1343,7 @@ export default function AnalyticsPage() {
                   label={{ value: 'Win Rate (%)', angle: -90, position: 'insideLeft', fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
                 />
                 <Tooltip
+                  trigger="click"
                   formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
                   contentStyle={{ 
                     backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
@@ -1356,7 +1408,9 @@ export default function AnalyticsPage() {
                                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 gap-1">
                                   Best ROI
                                   {legs.bet_count < MIN_SAMPLE_SIZES.COMBINATION && (
-                                    <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${legs.bet_count})`}>⚠</span>
+                                    <TouchFriendlyTooltip content={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${legs.bet_count})`}>
+                                      <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${legs.bet_count})`}>⚠</span>
+                                    </TouchFriendlyTooltip>
                                   )}
                                 </span>
                               )}
@@ -1369,7 +1423,9 @@ export default function AnalyticsPage() {
                                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 gap-1">
                                   Best Win Rate
                                   {legs.bet_count < MIN_SAMPLE_SIZES.COMBINATION && (
-                                    <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${legs.bet_count})`}>⚠</span>
+                                    <TouchFriendlyTooltip content={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${legs.bet_count})`}>
+                                      <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.COMBINATION} bets (currently ${legs.bet_count})`}>⚠</span>
+                                    </TouchFriendlyTooltip>
                                   )}
                                 </span>
                               )}
@@ -1513,6 +1569,7 @@ export default function AnalyticsPage() {
                   label={{ value: 'ROI (%)', angle: -90, position: 'insideLeft' }}
                 />
                 <Tooltip
+                  trigger="click"
                   formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
                   contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
                 />
@@ -1540,6 +1597,7 @@ export default function AnalyticsPage() {
                   label={{ value: 'Win Rate (%)', angle: -90, position: 'insideLeft' }}
                 />
                 <Tooltip
+                  trigger="click"
                   formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
                   contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
                 />
@@ -1567,6 +1625,7 @@ export default function AnalyticsPage() {
                   label={{ value: 'Profit ($)', angle: -90, position: 'insideLeft' }}
                 />
                 <Tooltip
+                  trigger="click"
                   formatter={(value: number) => `$${value.toFixed(2)}`}
                   contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
                 />
@@ -2627,6 +2686,7 @@ export default function AnalyticsPage() {
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip
+                  trigger="click"
                   formatter={(value: number) => `$${value.toFixed(2)}`}
                   contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
                 />
@@ -2710,6 +2770,7 @@ export default function AnalyticsPage() {
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip
+                  trigger="click"
                   formatter={(value: number) => `$${value.toFixed(2)}`}
                   contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px' }}
                 />
@@ -2846,6 +2907,7 @@ export default function AnalyticsPage() {
                 <XAxis dataKey="range" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={(value) => `$${value.toFixed(0)}`} tick={{ fontSize: 12 }} />
                 <Tooltip
+                  trigger="click"
                   formatter={(value: number, name: string) => {
                     if (name === 'total_profit') return [`$${value.toFixed(2)}`, 'Profit'];
                     if (name === 'roi') return [`${(value * 100).toFixed(1)}%`, 'ROI'];
@@ -2928,7 +2990,9 @@ export default function AnalyticsPage() {
                                   <span className="text-sm font-medium text-green-900 dark:text-green-300 flex items-center gap-1">
                                     {index + 1}. {league.league_name}
                                     {league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                                      <TouchFriendlyTooltip content={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>
                                       <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>⚠</span>
+                                    </TouchFriendlyTooltip>
                                     )}
                                   </span>
                                   <span className="text-sm font-bold text-green-700 dark:text-green-400">${league.total_profit.toFixed(2)}</span>
@@ -2953,7 +3017,9 @@ export default function AnalyticsPage() {
                                   <span className="text-sm font-medium text-red-900 dark:text-red-300 flex items-center gap-1">
                                     {index + 1}. {league.league_name}
                                     {league.bet_count < MIN_SAMPLE_SIZES.LEAGUE && (
+                                      <TouchFriendlyTooltip content={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>
                                       <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.LEAGUE} bets (currently ${league.bet_count})`}>⚠</span>
+                                    </TouchFriendlyTooltip>
                                     )}
                                   </span>
                                   <span className="text-sm font-bold text-red-700 dark:text-red-400">${league.total_profit.toFixed(2)}</span>
@@ -3005,7 +3071,9 @@ export default function AnalyticsPage() {
                                   <span className="text-sm font-medium text-purple-900 dark:text-purple-300 flex items-center gap-1">
                                     {index + 1}. {category.category_name}
                                     {category.bet_count < MIN_SAMPLE_SIZES.CATEGORY && (
+                                      <TouchFriendlyTooltip content={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${category.bet_count})`}>
                                       <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${category.bet_count})`}>⚠</span>
+                                    </TouchFriendlyTooltip>
                                     )}
                                   </span>
                                   <span className="text-sm font-bold text-purple-700 dark:text-purple-400">${category.total_profit.toFixed(2)}</span>
@@ -3030,7 +3098,9 @@ export default function AnalyticsPage() {
                                   <span className="text-sm font-medium text-orange-900 dark:text-orange-300 flex items-center gap-1">
                                     {index + 1}. {category.category_name}
                                     {category.bet_count < MIN_SAMPLE_SIZES.CATEGORY && (
+                                      <TouchFriendlyTooltip content={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${category.bet_count})`}>
                                       <span className="text-orange-600 dark:text-orange-400" title={`Low confidence - need at least ${MIN_SAMPLE_SIZES.CATEGORY} bets (currently ${category.bet_count})`}>⚠</span>
+                                    </TouchFriendlyTooltip>
                                     )}
                                   </span>
                                   <span className="text-sm font-bold text-orange-700 dark:text-orange-400">${category.total_profit.toFixed(2)}</span>
@@ -3491,6 +3561,7 @@ export default function AnalyticsPage() {
                 <XAxis dataKey="stake_range" tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
                 <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
                 <Tooltip 
+                  trigger="click"
                   formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
                   contentStyle={{ 
                     backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
@@ -3632,6 +3703,7 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
                   <YAxis tickFormatter={(value) => `$${value.toFixed(0)}`} tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
                   <Tooltip 
+                    trigger="click"
                     formatter={(value: number) => `$${value.toFixed(2)}`}
                     contentStyle={{ 
                       backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
@@ -3677,6 +3749,7 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
                   <YAxis tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
                   <Tooltip 
+                    trigger="click"
                     contentStyle={{ 
                       backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
                       border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`, 
@@ -3800,6 +3873,7 @@ export default function AnalyticsPage() {
                 <XAxis dataKey="range" tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
                 <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }} />
                 <Tooltip 
+                  trigger="click"
                   formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
                   contentStyle={{ 
                     backgroundColor: theme === 'dark' ? '#1f2937' : '#fff', 
