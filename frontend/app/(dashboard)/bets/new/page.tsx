@@ -24,6 +24,7 @@ export default function NewBetPage() {
   const [betTypes, setBetTypes] = useState<ReferenceItem[]>([]);
   const [categories, setCategories] = useState<ReferenceItem[]>([]);
   const [responsibles, setResponsibles] = useState<ReferenceItem[]>([]);
+  const [sports, setSports] = useState<ReferenceItem[]>([]);
   const [formData, setFormData] = useState<CreateBetRequest>({
     date: new Date().toISOString(),
     stake: 0,
@@ -67,6 +68,7 @@ export default function NewBetPage() {
   const [bulkBetTypeId, setBulkBetTypeId] = useState<string>('');
   const [bulkCategoryId, setBulkCategoryId] = useState<string>('');
   const [bulkResponsibleId, setBulkResponsibleId] = useState<string>('');
+  const [bulkSportId, setBulkSportId] = useState<string>('');
 
   useEffect(() => {
     fetchReferenceItems();
@@ -89,6 +91,7 @@ export default function NewBetPage() {
             const newLegs: CreateLegRequest[] = originalBet.legs.map((leg) => ({
               home_team_id: leg.home_team_id,
               away_team_id: leg.away_team_id,
+              sport_id: leg.sport_id,
               odd: 1,
               result_state: 'pending',
             }));
@@ -99,6 +102,7 @@ export default function NewBetPage() {
               stake: 0,
               odds: undefined,
               state: 'pending',
+              sport_id: originalBet.sport_id,
               legs: newLegs,
             }));
 
@@ -178,18 +182,20 @@ export default function NewBetPage() {
     try {
       // Fetch all items with a high limit to ensure we get everything
       // The API supports up to 10000 items per request
-      const [teamsRes, leaguesRes, betTypesRes, categoriesRes, responsiblesRes] = await Promise.all([
+      const [teamsRes, leaguesRes, betTypesRes, categoriesRes, responsiblesRes, sportsRes] = await Promise.all([
         apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=team&limit=1000'),
         apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=league&limit=1000'),
         apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=bet_type&limit=1000'),
         apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=category&limit=1000'),
         apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=responsible&limit=1000'),
+        apiClient.get<{ data: ReferenceItem[] }>('/api/reference-items?kind=sport&limit=1000'),
       ]);
       setTeams(teamsRes.data.data || []);
       setLeagues(leaguesRes.data.data || []);
       setBetTypes(betTypesRes.data.data || []);
       setCategories(categoriesRes.data.data || []);
       setResponsibles(responsiblesRes.data.data || []);
+      setSports(sportsRes.data.data || []);
       
       console.log('Reference items loaded:', {
         teams: teamsRes.data.data?.length || 0,
@@ -197,6 +203,7 @@ export default function NewBetPage() {
         betTypes: betTypesRes.data.data?.length || 0,
         categories: categoriesRes.data.data?.length || 0,
         responsibles: responsiblesRes.data.data?.length || 0,
+        sports: sportsRes.data.data?.length || 0,
       });
     } catch (error) {
       console.error('Failed to fetch reference items:', error);
@@ -208,6 +215,7 @@ export default function NewBetPage() {
 
   const legSummaries: LegSummary[] = formData.legs.map((leg, index) => {
     const parts = [
+      getReferenceLabel(sports, leg.sport_id),
       getReferenceLabel(betTypes, leg.bet_type_id),
       getReferenceLabel(leagues, leg.league_id),
       getReferenceLabel(responsibles, leg.responsible_id),
@@ -274,6 +282,7 @@ export default function NewBetPage() {
         state: formData.state || 'pending',
         ...(formData.notes && { notes: formData.notes }),
         ...(formData.odds && { odds: formData.odds }),
+        ...(formData.sport_id && { sport_id: formData.sport_id }),
         legs: formData.legs.map(leg => {
           const cleanedLeg: any = {
             odd: leg.odd,
@@ -287,6 +296,7 @@ export default function NewBetPage() {
           if (leg.bet_type_id) cleanedLeg.bet_type_id = leg.bet_type_id;
           if (leg.category_id) cleanedLeg.category_id = leg.category_id;
           if (leg.responsible_id) cleanedLeg.responsible_id = leg.responsible_id;
+          if (leg.sport_id) cleanedLeg.sport_id = leg.sport_id;
           if (leg.notes) cleanedLeg.notes = leg.notes;
           
           return cleanedLeg;
@@ -438,6 +448,7 @@ export default function NewBetPage() {
         ...(bulkBetTypeId ? { bet_type_id: bulkBetTypeId } : {}),
         ...(bulkCategoryId ? { category_id: bulkCategoryId } : {}),
         ...(bulkResponsibleId ? { responsible_id: bulkResponsibleId } : {}),
+        ...(bulkSportId ? { sport_id: bulkSportId } : {}),
       })),
     }));
   };
@@ -551,6 +562,18 @@ export default function NewBetPage() {
           </p>
         </div>
         <div>
+          <SearchableSelect
+            options={sports}
+            value={formData.sport_id || ''}
+            onChange={(value) => setFormData({ ...formData, sport_id: value || undefined })}
+            placeholder="Search sport..."
+            label="Sport (optional)"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Primary sport for this bet. Each leg can also have its own sport.
+          </p>
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-700">Notes (optional)</label>
           <textarea
             value={formData.notes || ''}
@@ -581,7 +604,7 @@ export default function NewBetPage() {
             <div className="mt-2 mb-4 p-3 rounded-md border border-dashed border-gray-300 bg-gray-50">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                 <p className="text-xs font-medium text-gray-700">
-                  Quick fill: apply the same teams, league, bet type, category, and responsible to all legs.
+                  Quick fill: apply the same teams, league, bet type, category, responsible, and sport to all legs.
                 </p>
                 <button
                   type="button"
@@ -633,6 +656,13 @@ export default function NewBetPage() {
                   onChange={(value) => setBulkResponsibleId(value || '')}
                   placeholder="Choose responsible..."
                   label="Responsible (all legs)"
+                />
+                <SearchableSelect
+                  options={sports}
+                  value={bulkSportId}
+                  onChange={(value) => setBulkSportId(value || '')}
+                  placeholder="Choose sport..."
+                  label="Sport (all legs)"
                 />
               </div>
             </div>
@@ -741,6 +771,20 @@ export default function NewBetPage() {
                       label="Responsible"
                     />
                   </div>
+                </div>
+                <div>
+                    <SearchableSelect
+                      options={sports}
+                      value={leg.sport_id || ''}
+                      onChange={(value) => {
+                        const newLegs = formData.legs.map((l, i) =>
+                          i === index ? { ...l, sport_id: value || undefined } : { ...l }
+                        );
+                        setFormData({ ...formData, legs: newLegs });
+                      }}
+                      placeholder="Search sport..."
+                      label="Sport"
+                    />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Odds *</label>

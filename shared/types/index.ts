@@ -13,6 +13,7 @@ export interface MainBet {
   profit_loss?: number;
   state: 'pending' | 'won' | 'lost' | 'void';
   cumulative_profit?: number;
+  sport_id?: string;
   notes?: string;
   deleted_at?: string;
   created_at: string;
@@ -29,6 +30,7 @@ export interface Leg {
   bet_type_id?: string;
   category_id?: string;
   responsible_id?: string;
+  sport_id?: string;
   odd: number;
   result_state: 'pending' | 'won' | 'lost' | 'void';
   probability_est?: number;
@@ -63,7 +65,7 @@ export interface MLPredictionResponse {
 // Reference items
 export interface ReferenceItem {
   id: string;
-  kind: 'team' | 'league' | 'bet_type' | 'category' | 'responsible';
+  kind: 'team' | 'league' | 'bet_type' | 'category' | 'responsible' | 'sport';
   name: string;
   metadata?: Record<string, unknown>;
   created_at: string;
@@ -76,6 +78,7 @@ export interface CreateBetRequest {
   stake: number;
   odds?: number;
   state?: 'pending' | 'won' | 'lost' | 'void';
+  sport_id?: string;
   notes?: string;
   legs: CreateLegRequest[];
 }
@@ -87,6 +90,7 @@ export interface CreateLegRequest {
   bet_type_id?: string;
   category_id?: string;
   responsible_id?: string;
+  sport_id?: string;
   odd: number;
   result_state?: 'pending' | 'won' | 'lost' | 'void';
   notes?: string;
@@ -96,6 +100,7 @@ export interface UpdateBetRequest {
   stake?: number;
   odds?: number;
   state?: 'pending' | 'won' | 'lost' | 'void';
+  sport_id?: string;
   notes?: string;
   profit_loss?: number;
 }
@@ -151,6 +156,16 @@ export interface AnalyticsByBetType {
 export interface AnalyticsByCategory {
   category_id: string;
   category_name: string;
+  total_stake: number;
+  total_profit: number;
+  roi: number;
+  win_rate: number;
+  bet_count: number;
+}
+
+export interface AnalyticsBySport {
+  sport_id: string;
+  sport_name: string;
   total_stake: number;
   total_profit: number;
   roi: number;

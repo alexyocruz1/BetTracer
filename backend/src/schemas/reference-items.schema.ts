@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const getReferenceItemsSchema = z.object({
   query: z.object({
-    kind: z.enum(['team', 'league', 'bet_type', 'category', 'responsible']).optional(),
+    kind: z.enum(['team', 'league', 'bet_type', 'category', 'responsible', 'sport']).optional(),
     limit: z.string().transform(Number).pipe(z.number().int().positive().max(10000)).optional().default('100'),
     offset: z.string().transform(Number).pipe(z.number().int().nonnegative()).optional().default('0'),
   }),
@@ -10,7 +10,7 @@ export const getReferenceItemsSchema = z.object({
 
 export const createReferenceItemSchema = z.object({
   body: z.object({
-    kind: z.enum(['team', 'league', 'bet_type', 'category', 'responsible']),
+    kind: z.enum(['team', 'league', 'bet_type', 'category', 'responsible', 'sport']),
     name: z.string().min(1),
     metadata: z.record(z.unknown()).optional().default({}),
   }),

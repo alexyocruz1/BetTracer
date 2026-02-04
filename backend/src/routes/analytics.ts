@@ -25,6 +25,7 @@ router.get('/by-league', asyncHandler(analyticsController.getByLeague));
 router.get('/by-responsible', asyncHandler(analyticsController.getByResponsible));
 router.get('/by-bet-type', asyncHandler(analyticsController.getByBetType));
 router.get('/by-category', asyncHandler(analyticsController.getByCategory));
+router.get('/by-sport', asyncHandler(analyticsController.getBySport));
 router.get('/leg-analytics', asyncHandler(analyticsController.getLegAnalytics));
 router.get('/odds-analysis', asyncHandler(analyticsController.getOddsAnalysis));
 router.get('/team-performance', asyncHandler(analyticsController.getTeamPerformance));

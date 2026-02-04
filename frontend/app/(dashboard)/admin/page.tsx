@@ -7,7 +7,7 @@ import { apiClient } from '@/lib/api/client';
 import { ReferenceItem } from '@/types';
 import { InlineLoading, TableSkeleton } from '@/components/ui/LoadingSkeleton';
 
-type ReferenceItemKind = 'team' | 'league' | 'bet_type' | 'category' | 'responsible';
+type ReferenceItemKind = 'team' | 'league' | 'bet_type' | 'category' | 'responsible' | 'sport';
 
 export default function AdminPage() {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -258,6 +258,7 @@ export default function AdminPage() {
     { id: 'bet_type', label: 'Bet Types' },
     { id: 'category', label: 'Categories' },
     { id: 'responsible', label: 'Responsibles' },
+    { id: 'sport', label: 'Sports' },
   ];
 
   return (
@@ -265,7 +266,7 @@ export default function AdminPage() {
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Admin Panel</h1>
         <p className="mt-2 text-sm text-gray-600">
-          Manage reference items: leagues, teams, bet types, categories, and responsibles
+          Manage reference items: leagues, teams, bet types, categories, responsibles, and sports
         </p>
       </div>
 

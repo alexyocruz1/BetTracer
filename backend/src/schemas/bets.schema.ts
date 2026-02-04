@@ -6,6 +6,7 @@ export const createBetSchema = z.object({
     stake: z.number().positive(),
     odds: z.number().positive().optional(),
     state: z.enum(['pending', 'won', 'lost', 'void']).optional().default('pending'),
+    sport_id: z.string().uuid().optional(),
     notes: z.string().optional(),
     legs: z.array(
       z.object({
@@ -15,6 +16,7 @@ export const createBetSchema = z.object({
         bet_type_id: z.string().uuid().optional(),
         category_id: z.string().uuid().optional(),
         responsible_id: z.string().uuid().optional(),
+        sport_id: z.string().uuid().optional(),
         odd: z.number().positive(),
         result_state: z.enum(['pending', 'won', 'lost', 'void']).optional().default('pending'),
         notes: z.string().optional(),
@@ -28,6 +30,7 @@ export const updateBetSchema = z.object({
     stake: z.number().positive().optional(),
     odds: z.number().positive().optional(),
     state: z.enum(['pending', 'won', 'lost', 'void']).optional(),
+    sport_id: z.string().uuid().optional().nullable(),
     notes: z.string().optional(),
     profit_loss: z.number().optional(),
   }),

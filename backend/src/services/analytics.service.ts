@@ -5,6 +5,7 @@ import {
   AnalyticsByResponsible,
   AnalyticsByBetType,
   AnalyticsByCategory,
+  AnalyticsBySport,
   TimeSeriesData,
   LegAnalytics,
   OddsAnalysis,
@@ -469,6 +470,79 @@ export class AnalyticsService {
       const resolvedCategoryBets = categoryBets?.filter((b) => b.state === 'won' || b.state === 'lost') || [];
       const wonCategoryBets = resolvedCategoryBets.filter((b) => b.state === 'won').length || 0;
       result.win_rate = resolvedCategoryBets.length > 0 ? wonCategoryBets / resolvedCategoryBets.length : 0;
+    }
+
+    return results;
+  }
+
+  async getBySport(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<AnalyticsBySport[]> {
+    let betsQuery = this.supabase
+      .from('main_bets')
+      .select('*')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .not('sport_id', 'is', null);
+
+    if (startDate) {
+      betsQuery = betsQuery.gte('date', startDate);
+    }
+
+    if (endDate) {
+      betsQuery = betsQuery.lte('date', endDate);
+    }
+
+    const { data: bets, error } = await betsQuery;
+
+    if (error) {
+      throw createError(errorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch by sport', 500);
+    }
+
+    const sportMap = new Map<string, AnalyticsBySport>();
+
+    bets?.forEach((bet: any) => {
+      if (!bet.sport_id) return;
+
+      const sportId = bet.sport_id;
+      if (!sportMap.has(sportId)) {
+        sportMap.set(sportId, {
+          sport_id: sportId,
+          sport_name: '',
+          total_stake: 0,
+          total_profit: 0,
+          roi: 0,
+          win_rate: 0,
+          bet_count: 0,
+        });
+      }
+
+      const sportData = sportMap.get(sportId)!;
+      sportData.total_stake += Number(bet.stake || 0);
+      sportData.total_profit += Number(bet.profit_loss || 0);
+      sportData.bet_count += 1;
+    });
+
+    const results = Array.from(sportMap.values());
+    for (const result of results) {
+      result.roi = result.total_stake > 0 ? result.total_profit / result.total_stake : 0;
+
+      const { data: sport } = await this.supabase
+        .from('reference_items')
+        .select('name')
+        .eq('id', result.sport_id)
+        .single();
+
+      if (sport) {
+        result.sport_name = sport.name;
+      }
+
+      const sportBets = bets?.filter((b: any) => b.sport_id === result.sport_id) || [];
+      const resolvedSportBets = sportBets.filter((b: any) => b.state === 'won' || b.state === 'lost');
+      const wonSportBets = resolvedSportBets.filter((b: any) => b.state === 'won').length || 0;
+      result.win_rate = resolvedSportBets.length > 0 ? wonSportBets / resolvedSportBets.length : 0;
     }
 
     return results;

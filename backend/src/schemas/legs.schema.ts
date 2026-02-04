@@ -8,6 +8,7 @@ export const updateLegSchema = z.object({
     bet_type_id: z.string().uuid().optional(),
     category_id: z.string().uuid().optional(),
     responsible_id: z.string().uuid().optional(),
+    sport_id: z.string().uuid().optional().nullable(),
     odd: z.number().positive().optional(),
     result_state: z.enum(['pending', 'won', 'lost', 'void']).optional(),
     notes: z.string().optional(),

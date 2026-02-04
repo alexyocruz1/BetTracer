@@ -1019,6 +1019,12 @@ export default function BetDetailPage() {
             <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Date</label>
             <div className="text-lg text-gray-900 dark:text-gray-100">{new Date(bet.date).toLocaleString()}</div>
           </div>
+          {bet.sport_id && getReferenceName(bet.sport_id) && (
+            <div>
+              <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Sport</label>
+              <div className="text-lg text-gray-900 dark:text-gray-100">{getReferenceName(bet.sport_id)}</div>
+            </div>
+          )}
           {bet.notes && (
             <div>
               <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Notes</label>
@@ -1146,6 +1152,15 @@ export default function BetDetailPage() {
                       leg.result_state === 'void' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'
                     }`}>
                       {getReferenceName(leg.league_id)}
+                    </div>
+                  )}
+
+                  {/* Sport (per leg) */}
+                  {leg.sport_id && getReferenceName(leg.sport_id) && (
+                    <div className={`text-sm mt-1 ${
+                      leg.result_state === 'void' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'
+                    }`}>
+                      Sport: {getReferenceName(leg.sport_id)}
                     </div>
                   )}
 

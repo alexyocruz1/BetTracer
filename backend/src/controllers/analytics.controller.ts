@@ -83,6 +83,18 @@ export class AnalyticsController {
     return sendSuccess(res, byCategory);
   };
 
+  getBySport = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { start_date, end_date } = req.query;
+
+    const bySport = await this.analyticsService.getBySport(
+      userId,
+      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+    );
+    return sendSuccess(res, bySport);
+  };
+
   getLegAnalytics = async (req: AuthRequest, res: Response): Promise<Response> => {
     const userId = req.user!.id;
     const { start_date, end_date } = req.query;

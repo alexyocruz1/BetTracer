@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { apiClient } from '@/lib/api/client';
-import { AnalyticsSummary, AnalyticsByLeague, AnalyticsByResponsible, AnalyticsByBetType, AnalyticsByCategory, TimeSeriesData, LegAnalytics, OddsAnalysis, TeamPerformance, BestWorstPerformers, StreakAnalysis, ResponsibleDetailedAnalytics, AnalyticsByLegs, TemporalAnalytics, StakeAnalysis, CombinationAnalytics, RiskMetrics, PeriodComparison, EVAnalysis, RecoveryAnalysis, BankrollAnalysis, FrequencyAnalysis } from '@/types';
+import { AnalyticsSummary, AnalyticsByLeague, AnalyticsByResponsible, AnalyticsByBetType, AnalyticsByCategory, AnalyticsBySport, TimeSeriesData, LegAnalytics, OddsAnalysis, TeamPerformance, BestWorstPerformers, StreakAnalysis, ResponsibleDetailedAnalytics, AnalyticsByLegs, TemporalAnalytics, StakeAnalysis, CombinationAnalytics, RiskMetrics, PeriodComparison, EVAnalysis, RecoveryAnalysis, BankrollAnalysis, FrequencyAnalysis } from '@/types';
 import { useTheme } from '@/contexts/theme-context';
 import {
   LineChart,
@@ -301,6 +301,7 @@ export default function AnalyticsPage() {
   const [responsibleDetailed, setResponsibleDetailed] = useState<ResponsibleDetailedAnalytics[]>([]);
   const [byBetType, setByBetType] = useState<AnalyticsByBetType[]>([]);
   const [byCategory, setByCategory] = useState<AnalyticsByCategory[]>([]);
+  const [bySport, setBySport] = useState<AnalyticsBySport[]>([]);
   const [legAnalytics, setLegAnalytics] = useState<LegAnalytics | null>(null);
   
   // Calculate dynamic thresholds based on current dataset size
@@ -368,6 +369,7 @@ export default function AnalyticsPage() {
         setResponsibleDetailed([]);
         setByBetType([]);
         setByCategory([]);
+        setBySport([]);
         setLegAnalytics(null);
         setOddsAnalysis([]);
         setTeamPerformance([]);
@@ -401,6 +403,7 @@ export default function AnalyticsPage() {
         { name: 'responsibleDetailed', promise: apiClient.get<{ data: ResponsibleDetailedAnalytics[] }>(`/api/analytics/responsible-detailed${queryString}`) },
         { name: 'byBetType', promise: apiClient.get<{ data: AnalyticsByBetType[] }>(`/api/analytics/by-bet-type${queryString}`) },
         { name: 'byCategory', promise: apiClient.get<{ data: AnalyticsByCategory[] }>(`/api/analytics/by-category${queryString}`) },
+        { name: 'bySport', promise: apiClient.get<{ data: AnalyticsBySport[] }>(`/api/analytics/by-sport${queryString}`) },
         { name: 'legAnalytics', promise: apiClient.get<{ data: LegAnalytics }>(`/api/analytics/leg-analytics${queryString}`) },
         { name: 'oddsAnalysis', promise: apiClient.get<{ data: OddsAnalysis[] }>(`/api/analytics/odds-analysis${queryString}`) },
         { name: 'teamPerformance', promise: apiClient.get<{ data: TeamPerformance[] }>(`/api/analytics/team-performance${queryString}`) },
@@ -432,22 +435,23 @@ export default function AnalyticsPage() {
       const responsibleDetailedRes = results[3].status === 'fulfilled' ? results[3].value : { data: { data: [] } };
       const byBetTypeRes = results[4].status === 'fulfilled' ? results[4].value : { data: { data: [] } };
       const byCategoryRes = results[5].status === 'fulfilled' ? results[5].value : { data: { data: [] } };
-      const legAnalyticsRes = results[6].status === 'fulfilled' ? results[6].value : { data: { data: null } };
-      const oddsAnalysisRes = results[7].status === 'fulfilled' ? results[7].value : { data: { data: [] } };
-      const teamPerformanceRes = results[8].status === 'fulfilled' ? results[8].value : { data: { data: [] } };
-      const bestWorstRes = results[9].status === 'fulfilled' ? results[9].value : { data: { data: null } };
-      const streakRes = results[10].status === 'fulfilled' ? results[10].value : { data: { data: null } };
-      const timeSeriesRes = results[11].status === 'fulfilled' ? results[11].value : { data: { data: [] } };
-      const byLegsRes = results[12].status === 'fulfilled' ? results[12].value : { data: { data: [] } };
-      const temporalRes = results[13].status === 'fulfilled' ? results[13].value : { data: { data: null } };
-      const stakeAnalysisRes = results[14].status === 'fulfilled' ? results[14].value : { data: { data: [] } };
-      const combinationsRes = results[15].status === 'fulfilled' ? results[15].value : { data: { data: null } };
-      const riskMetricsRes = results[16].status === 'fulfilled' ? results[16].value : { data: { data: null } };
-      const periodComparisonRes = results[17].status === 'fulfilled' ? results[17].value : { data: { data: null } };
-      const evAnalysisRes = results[18].status === 'fulfilled' ? results[18].value : { data: { data: null } };
-      const recoveryRes = results[19].status === 'fulfilled' ? results[19].value : { data: { data: null } };
-      const bankrollRes = results[20].status === 'fulfilled' ? results[20].value : { data: { data: null } };
-      const frequencyRes = results[21].status === 'fulfilled' ? results[21].value : { data: { data: null } };
+      const bySportRes = results[6].status === 'fulfilled' ? results[6].value : { data: { data: [] } };
+      const legAnalyticsRes = results[7].status === 'fulfilled' ? results[7].value : { data: { data: null } };
+      const oddsAnalysisRes = results[8].status === 'fulfilled' ? results[8].value : { data: { data: [] } };
+      const teamPerformanceRes = results[9].status === 'fulfilled' ? results[9].value : { data: { data: [] } };
+      const bestWorstRes = results[10].status === 'fulfilled' ? results[10].value : { data: { data: null } };
+      const streakRes = results[11].status === 'fulfilled' ? results[11].value : { data: { data: null } };
+      const timeSeriesRes = results[12].status === 'fulfilled' ? results[12].value : { data: { data: [] } };
+      const byLegsRes = results[13].status === 'fulfilled' ? results[13].value : { data: { data: [] } };
+      const temporalRes = results[14].status === 'fulfilled' ? results[14].value : { data: { data: null } };
+      const stakeAnalysisRes = results[15].status === 'fulfilled' ? results[15].value : { data: { data: [] } };
+      const combinationsRes = results[16].status === 'fulfilled' ? results[16].value : { data: { data: null } };
+      const riskMetricsRes = results[17].status === 'fulfilled' ? results[17].value : { data: { data: null } };
+      const periodComparisonRes = results[18].status === 'fulfilled' ? results[18].value : { data: { data: null } };
+      const evAnalysisRes = results[19].status === 'fulfilled' ? results[19].value : { data: { data: null } };
+      const recoveryRes = results[20].status === 'fulfilled' ? results[20].value : { data: { data: null } };
+      const bankrollRes = results[21].status === 'fulfilled' ? results[21].value : { data: { data: null } };
+      const frequencyRes = results[22].status === 'fulfilled' ? results[22].value : { data: { data: null } };
 
       // Log any failures
       results.forEach((result, index) => {
@@ -495,6 +499,7 @@ export default function AnalyticsPage() {
         setResponsibleDetailed(detailedData);
         setByBetType((byBetTypeRes.data?.data as AnalyticsByBetType[]) || []);
         setByCategory((byCategoryRes.data?.data as AnalyticsByCategory[]) || []);
+        setBySport((bySportRes.data?.data as AnalyticsBySport[]) || []);
         setLegAnalytics((legAnalyticsRes.data?.data as LegAnalytics) || null);
         setByLegs((byLegsRes.data?.data as AnalyticsByLegs[]) || []);
         setTemporal((temporalRes.data?.data as TemporalAnalytics) || null);
@@ -831,7 +836,7 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </div>
-      ) : (byLeague.length === 0 && byResponsible.length === 0 && byBetType.length === 0 && byCategory.length === 0 && timeSeries.length === 0) ? (
+      ) : (byLeague.length === 0 && byResponsible.length === 0 && byBetType.length === 0 && byCategory.length === 0 && bySport.length === 0 && timeSeries.length === 0) ? (
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-12 mb-8 border border-gray-200 dark:border-gray-700">
           <div className="text-center">
             <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1282,6 +1287,89 @@ export default function AnalyticsPage() {
           <p className="text-gray-500 dark:text-gray-400 text-center">No league data available for the selected period.</p>
         </div>
       )}
+
+      {bySport.length > 0 ? (
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Performance by Sport</h2>
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Profit by Sport</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={bySport}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
+                <XAxis
+                  dataKey="sport_name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
+                />
+                <YAxis
+                  tickFormatter={(value) => `$${value.toFixed(0)}`}
+                  tick={{ fontSize: 12, fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
+                />
+                <Tooltip
+                  trigger="click"
+                  formatter={(value: number) => `$${value.toFixed(2)}`}
+                  contentStyle={{
+                    backgroundColor: theme === 'dark' ? '#1f2937' : '#fff',
+                    border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    color: theme === 'dark' ? '#f3f4f6' : '#111827'
+                  }}
+                  labelStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#111827' }}
+                />
+                <Bar dataKey="total_profit" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="overflow-x-auto -mx-6 px-6">
+            <div className="inline-block min-w-full align-middle">
+              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sport</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stake</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Profit</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ROI</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Win Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {bySport.map((sport) => (
+                      <tr key={sport.sport_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          {sport.sport_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          ${sport.total_stake.toFixed(2)}
+                        </td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                          sport.total_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          ${sport.total_profit.toFixed(2)}
+                        </td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                          sport.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          {(sport.roi * 100).toFixed(1)}%
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <WinRateDisplay
+                            winRate={sport.win_rate}
+                            sampleSize={sport.bet_count}
+                            minThreshold={MIN_SAMPLE_SIZES.LEAGUE}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {byLegs.length > 0 ? (
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
