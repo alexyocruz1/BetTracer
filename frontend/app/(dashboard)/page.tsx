@@ -40,13 +40,19 @@ export default function DashboardPage() {
         const streakUrl = `/api/analytics/streak-analysis${cacheBuster}`;
         const bestWorstUrl = `/api/analytics/best-worst-performers${cacheBuster}`;
         const timeSeriesUrl = `/api/analytics/time-series?granularity=daily&start_date=${startDate}&t=${Date.now()}`;
+        // Get profit before the 30-day window to use as starting cumulative
+        const beforeDate = new Date(thirtyDaysAgo);
+        beforeDate.setDate(beforeDate.getDate() - 1);
+        const endDateBefore = beforeDate.toISOString().split('T')[0];
+        const summaryBeforeUrl = `/api/analytics/summary?end_date=${endDateBefore}&t=${Date.now()}`;
 
-        const [summaryRes, betsRes, streakRes, bestWorstRes, timeSeriesRes] = await Promise.allSettled([
+        const [summaryRes, betsRes, streakRes, bestWorstRes, timeSeriesRes, summaryBeforeRes] = await Promise.allSettled([
           apiClient.get<{ data: AnalyticsSummary }>(summaryUrl),
           apiClient.get<{ data: { bets: MainBet[]; total: number; totalPages: number } }>(betsUrl),
           apiClient.get<{ data: StreakAnalysis }>(streakUrl),
           apiClient.get<{ data: BestWorstPerformers }>(bestWorstUrl),
           apiClient.get<{ data: TimeSeriesData[] }>(timeSeriesUrl),
+          apiClient.get<{ data: AnalyticsSummary }>(summaryBeforeUrl),
         ]);
 
         if (requestCompleted || cancelled) return;
@@ -65,8 +71,13 @@ export default function DashboardPage() {
         }
         if (timeSeriesRes.status === 'fulfilled') {
           const rawData = timeSeriesRes.value.data.data || [];
-          // Calculate cumulative profit for the chart
-          let cumulative = 0;
+          // Get the cumulative profit before the 30-day window as starting point
+          let cumulativeStart = 0;
+          if (summaryBeforeRes.status === 'fulfilled') {
+            cumulativeStart = summaryBeforeRes.value.data.data.total_profit || 0;
+          }
+          // Calculate cumulative profit for the chart starting from historical profit
+          let cumulative = cumulativeStart;
           const chartData = rawData.map((item) => {
             cumulative += item.profit;
             return {
