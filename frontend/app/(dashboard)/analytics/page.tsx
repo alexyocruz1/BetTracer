@@ -1003,7 +1003,16 @@ export default function AnalyticsPage() {
 
                     {/* Cumulative Profit Chart */}
                     <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Cumulative Profit</h3>
+                      <div className="mb-4">
+                        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                          {startDate || endDate ? 'Profit Accumulation (Selected Period)' : 'Cumulative Profit (All Time)'}
+                        </h3>
+                        {(startDate || endDate) && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Shows profit accumulated within the selected date range
+                          </p>
+                        )}
+                      </div>
                       <ResponsiveContainer width="100%" height={250}>
                         <LineChart
                           data={timeSeries
@@ -1033,7 +1042,7 @@ export default function AnalyticsPage() {
                           />
                           <Tooltip
                             trigger="click"
-                            formatter={(value: number) => `$${value.toFixed(2)}`}
+                            formatter={(value: number) => [`$${value.toFixed(2)}`, (startDate || endDate) ? 'Period Profit' : 'Cumulative Profit']}
                             contentStyle={{
                               backgroundColor: theme === 'dark' ? '#1f2937' : '#fff',
                               border: `1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}`,

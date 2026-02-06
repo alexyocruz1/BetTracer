@@ -28,31 +28,21 @@ export default function DashboardPage() {
       
       try {
         // Fetch all dashboard data in parallel
-        // Calculate date 30 days ago
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const startDate = thirtyDaysAgo.toISOString().split('T')[0];
-
-        // Add cache-busting timestamp for critical requests
+        // For the chart, we'll fetch all-time data and show last 30 days
+        // This ensures cumulative profit matches the summary total_profit
         const cacheBuster = `?t=${Date.now()}`;
         const summaryUrl = `/api/analytics/summary${cacheBuster}`;
         const betsUrl = `/api/bets?limit=5&offset=0&t=${Date.now()}`;
         const streakUrl = `/api/analytics/streak-analysis${cacheBuster}`;
         const bestWorstUrl = `/api/analytics/best-worst-performers${cacheBuster}`;
-        const timeSeriesUrl = `/api/analytics/time-series?granularity=daily&start_date=${startDate}&t=${Date.now()}`;
-        // Get profit before the 30-day window to use as starting cumulative
-        const beforeDate = new Date(thirtyDaysAgo);
-        beforeDate.setDate(beforeDate.getDate() - 1);
-        const endDateBefore = beforeDate.toISOString().split('T')[0];
-        const summaryBeforeUrl = `/api/analytics/summary?end_date=${endDateBefore}&t=${Date.now()}`;
+        const timeSeriesUrl = `/api/analytics/time-series?granularity=daily&t=${Date.now()}`; // No date filter = all time
 
-        const [summaryRes, betsRes, streakRes, bestWorstRes, timeSeriesRes, summaryBeforeRes] = await Promise.allSettled([
+        const [summaryRes, betsRes, streakRes, bestWorstRes, timeSeriesRes] = await Promise.allSettled([
           apiClient.get<{ data: AnalyticsSummary }>(summaryUrl),
           apiClient.get<{ data: { bets: MainBet[]; total: number; totalPages: number } }>(betsUrl),
           apiClient.get<{ data: StreakAnalysis }>(streakUrl),
           apiClient.get<{ data: BestWorstPerformers }>(bestWorstUrl),
           apiClient.get<{ data: TimeSeriesData[] }>(timeSeriesUrl),
-          apiClient.get<{ data: AnalyticsSummary }>(summaryBeforeUrl),
         ]);
 
         if (requestCompleted || cancelled) return;
@@ -71,13 +61,9 @@ export default function DashboardPage() {
         }
         if (timeSeriesRes.status === 'fulfilled') {
           const rawData = timeSeriesRes.value.data.data || [];
-          // Get the cumulative profit before the 30-day window as starting point
-          let cumulativeStart = 0;
-          if (summaryBeforeRes.status === 'fulfilled') {
-            cumulativeStart = summaryBeforeRes.value.data.data.total_profit || 0;
-          }
-          // Calculate cumulative profit for the chart starting from historical profit
-          let cumulative = cumulativeStart;
+          
+          // Calculate cumulative profit from the beginning (all time data)
+          let cumulative = 0;
           const chartData = rawData.map((item) => {
             cumulative += item.profit;
             return {
@@ -85,6 +71,7 @@ export default function DashboardPage() {
               cumulative_profit: cumulative,
             };
           });
+          
           setTimeSeries(chartData);
         }
 
@@ -468,7 +455,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={timeSeries}>
+            <LineChart data={timeSeries.slice(-30)}>
               <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#374151' : '#e5e7eb'} />
               <XAxis 
                 dataKey="date" 
