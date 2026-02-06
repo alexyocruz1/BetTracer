@@ -266,6 +266,46 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Last 5 Days Profit */}
+      {timeSeries.length > 0 && (
+        <div className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Last 5 Days Performance</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            {timeSeries.slice(-5).map((day, index) => {
+              const date = new Date(day.date);
+              const isPositive = day.profit >= 0;
+              return (
+                <div 
+                  key={index} 
+                  className={`p-4 rounded-lg border-2 ${
+                    isPositive 
+                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                      : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  }`}
+                >
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                  </div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </div>
+                  <div className={`text-xl font-bold ${
+                    isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {isPositive ? '+' : ''}${day.profit.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {day.bet_count} bet{day.bet_count !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Current Streak */}
       {streakAnalysis && streakAnalysis.current_streak.length > 0 && (
         <div className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
