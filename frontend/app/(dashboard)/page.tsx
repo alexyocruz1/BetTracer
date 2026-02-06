@@ -306,6 +306,56 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Total Profit Trend - Last 5 Days */}
+      {timeSeries.length > 0 && (
+        <div className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Total Profit Trend (Last 5 Days)</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            {timeSeries.slice(-5).map((day, index, arr) => {
+              const date = new Date(day.date);
+              const isPositive = day.cumulative_profit >= 0;
+              // Calculate change from previous day
+              const previousDay = index > 0 ? arr[index - 1].cumulative_profit : null;
+              const change = previousDay !== null ? day.cumulative_profit - previousDay : null;
+              const hasIncreased = change !== null && change > 0;
+              const hasDecreased = change !== null && change < 0;
+              
+              return (
+                <div 
+                  key={index} 
+                  className="p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                >
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                  </div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </div>
+                  <div className={`text-xl font-bold ${
+                    isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    ${day.cumulative_profit.toFixed(2)}
+                  </div>
+                  {change !== null && (
+                    <div className={`text-xs mt-1 flex items-center ${
+                      hasIncreased ? 'text-green-600 dark:text-green-400' : 
+                      hasDecreased ? 'text-red-600 dark:text-red-400' : 
+                      'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {hasIncreased && '↑ '}
+                      {hasDecreased && '↓ '}
+                      {change >= 0 ? '+' : ''}${change.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Current Streak */}
       {streakAnalysis && streakAnalysis.current_streak.length > 0 && (
         <div className="mt-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
