@@ -100,14 +100,35 @@ async function fixVoidedLegsProfit() {
 
     console.log(`📊 Found ${bets.length} resolved bets to check.\n`);
 
-    // Filter to only bets that have at least one voided leg
-    const betsWithVoidedLegs = bets.filter((bet: any) => 
-      bet.legs && bet.legs.length > 0 && bet.legs.some((leg: any) => leg.result_state === 'void')
-    );
+    // Filter to bets that either:
+    // 1. Have at least one voided leg, OR
+    // 2. Have placeholder leg odds (all legs ≤ 1.01)
+    const betsNeedingFix = bets.filter((bet: any) => {
+      if (!bet.legs || bet.legs.length === 0) return false;
+      
+      // Check for voided legs
+      const hasVoidedLeg = bet.legs.some((leg: any) => leg.result_state === 'void');
+      
+      // Check for placeholder odds
+      const hasPlaceholderOdds = bet.legs.every((leg: any) => {
+        const odd = Number(leg.odd || 1);
+        return odd <= 1.01;
+      });
+      
+      return hasVoidedLeg || hasPlaceholderOdds;
+    });
 
-    console.log(`🎯 Found ${betsWithVoidedLegs.length} bets with voided legs that need fixing.\n`);
+    console.log(`🎯 Found ${betsNeedingFix.length} bets that need fixing:\n`);
+    const withVoided = betsNeedingFix.filter((bet: any) => 
+      bet.legs.some((leg: any) => leg.result_state === 'void')
+    ).length;
+    const withPlaceholder = betsNeedingFix.filter((bet: any) => 
+      bet.legs.every((leg: any) => Number(leg.odd || 1) <= 1.01)
+    ).length;
+    console.log(`  - ${withVoided} with voided legs`);
+    console.log(`  - ${withPlaceholder} with placeholder odds\n`);
 
-    if (betsWithVoidedLegs.length === 0) {
+    if (betsNeedingFix.length === 0) {
       console.log('✅ No bets need fixing!');
       return;
     }
@@ -116,8 +137,21 @@ async function fixVoidedLegsProfit() {
     let unchangedCount = 0;
     const updates: Array<{ id: string; oldProfit: number; newProfit: number; effectiveOdds: number }> = [];
 
-    for (const bet of betsWithVoidedLegs as any[]) {
+    for (const bet of betsNeedingFix as any[]) {
+      console.log(`\n🔍 Processing bet ${bet.id.substring(0, 8)}...`);
+      console.log(`  Date: ${bet.date?.substring(0, 10)}`);
+      console.log(`  State: ${bet.state}`);
+      console.log(`  Stake: $${bet.stake}`);
+      console.log(`  Main odds: ${bet.odds}`);
+      console.log(`  Current profit: $${bet.profit_loss}`);
+      console.log(`  Legs: ${bet.legs.length}`);
+      bet.legs.forEach((leg: any, idx: number) => {
+        console.log(`    Leg ${idx + 1}: odds=${leg.odd}, state=${leg.result_state}`);
+      });
+      
       const effectiveOdds = calculateEffectiveOdds(bet.legs, bet.odds);
+      console.log(`  Calculated effective odds: ${effectiveOdds}`);
+      
       let newProfitLoss: number;
 
       if (bet.state === 'won') {
@@ -131,9 +165,13 @@ async function fixVoidedLegsProfit() {
       // Round to 2 decimal places for comparison
       newProfitLoss = Math.round(newProfitLoss * 100) / 100;
       const oldProfitLoss = bet.profit_loss !== null ? Math.round(bet.profit_loss * 100) / 100 : 0;
+      
+      console.log(`  Calculated profit: $${newProfitLoss}`);
+      console.log(`  Difference: $${(newProfitLoss - oldProfitLoss).toFixed(2)}`);
 
       // Only update if the value is different
       if (Math.abs(newProfitLoss - oldProfitLoss) > 0.01) {
+        console.log(`  ✅ Updating...`);
         const { error: updateError } = await supabase
           .from('main_bets')
           .update({ profit_loss: newProfitLoss })
@@ -151,6 +189,7 @@ async function fixVoidedLegsProfit() {
           });
         }
       } else {
+        console.log(`  ⚪ Already correct, skipping`);
         unchangedCount++;
       }
     }
@@ -158,7 +197,7 @@ async function fixVoidedLegsProfit() {
     console.log('\n📋 Summary:');
     console.log(`✅ Fixed: ${fixedCount} bets`);
     console.log(`⚪ Unchanged: ${unchangedCount} bets (already correct)`);
-    console.log(`📊 Total checked: ${betsWithVoidedLegs.length} bets\n`);
+    console.log(`📊 Total checked: ${betsNeedingFix.length} bets\n`);
 
     if (updates.length > 0) {
       console.log('📝 Updated bets:');
