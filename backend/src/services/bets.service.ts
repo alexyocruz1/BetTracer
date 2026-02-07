@@ -12,16 +12,43 @@ export class BetsService {
     }
 
     const nonVoidedLegs = bet.legs.filter((leg: any) => leg.result_state !== 'void');
+    const allLegs = bet.legs;
     
     if (nonVoidedLegs.length === 0) {
       // All legs are voided - return 1 (push/no action)
       return 1;
     }
 
+    // Check if leg odds are placeholders (all 1.0 or all 0)
+    // This happens when user only knows combined odds but not individual leg odds
+    const hasPlaceholderOdds = allLegs.every((leg: any) => {
+      const odd = Number(leg.odd || 1);
+      return odd <= 1.01; // Consider 1.0 or less as placeholder
+    });
+
+    // If using placeholder odds, we can't calculate effective odds properly
+    // Fall back to main bet odds (can't adjust for voided legs without real leg odds)
+    if (hasPlaceholderOdds) {
+      console.log(`[BetsService] Bet ${bet.id} has placeholder leg odds, using main bet odds: ${bet.odds}`);
+      return Number(bet.odds || 0);
+    }
+
     // Calculate effective odds by multiplying non-voided legs
     const effectiveOdds = nonVoidedLegs.reduce((acc: number, leg: any) => {
       return acc * Number(leg.odd || 1);
     }, 1);
+
+    // Verify calculated odds are reasonable
+    // If leg odds product differs too much from main bet odds, use main bet odds
+    const mainOdds = Number(bet.odds || 0);
+    const allLegsProduct = allLegs.reduce((acc: number, leg: any) => acc * Number(leg.odd || 1), 1);
+    const odssDifference = Math.abs(allLegsProduct - mainOdds);
+    
+    // If difference > 10% of main odds, leg odds might be placeholders or incorrect
+    if (mainOdds > 0 && odssDifference > mainOdds * 0.1) {
+      console.log(`[BetsService] Bet ${bet.id} leg odds product (${allLegsProduct.toFixed(2)}) differs from main odds (${mainOdds.toFixed(2)}), using main bet odds`);
+      return mainOdds;
+    }
 
     return effectiveOdds;
   }

@@ -33,9 +33,9 @@ interface Bet {
   legs: Leg[];
 }
 
-function calculateEffectiveOdds(legs: Leg[]): number {
+function calculateEffectiveOdds(legs: Leg[], mainOdds: number): number {
   if (!legs || legs.length === 0) {
-    return 0;
+    return mainOdds;
   }
 
   const nonVoidedLegs = legs.filter(leg => leg.result_state !== 'void');
@@ -45,10 +45,35 @@ function calculateEffectiveOdds(legs: Leg[]): number {
     return 1;
   }
 
+  // Check if leg odds are placeholders (all 1.0 or all 0)
+  // This happens when user only knows combined odds but not individual leg odds
+  const hasPlaceholderOdds = legs.every(leg => {
+    const odd = Number(leg.odd || 1);
+    return odd <= 1.01; // Consider 1.0 or less as placeholder
+  });
+
+  // If using placeholder odds, we can't calculate effective odds properly
+  // Fall back to main bet odds (can't adjust for voided legs without real leg odds)
+  if (hasPlaceholderOdds) {
+    console.log(`  Using main bet odds (placeholder leg odds detected)`);
+    return mainOdds;
+  }
+
   // Calculate effective odds by multiplying non-voided legs
   const effectiveOdds = nonVoidedLegs.reduce((acc, leg) => {
     return acc * Number(leg.odd || 1);
   }, 1);
+
+  // Verify calculated odds are reasonable
+  // If leg odds product differs too much from main bet odds, use main bet odds
+  const allLegsProduct = legs.reduce((acc, leg) => acc * Number(leg.odd || 1), 1);
+  const oddsDifference = Math.abs(allLegsProduct - mainOdds);
+  
+  // If difference > 10% of main odds, leg odds might be placeholders or incorrect
+  if (mainOdds > 0 && oddsDifference > mainOdds * 0.1) {
+    console.log(`  Leg odds mismatch (product: ${allLegsProduct.toFixed(2)}, main: ${mainOdds.toFixed(2)}), using main bet odds`);
+    return mainOdds;
+  }
 
   return effectiveOdds;
 }
@@ -92,7 +117,7 @@ async function fixVoidedLegsProfit() {
     const updates: Array<{ id: string; oldProfit: number; newProfit: number; effectiveOdds: number }> = [];
 
     for (const bet of betsWithVoidedLegs as any[]) {
-      const effectiveOdds = calculateEffectiveOdds(bet.legs);
+      const effectiveOdds = calculateEffectiveOdds(bet.legs, bet.odds);
       let newProfitLoss: number;
 
       if (bet.state === 'won') {

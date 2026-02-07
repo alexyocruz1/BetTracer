@@ -90,16 +90,41 @@ export class AnalyticsService {
     }
 
     const nonVoidedLegs = bet.legs.filter((leg: any) => leg.result_state !== 'void');
+    const allLegs = bet.legs;
     
     if (nonVoidedLegs.length === 0) {
       // All legs are voided
       return 0;
     }
 
+    // Check if leg odds are placeholders (all 1.0 or all 0)
+    // This happens when user only knows combined odds but not individual leg odds
+    const hasPlaceholderOdds = allLegs.every((leg: any) => {
+      const odd = Number(leg.odd || 1);
+      return odd <= 1.01; // Consider 1.0 or less as placeholder
+    });
+
+    // If using placeholder odds, we can't calculate effective odds properly
+    // Fall back to main bet odds (can't adjust for voided legs without real leg odds)
+    if (hasPlaceholderOdds) {
+      return Number(bet.odds || 0);
+    }
+
     // Calculate effective odds by multiplying non-voided legs
     const effectiveOdds = nonVoidedLegs.reduce((acc: number, leg: any) => {
       return acc * Number(leg.odd || 1);
     }, 1);
+
+    // Verify calculated odds are reasonable
+    // If leg odds product differs too much from main bet odds, use main bet odds
+    const mainOdds = Number(bet.odds || 0);
+    const allLegsProduct = allLegs.reduce((acc: number, leg: any) => acc * Number(leg.odd || 1), 1);
+    const oddsDifference = Math.abs(allLegsProduct - mainOdds);
+    
+    // If difference > 10% of main odds, leg odds might be placeholders or incorrect
+    if (mainOdds > 0 && oddsDifference > mainOdds * 0.1) {
+      return mainOdds;
+    }
 
     return effectiveOdds;
   }
