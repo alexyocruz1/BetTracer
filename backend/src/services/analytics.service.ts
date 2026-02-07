@@ -552,7 +552,8 @@ export class AnalyticsService {
     userId: string,
     granularity: 'daily' | 'weekly' | 'monthly' | 'all-time',
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    timezoneOffset?: number
   ): Promise<TimeSeriesData[]> {
     let query = this.supabase
       .from('main_bets')
@@ -578,18 +579,37 @@ export class AnalyticsService {
     // Group by date based on granularity
     const dateMap = new Map<string, TimeSeriesData>();
 
-    bets?.forEach((bet) => {
+    bets?.forEach((bet: any) => {
       const date = new Date(bet.date);
+      
+      // If timezone offset is provided, adjust the date to user's timezone
+      // timezoneOffset is in minutes (e.g., -300 for EST/UTC-5)
+      // We need to convert UTC time to user's local time
+      if (timezoneOffset !== undefined) {
+        // Get the UTC time in milliseconds
+        const utcTime = date.getTime();
+        // Subtract the offset (negative offset means ahead of UTC, so we subtract)
+        const localTime = utcTime - (timezoneOffset * 60 * 1000);
+        date.setTime(localTime);
+      }
+      
       let key: string;
 
       if (granularity === 'daily' || granularity === 'all-time') {
-        key = date.toISOString().split('T')[0];
+        // Extract date components in the adjusted timezone
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        key = `${year}-${month}-${day}`;
       } else if (granularity === 'weekly') {
         const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay());
-        key = weekStart.toISOString().split('T')[0];
+        weekStart.setUTCDate(date.getUTCDate() - date.getUTCDay());
+        const year = weekStart.getUTCFullYear();
+        const month = String(weekStart.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(weekStart.getUTCDate()).padStart(2, '0');
+        key = `${year}-${month}-${day}`;
       } else {
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
       }
 
       if (!dateMap.has(key)) {
@@ -963,7 +983,8 @@ export class AnalyticsService {
   async getStreakAnalysis(
     userId: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    timezoneOffset?: number
   ): Promise<StreakAnalysis> {
     // For current streak, we need ALL bets including today, regardless of filters
     // CRITICAL: No date filters applied to this query - it gets ALL bets for the user
@@ -2670,7 +2691,8 @@ export class AnalyticsService {
   async getTemporalAnalytics(
     userId: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    timezoneOffset?: number
   ): Promise<TemporalAnalytics> {
     let betsQuery = this.supabase
       .from('main_bets')
@@ -2733,10 +2755,18 @@ export class AnalyticsService {
 
     bets.forEach((bet) => {
       const betDate = new Date(bet.date);
-      const dayOfWeek = betDate.getDay();
-      const hour = betDate.getHours();
-      const month = betDate.getMonth();
-      const year = betDate.getFullYear();
+      
+      // Apply timezone offset if provided
+      if (timezoneOffset !== undefined) {
+        const utcTime = betDate.getTime();
+        const localTime = utcTime - (timezoneOffset * 60 * 1000);
+        betDate.setTime(localTime);
+      }
+      
+      const dayOfWeek = timezoneOffset !== undefined ? betDate.getUTCDay() : betDate.getDay();
+      const hour = timezoneOffset !== undefined ? betDate.getUTCHours() : betDate.getHours();
+      const month = timezoneOffset !== undefined ? betDate.getUTCMonth() : betDate.getMonth();
+      const year = timezoneOffset !== undefined ? betDate.getUTCFullYear() : betDate.getFullYear();
       const monthKey = `${year}-${month}`;
 
       // Day of week
@@ -3759,7 +3789,8 @@ export class AnalyticsService {
   async getBankrollAnalysis(
     userId: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    timezoneOffset?: number
   ): Promise<BankrollAnalysis> {
     let betsQuery = this.supabase
       .from('main_bets')
@@ -3922,7 +3953,8 @@ export class AnalyticsService {
   async getFrequencyAnalysis(
     userId: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    timezoneOffset?: number
   ): Promise<FrequencyAnalysis> {
     let betsQuery = this.supabase
       .from('main_bets')
@@ -3959,7 +3991,20 @@ export class AnalyticsService {
     // Group by date
     const dateMap = new Map<string, { bets: any[]; profit: number }>();
     bets.forEach((bet) => {
-      const date = bet.date.split('T')[0];
+      const betDate = new Date(bet.date);
+      
+      // Apply timezone offset if provided
+      if (timezoneOffset !== undefined) {
+        const utcTime = betDate.getTime();
+        const localTime = utcTime - (timezoneOffset * 60 * 1000);
+        betDate.setTime(localTime);
+      }
+      
+      // Extract date in the adjusted timezone
+      const date = timezoneOffset !== undefined
+        ? betDate.toISOString().split('T')[0]
+        : bet.date.split('T')[0];
+        
       if (!dateMap.has(date)) {
         dateMap.set(date, { bets: [], profit: 0 });
       }

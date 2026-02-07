@@ -394,6 +394,9 @@ export default function AnalyticsPage() {
       const params = new URLSearchParams();
       if (startDate && startDate.trim()) params.append('start_date', startDate);
       if (endDate && endDate.trim()) params.append('end_date', endDate);
+      // Add user's timezone offset for proper date grouping
+      const timezoneOffset = new Date().getTimezoneOffset();
+      params.append('timezone_offset', timezoneOffset.toString());
       const queryString = params.toString() ? `?${params.toString()}` : '';
 
       const requests = [

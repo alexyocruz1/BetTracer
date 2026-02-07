@@ -6,6 +6,16 @@ import { sendSuccess } from '../utils/responses';
 export class AnalyticsController {
   constructor(private analyticsService: AnalyticsService) {}
 
+  // Helper to extract common query parameters
+  private extractQueryParams(req: AuthRequest) {
+    const { start_date, end_date, timezone_offset } = req.query;
+    return {
+      startDate: start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
+      endDate: end_date && String(end_date).trim() ? String(end_date).trim() : undefined,
+      timezoneOffset: timezone_offset ? parseInt(String(timezone_offset)) : undefined,
+    };
+  }
+
   getSummary = async (req: AuthRequest, res: Response): Promise<Response> => {
     const userId = req.user!.id;
     const { start_date, end_date } = req.query;
@@ -47,13 +57,14 @@ export class AnalyticsController {
 
   getTimeSeries = async (req: AuthRequest, res: Response): Promise<Response> => {
     const userId = req.user!.id;
-    const { granularity = 'all-time', start_date, end_date } = req.query;
+    const { granularity = 'all-time', start_date, end_date, timezone_offset } = req.query;
 
     const timeSeries = await this.analyticsService.getTimeSeries(
       userId,
       granularity as 'daily' | 'weekly' | 'monthly' | 'all-time',
       start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
-      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+      end_date && String(end_date).trim() ? String(end_date).trim() : undefined,
+      timezone_offset ? parseInt(String(timezone_offset)) : undefined
     );
 
     return sendSuccess(res, timeSeries);
@@ -145,12 +156,13 @@ export class AnalyticsController {
 
   getStreakAnalysis = async (req: AuthRequest, res: Response): Promise<Response> => {
     const userId = req.user!.id;
-    const { start_date, end_date } = req.query;
+    const { startDate, endDate, timezoneOffset } = this.extractQueryParams(req);
 
     const streakAnalysis = await this.analyticsService.getStreakAnalysis(
       userId,
-      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
-      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+      startDate,
+      endDate,
+      timezoneOffset
     );
     return sendSuccess(res, streakAnalysis);
   };
@@ -182,12 +194,13 @@ export class AnalyticsController {
 
   getTemporalAnalytics = async (req: AuthRequest, res: Response): Promise<Response> => {
     const userId = req.user!.id;
-    const { start_date, end_date } = req.query;
+    const { startDate, endDate, timezoneOffset } = this.extractQueryParams(req);
 
     const temporal = await this.analyticsService.getTemporalAnalytics(
       userId,
-      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
-      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+      startDate,
+      endDate,
+      timezoneOffset
     );
     return sendSuccess(res, temporal);
   };
@@ -266,24 +279,26 @@ export class AnalyticsController {
 
   getBankrollAnalysis = async (req: AuthRequest, res: Response): Promise<Response> => {
     const userId = req.user!.id;
-    const { start_date, end_date } = req.query;
+    const { startDate, endDate, timezoneOffset } = this.extractQueryParams(req);
 
     const bankroll = await this.analyticsService.getBankrollAnalysis(
       userId,
-      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
-      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+      startDate,
+      endDate,
+      timezoneOffset
     );
     return sendSuccess(res, bankroll);
   };
 
   getFrequencyAnalysis = async (req: AuthRequest, res: Response): Promise<Response> => {
     const userId = req.user!.id;
-    const { start_date, end_date } = req.query;
+    const { startDate, endDate, timezoneOffset } = this.extractQueryParams(req);
 
     const frequency = await this.analyticsService.getFrequencyAnalysis(
       userId,
-      start_date && String(start_date).trim() ? String(start_date).trim() : undefined,
-      end_date && String(end_date).trim() ? String(end_date).trim() : undefined
+      startDate,
+      endDate,
+      timezoneOffset
     );
     return sendSuccess(res, frequency);
   };

@@ -35,7 +35,9 @@ export default function DashboardPage() {
         const betsUrl = `/api/bets?limit=5&offset=0&t=${Date.now()}`;
         const streakUrl = `/api/analytics/streak-analysis${cacheBuster}`;
         const bestWorstUrl = `/api/analytics/best-worst-performers${cacheBuster}`;
-        const timeSeriesUrl = `/api/analytics/time-series?granularity=daily&t=${Date.now()}`; // No date filter = all time
+        // Get user's timezone offset in minutes (e.g., -300 for EST)
+        const timezoneOffset = new Date().getTimezoneOffset();
+        const timeSeriesUrl = `/api/analytics/time-series?granularity=daily&timezone_offset=${timezoneOffset}&t=${Date.now()}`; // No date filter = all time
 
         const [summaryRes, betsRes, streakRes, bestWorstRes, timeSeriesRes] = await Promise.allSettled([
           apiClient.get<{ data: AnalyticsSummary }>(summaryUrl),
@@ -272,8 +274,12 @@ export default function DashboardPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             {timeSeries.slice(-5).map((day, index) => {
-              const date = new Date(day.date);
+              // Parse date as UTC to avoid timezone issues
+              const date = new Date(day.date + 'T00:00:00');
               const isPositive = day.profit >= 0;
+              const today = new Date().toISOString().split('T')[0];
+              const isToday = day.date === today;
+              
               return (
                 <div 
                   key={index} 
@@ -285,6 +291,7 @@ export default function DashboardPage() {
                 >
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                     {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                    {isToday && <span className="ml-1 font-semibold text-blue-600 dark:text-blue-400">(Today)</span>}
                   </div>
                   <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -312,8 +319,12 @@ export default function DashboardPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             {timeSeries.slice(-5).map((day, index, arr) => {
-              const date = new Date(day.date);
+              // Parse date as UTC to avoid timezone issues
+              const date = new Date(day.date + 'T00:00:00');
               const isPositive = day.cumulative_profit >= 0;
+              const today = new Date().toISOString().split('T')[0];
+              const isToday = day.date === today;
+              
               // Calculate change from previous day
               const previousDay = index > 0 ? arr[index - 1].cumulative_profit : null;
               const change = previousDay !== null ? day.cumulative_profit - previousDay : null;
@@ -327,6 +338,7 @@ export default function DashboardPage() {
                 >
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                     {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                    {isToday && <span className="ml-1 font-semibold text-blue-600 dark:text-blue-400">(Today)</span>}
                   </div>
                   <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
