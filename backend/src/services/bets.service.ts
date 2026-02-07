@@ -5,6 +5,27 @@ import { createError, errorCodes } from '../utils/errors';
 export class BetsService {
   constructor(private supabase: SupabaseClient) {}
 
+  // Helper function to calculate effective odds excluding voided legs
+  private calculateEffectiveOdds(bet: MainBet): number {
+    if (!bet.legs || bet.legs.length === 0) {
+      return Number(bet.odds || 0);
+    }
+
+    const nonVoidedLegs = bet.legs.filter((leg: any) => leg.result_state !== 'void');
+    
+    if (nonVoidedLegs.length === 0) {
+      // All legs are voided - return 1 (push/no action)
+      return 1;
+    }
+
+    // Calculate effective odds by multiplying non-voided legs
+    const effectiveOdds = nonVoidedLegs.reduce((acc: number, leg: any) => {
+      return acc * Number(leg.odd || 1);
+    }, 1);
+
+    return effectiveOdds;
+  }
+
   async createBet(userId: string, betData: CreateBetRequest): Promise<MainBet> {
     try {
       const { legs, ...mainBetData } = betData;
@@ -212,10 +233,16 @@ export class BetsService {
     let profitLoss = stateData.profit_loss;
     if (!profitLoss) {
       const bet = await this.getBetById(userId, betId);
+      
       if (stateData.state === 'won') {
-        profitLoss = bet.stake * (bet.odds || 1) - bet.stake;
+        // Use effective odds (excluding voided legs) for profit calculation
+        const effectiveOdds = this.calculateEffectiveOdds(bet);
+        profitLoss = bet.stake * effectiveOdds - bet.stake;
       } else if (stateData.state === 'lost') {
         profitLoss = -bet.stake;
+      } else if (stateData.state === 'void') {
+        // Voided bet returns stake (no profit/loss)
+        profitLoss = 0;
       } else {
         profitLoss = 0;
       }
