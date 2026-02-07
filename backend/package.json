@@ -14,7 +14,8 @@
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "fix:voided-legs": "tsx src/scripts/fix-voided-legs-profit.ts"
   },
   "keywords": [
     "bettracer",
