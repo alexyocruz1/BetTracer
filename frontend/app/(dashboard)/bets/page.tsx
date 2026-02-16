@@ -129,6 +129,35 @@ export default function BetsPage() {
     return uniqueIds.map(id => getReferenceName(id)).filter(name => name !== '');
   };
 
+  const getUniqueMatchesForBet = (bet: MainBet): string[] => {
+    if (!bet.legs || bet.legs.length === 0) return [];
+    
+    // Create unique match identifiers
+    const matchesMap = new Map<string, { homeTeam: string; awayTeam: string }>();
+    
+    bet.legs.forEach(leg => {
+      // Only add if both teams are present
+      if (leg.home_team_id && leg.away_team_id) {
+        // Create a unique key for the match (sorted to handle potential duplicates with swapped teams)
+        const matchKey = [leg.home_team_id, leg.away_team_id].sort().join('-');
+        
+        if (!matchesMap.has(matchKey)) {
+          const homeTeam = getReferenceName(leg.home_team_id);
+          const awayTeam = getReferenceName(leg.away_team_id);
+          
+          if (homeTeam && awayTeam) {
+            matchesMap.set(matchKey, { homeTeam, awayTeam });
+          }
+        }
+      }
+    });
+    
+    // Convert to array of match strings
+    return Array.from(matchesMap.values()).map(
+      ({ homeTeam, awayTeam }) => `${homeTeam} vs ${awayTeam}`
+    );
+  };
+
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
@@ -227,6 +256,7 @@ export default function BetsPage() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
             <input
               type="date"
+              title="Start Date"
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value);
@@ -239,6 +269,7 @@ export default function BetsPage() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
             <input
               type="date"
+              title="End Date"
               value={endDate}
               onChange={(e) => {
                 setEndDate(e.target.value);
@@ -250,6 +281,7 @@ export default function BetsPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State</label>
             <select
+              title="State"
               value={stateFilter}
               onChange={(e) => {
                 setStateFilter(e.target.value);
@@ -280,6 +312,7 @@ export default function BetsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {bets.map((bet) => {
           const responsibles = getResponsiblesForBet(bet);
+          const matches = getUniqueMatchesForBet(bet);
           const profitLoss = bet.profit_loss !== null && bet.profit_loss !== undefined ? bet.profit_loss : null;
           const isProfit = profitLoss !== null && profitLoss >= 0;
           const isLoss = profitLoss !== null && profitLoss < 0;
@@ -370,6 +403,22 @@ export default function BetsPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Matches */}
+                {matches.length > 0 && (
+                  <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-wrap gap-1.5">
+                      {matches.map((match, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                        >
+                          {match}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Main Stats Grid */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
