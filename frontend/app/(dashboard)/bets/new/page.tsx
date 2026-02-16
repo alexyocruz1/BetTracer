@@ -14,10 +14,12 @@ import {
 import SearchableSelect from '@/components/SearchableSelect';
 import { useMLPrediction } from '@/hooks/useMLPrediction';
 import MLInsights, { LegSummary } from '@/components/bets/MLInsights';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function NewBetPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState<ReferenceItem[]>([]);
   const [leagues, setLeagues] = useState<ReferenceItem[]>([]);
@@ -207,6 +209,45 @@ export default function NewBetPage() {
       });
     } catch (error) {
       console.error('Failed to fetch reference items:', error);
+    }
+  };
+
+  const handleCreateNewReferenceItem = async (name: string, kind: string): Promise<ReferenceItem | null> => {
+    try {
+      const response = await apiClient.post<{ data: ReferenceItem }>('/api/reference-items', {
+        kind,
+        name,
+      });
+
+      const newItem = response.data.data;
+
+      // Update the appropriate state based on kind
+      switch (kind) {
+        case 'team':
+          setTeams(prev => [...prev, newItem]);
+          break;
+        case 'league':
+          setLeagues(prev => [...prev, newItem]);
+          break;
+        case 'bet_type':
+          setBetTypes(prev => [...prev, newItem]);
+          break;
+        case 'category':
+          setCategories(prev => [...prev, newItem]);
+          break;
+        case 'responsible':
+          setResponsibles(prev => [...prev, newItem]);
+          break;
+        case 'sport':
+          setSports(prev => [...prev, newItem]);
+          break;
+      }
+
+      return newItem;
+    } catch (error: any) {
+      console.error('Failed to create reference item:', error);
+      alert(error.response?.data?.error?.message || error.message || 'Failed to create item');
+      return null;
     }
   };
 
@@ -568,6 +609,9 @@ export default function NewBetPage() {
             onChange={(value) => setFormData({ ...formData, sport_id: value || undefined })}
             placeholder="Search sport..."
             label="Sport (optional)"
+            allowCreate={isAdmin}
+            createKind="sport"
+            onCreateNew={handleCreateNewReferenceItem}
           />
           <p className="mt-1 text-xs text-gray-500">
             Primary sport for this bet. Each leg can also have its own sport.
@@ -621,6 +665,9 @@ export default function NewBetPage() {
                   onChange={(value) => setBulkHomeTeamId(value || '')}
                   placeholder="Choose home team..."
                   label="Home Team (all legs)"
+                  allowCreate={isAdmin}
+                  createKind="team"
+                  onCreateNew={handleCreateNewReferenceItem}
                 />
                 <SearchableSelect
                   options={teams}
@@ -628,6 +675,9 @@ export default function NewBetPage() {
                   onChange={(value) => setBulkAwayTeamId(value || '')}
                   placeholder="Choose away team..."
                   label="Away Team (all legs)"
+                  allowCreate={isAdmin}
+                  createKind="team"
+                  onCreateNew={handleCreateNewReferenceItem}
                 />
                 <SearchableSelect
                   options={leagues}
@@ -635,6 +685,9 @@ export default function NewBetPage() {
                   onChange={(value) => setBulkLeagueId(value || '')}
                   placeholder="Choose league..."
                   label="League (all legs)"
+                  allowCreate={isAdmin}
+                  createKind="league"
+                  onCreateNew={handleCreateNewReferenceItem}
                 />
                 <SearchableSelect
                   options={betTypes}
@@ -642,6 +695,9 @@ export default function NewBetPage() {
                   onChange={(value) => setBulkBetTypeId(value || '')}
                   placeholder="Choose bet type..."
                   label="Bet Type (all legs)"
+                  allowCreate={isAdmin}
+                  createKind="bet_type"
+                  onCreateNew={handleCreateNewReferenceItem}
                 />
                 <SearchableSelect
                   options={categories}
@@ -649,6 +705,9 @@ export default function NewBetPage() {
                   onChange={(value) => setBulkCategoryId(value || '')}
                   placeholder="Choose category..."
                   label="Category (all legs)"
+                  allowCreate={isAdmin}
+                  createKind="category"
+                  onCreateNew={handleCreateNewReferenceItem}
                 />
                 <SearchableSelect
                   options={responsibles}
@@ -656,6 +715,9 @@ export default function NewBetPage() {
                   onChange={(value) => setBulkResponsibleId(value || '')}
                   placeholder="Choose responsible..."
                   label="Responsible (all legs)"
+                  allowCreate={isAdmin}
+                  createKind="responsible"
+                  onCreateNew={handleCreateNewReferenceItem}
                 />
                 <SearchableSelect
                   options={sports}
@@ -663,6 +725,9 @@ export default function NewBetPage() {
                   onChange={(value) => setBulkSportId(value || '')}
                   placeholder="Choose sport..."
                   label="Sport (all legs)"
+                  allowCreate={isAdmin}
+                  createKind="sport"
+                  onCreateNew={handleCreateNewReferenceItem}
                 />
               </div>
             </div>
@@ -695,6 +760,9 @@ export default function NewBetPage() {
                       }}
                       placeholder="Search home team..."
                       label="Home Team"
+                      allowCreate={isAdmin}
+                      createKind="team"
+                      onCreateNew={handleCreateNewReferenceItem}
                     />
                   </div>
                   <div>
@@ -709,6 +777,9 @@ export default function NewBetPage() {
                       }}
                       placeholder="Search away team..."
                       label="Away Team"
+                      allowCreate={isAdmin}
+                      createKind="team"
+                      onCreateNew={handleCreateNewReferenceItem}
                     />
                   </div>
               </div>
@@ -725,6 +796,9 @@ export default function NewBetPage() {
                       }}
                       placeholder="Search league..."
                       label="League"
+                      allowCreate={isAdmin}
+                      createKind="league"
+                      onCreateNew={handleCreateNewReferenceItem}
                     />
                   </div>
                   <div>
@@ -739,6 +813,9 @@ export default function NewBetPage() {
                     }}
                       placeholder="Search bet type..."
                       label="Bet Type"
+                      allowCreate={isAdmin}
+                      createKind="bet_type"
+                      onCreateNew={handleCreateNewReferenceItem}
                     />
                   </div>
                 </div>
@@ -755,6 +832,9 @@ export default function NewBetPage() {
                       }}
                       placeholder="Search category..."
                       label="Category"
+                      allowCreate={isAdmin}
+                      createKind="category"
+                      onCreateNew={handleCreateNewReferenceItem}
                     />
                 </div>
                 <div>
@@ -769,6 +849,9 @@ export default function NewBetPage() {
                     }}
                       placeholder="Search responsible..."
                       label="Responsible"
+                      allowCreate={isAdmin}
+                      createKind="responsible"
+                      onCreateNew={handleCreateNewReferenceItem}
                     />
                   </div>
                 </div>
@@ -784,6 +867,9 @@ export default function NewBetPage() {
                       }}
                       placeholder="Search sport..."
                       label="Sport"
+                      allowCreate={isAdmin}
+                      createKind="sport"
+                      onCreateNew={handleCreateNewReferenceItem}
                     />
                 </div>
                 <div>
