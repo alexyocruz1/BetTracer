@@ -204,7 +204,7 @@ export default function SearchableSelect({
           {filteredOptions.length === 0 ? (
             <div>
               <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                No options found
+                {searchTerm.trim() ? 'No options found' : 'Start typing to search...'}
               </div>
               {allowCreate && searchTerm.trim() && onCreateNew && createKind && (
                 <button
@@ -220,18 +220,32 @@ export default function SearchableSelect({
               )}
             </div>
           ) : (
-            filteredOptions.map((option, index) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => handleSelect(option)}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none text-gray-900 dark:text-gray-100 ${
-                  index === highlightedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
-                } ${value === option.id ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : ''}`}
-              >
-                {option.name}
-              </button>
-            ))
+            <>
+              {filteredOptions.map((option, index) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => handleSelect(option)}
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 focus:outline-none text-gray-900 dark:text-gray-100 ${
+                    index === highlightedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
+                  } ${value === option.id ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : ''}`}
+                >
+                  {option.name}
+                </button>
+              ))}
+              {allowCreate && searchTerm.trim() && onCreateNew && createKind && (
+                <button
+                  type="button"
+                  onClick={handleCreateNew}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-green-50 dark:hover:bg-green-900/20 focus:bg-green-50 dark:focus:bg-green-900/20 focus:outline-none text-green-700 dark:text-green-400 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create "{searchTerm.trim()}"
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
