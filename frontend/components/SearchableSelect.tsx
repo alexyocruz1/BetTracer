@@ -262,7 +262,7 @@ export default function SearchableSelect({
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  Create New {createKind?.replace('_', ' ').charAt(0).toUpperCase() + createKind?.replace('_', ' ').slice(1)}?
+                  Create New {createKind ? createKind.replace('_', ' ').charAt(0).toUpperCase() + createKind.replace('_', ' ').slice(1) : 'Item'}?
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                   You're about to create a new item: <span className="font-semibold">"{pendingCreateName}"</span>
