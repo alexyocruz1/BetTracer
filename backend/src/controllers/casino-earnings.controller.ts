@@ -1,137 +1,89 @@
-import { Request, Response } from 'express';
-import { casinoEarningsService } from '../services/casino-earnings.service';
+import { Response } from 'express';
+import { AuthRequest } from '../middleware/auth.middleware';
+import { CasinoEarningsService } from '../services/casino-earnings.service';
+import { sendSuccess, sendError } from '../utils/responses';
 
-export const casinoEarningsController = {
-  async create(req: Request, res: Response) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } });
-      }
+export class CasinoEarningsController {
+  constructor(private casinoEarningsService: CasinoEarningsService) {}
 
-      const casinoEarning = await casinoEarningsService.create({
-        user_id: userId,
-        ...req.body,
-      });
+  create = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
 
-      res.status(201).json({ data: casinoEarning });
-    } catch (error: any) {
-      console.error('Error creating casino earning:', error);
-      res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: error.message } });
+    const casinoEarning = await this.casinoEarningsService.create({
+      user_id: userId,
+      ...req.body,
+    });
+
+    return sendSuccess(res, casinoEarning, 201);
+  };
+
+  getById = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { id } = req.params;
+    
+    const casinoEarning = await this.casinoEarningsService.getById(id, userId);
+
+    if (!casinoEarning) {
+      return sendError(res, 'NOT_FOUND', 'Casino earning not found', 404);
     }
-  },
 
-  async getById(req: Request, res: Response) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } });
-      }
+    return sendSuccess(res, casinoEarning);
+  };
 
-      const { id } = req.params;
-      const casinoEarning = await casinoEarningsService.getById(id, userId);
+  getAll = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
 
-      if (!casinoEarning) {
-        return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Casino earning not found' } });
-      }
+    const filters = {
+      user_id: userId,
+      start_date: req.query.start_date as string | undefined,
+      end_date: req.query.end_date as string | undefined,
+      type: req.query.type as string | undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 20,
+      offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
+    };
 
-      res.json({ data: casinoEarning });
-    } catch (error: any) {
-      console.error('Error fetching casino earning:', error);
-      res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: error.message } });
-    }
-  },
+    const { data, total } = await this.casinoEarningsService.getAll(filters);
 
-  async getAll(req: Request, res: Response) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } });
-      }
+    const limit = filters.limit || 20;
+    const offset = filters.offset || 0;
+    const page = Math.floor(offset / limit) + 1;
+    const totalPages = Math.ceil(total / limit);
 
-      const filters = {
-        user_id: userId,
-        start_date: req.query.start_date as string | undefined,
-        end_date: req.query.end_date as string | undefined,
-        type: req.query.type as string | undefined,
-        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 20,
-        offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
-      };
+    return sendSuccess(res, data, 200, {
+      pagination: {
+        total,
+        totalPages,
+        page,
+        limit,
+      },
+    });
+  };
 
-      const { data, total } = await casinoEarningsService.getAll(filters);
+  update = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { id } = req.params;
+    
+    const casinoEarning = await this.casinoEarningsService.update(id, userId, req.body);
 
-      const limit = filters.limit || 20;
-      const offset = filters.offset || 0;
-      const page = Math.floor(offset / limit) + 1;
-      const totalPages = Math.ceil(total / limit);
+    return sendSuccess(res, casinoEarning);
+  };
 
-      res.json({
-        data,
-        meta: {
-          pagination: {
-            total,
-            totalPages,
-            page,
-            limit,
-          },
-        },
-      });
-    } catch (error: any) {
-      console.error('Error fetching casino earnings:', error);
-      res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: error.message } });
-    }
-  },
+  delete = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const { id } = req.params;
+    
+    await this.casinoEarningsService.delete(id, userId);
 
-  async update(req: Request, res: Response) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } });
-      }
+    return res.status(204).send();
+  };
 
-      const { id } = req.params;
-      const casinoEarning = await casinoEarningsService.update(id, userId, req.body);
+  getTotalEarnings = async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user!.id;
+    const startDate = req.query.start_date as string | undefined;
+    const endDate = req.query.end_date as string | undefined;
 
-      res.json({ data: casinoEarning });
-    } catch (error: any) {
-      console.error('Error updating casino earning:', error);
-      res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: error.message } });
-    }
-  },
+    const total = await this.casinoEarningsService.getTotalEarnings(userId, startDate, endDate);
 
-  async delete(req: Request, res: Response) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } });
-      }
-
-      const { id } = req.params;
-      await casinoEarningsService.delete(id, userId);
-
-      res.status(204).send();
-    } catch (error: any) {
-      console.error('Error deleting casino earning:', error);
-      res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: error.message } });
-    }
-  },
-
-  async getTotalEarnings(req: Request, res: Response) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } });
-      }
-
-      const startDate = req.query.start_date as string | undefined;
-      const endDate = req.query.end_date as string | undefined;
-
-      const total = await casinoEarningsService.getTotalEarnings(userId, startDate, endDate);
-
-      res.json({ data: { total } });
-    } catch (error: any) {
-      console.error('Error calculating total casino earnings:', error);
-      res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: error.message } });
-    }
-  },
-};
+    return sendSuccess(res, { total });
+  };
+}

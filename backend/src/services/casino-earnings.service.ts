@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '../config/supabase';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface CasinoEarning {
   id: string;
@@ -39,9 +39,11 @@ export interface GetCasinoEarningsFilters {
   offset?: number;
 }
 
-export const casinoEarningsService = {
+export class CasinoEarningsService {
+  constructor(private supabase: SupabaseClient) {}
+
   async create(input: CreateCasinoEarningInput): Promise<CasinoEarning> {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await this.supabase
       .from('casino_earnings')
       .insert({
         user_id: input.user_id,
@@ -62,7 +64,7 @@ export const casinoEarningsService = {
   },
 
   async getById(id: string, userId: string): Promise<CasinoEarning | null> {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await this.supabase
       .from('casino_earnings')
       .select('*')
       .eq('id', id)
@@ -81,7 +83,7 @@ export const casinoEarningsService = {
   },
 
   async getAll(filters: GetCasinoEarningsFilters): Promise<{ data: CasinoEarning[]; total: number }> {
-    let query = supabaseAdmin
+    let query = this.supabase
       .from('casino_earnings')
       .select('*', { count: 'exact' })
       .eq('user_id', filters.user_id)
@@ -121,7 +123,7 @@ export const casinoEarningsService = {
   },
 
   async update(id: string, userId: string, input: UpdateCasinoEarningInput): Promise<CasinoEarning> {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await this.supabase
       .from('casino_earnings')
       .update(input)
       .eq('id', id)
@@ -151,7 +153,7 @@ export const casinoEarningsService = {
   },
 
   async getTotalEarnings(userId: string, startDate?: string, endDate?: string): Promise<number> {
-    let query = supabaseAdmin
+    let query = this.supabase
       .from('casino_earnings')
       .select('amount')
       .eq('user_id', userId)
@@ -171,6 +173,6 @@ export const casinoEarningsService = {
       throw new Error(`Failed to calculate total earnings: ${error.message}`);
     }
 
-    return data?.reduce((sum, item) => sum + parseFloat(item.amount.toString()), 0) || 0;
-  },
-};
+    return data?.reduce((sum: number, item: { amount: number }) => sum + parseFloat(item.amount.toString()), 0) || 0;
+  }
+}

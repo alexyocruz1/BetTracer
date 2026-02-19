@@ -1,7 +1,6 @@
 import { Router } from 'express';
-import { casinoEarningsController } from '../controllers/casino-earnings.controller';
-import { authenticate } from '../middleware/auth';
-import { validateRequest } from '../middleware/validate';
+import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { validate } from '../middleware/validation.middleware';
 import {
   createCasinoEarningSchema,
   updateCasinoEarningSchema,
@@ -9,28 +8,41 @@ import {
   getCasinoEarningSchema,
   deleteCasinoEarningSchema,
 } from '../schemas/casino-earnings.schema';
+import { CasinoEarningsService } from '../services/casino-earnings.service';
+import { CasinoEarningsController } from '../controllers/casino-earnings.controller';
+import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-// All routes require authentication
+// Initialize services and controllers
+const casinoEarningsService = new CasinoEarningsService({} as any);
+const casinoEarningsController = new CasinoEarningsController(casinoEarningsService);
+
+// Middleware to inject supabase client
 router.use(authenticate);
+router.use((req: AuthRequest, _res, next) => {
+  if (req.supabaseClient) {
+    casinoEarningsService['supabase'] = req.supabaseClient;
+  }
+  next();
+});
 
 // Create a new casino earning
-router.post('/', validateRequest(createCasinoEarningSchema), casinoEarningsController.create);
+router.post('/', validate(createCasinoEarningSchema), asyncHandler(casinoEarningsController.create));
 
 // Get all casino earnings with filters
-router.get('/', validateRequest(getCasinoEarningsSchema), casinoEarningsController.getAll);
+router.get('/', validate(getCasinoEarningsSchema), asyncHandler(casinoEarningsController.getAll));
 
-// Get total casino earnings
-router.get('/total', casinoEarningsController.getTotalEarnings);
+// Get total casino earnings (must come before /:id route)
+router.get('/total', asyncHandler(casinoEarningsController.getTotalEarnings));
 
 // Get a specific casino earning
-router.get('/:id', validateRequest(getCasinoEarningSchema), casinoEarningsController.getById);
+router.get('/:id', validate(getCasinoEarningSchema), asyncHandler(casinoEarningsController.getById));
 
 // Update a casino earning
-router.put('/:id', validateRequest(updateCasinoEarningSchema), casinoEarningsController.update);
+router.put('/:id', validate(updateCasinoEarningSchema), asyncHandler(casinoEarningsController.update));
 
 // Delete a casino earning
-router.delete('/:id', validateRequest(deleteCasinoEarningSchema), casinoEarningsController.delete);
+router.delete('/:id', validate(deleteCasinoEarningSchema), asyncHandler(casinoEarningsController.delete));
 
 export default router;
