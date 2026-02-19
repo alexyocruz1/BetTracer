@@ -1039,3 +1039,33 @@ export interface User {
   updated_at: string;
 }
 
+// Casino earnings types
+export interface CasinoEarning {
+  id: string;
+  user_id: string;
+  date: string;
+  amount: number;
+  source: string;
+  type: 'casino_bet' | 'daily_bonus' | 'free_spins' | 'cashback' | 'promotion' | 'other';
+  notes?: string;
+  deleted_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCasinoEarningRequest {
+  date: string;
+  amount: number;
+  source: string;
+  type: 'casino_bet' | 'daily_bonus' | 'free_spins' | 'cashback' | 'promotion' | 'other';
+  notes?: string;
+}
+
+export interface UpdateCasinoEarningRequest {
+  date?: string;
+  amount?: number;
+  source?: string;
+  type?: 'casino_bet' | 'daily_bonus' | 'free_spins' | 'cashback' | 'promotion' | 'other';
+  notes?: string;
+}
+

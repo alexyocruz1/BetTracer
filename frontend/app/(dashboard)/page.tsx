@@ -15,6 +15,7 @@ export default function DashboardPage() {
   const [streakAnalysis, setStreakAnalysis] = useState<StreakAnalysis | null>(null);
   const [bestWorst, setBestWorst] = useState<BestWorstPerformers | null>(null);
   const [timeSeries, setTimeSeries] = useState<(TimeSeriesData & { cumulative_profit: number })[]>([]);
+  const [casinoTotal, setCasinoTotal] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,12 +40,15 @@ export default function DashboardPage() {
         const timezoneOffset = new Date().getTimezoneOffset();
         const timeSeriesUrl = `/api/analytics/time-series?granularity=daily&timezone_offset=${timezoneOffset}&t=${Date.now()}`; // No date filter = all time
 
-        const [summaryRes, betsRes, streakRes, bestWorstRes, timeSeriesRes] = await Promise.allSettled([
+        const casinoUrl = `/api/casino-earnings/total${cacheBuster}`;
+        
+        const [summaryRes, betsRes, streakRes, bestWorstRes, timeSeriesRes, casinoRes] = await Promise.allSettled([
           apiClient.get<{ data: AnalyticsSummary }>(summaryUrl),
           apiClient.get<{ data: { bets: MainBet[]; total: number; totalPages: number } }>(betsUrl),
           apiClient.get<{ data: StreakAnalysis }>(streakUrl),
           apiClient.get<{ data: BestWorstPerformers }>(bestWorstUrl),
           apiClient.get<{ data: TimeSeriesData[] }>(timeSeriesUrl),
+          apiClient.get<{ data: { total: number } }>(casinoUrl),
         ]);
 
         if (requestCompleted || cancelled) return;
@@ -75,6 +79,9 @@ export default function DashboardPage() {
           });
           
           setTimeSeries(chartData);
+        }
+        if (casinoRes.status === 'fulfilled') {
+          setCasinoTotal(casinoRes.value.data.data.total || 0);
         }
 
         requestCompleted = true;
@@ -180,19 +187,17 @@ export default function DashboardPage() {
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className={`text-2xl font-bold ${
-                  summary.total_profit >= 0 ? 'text-green-600' : 'text-red-600'
+                  (summary.total_profit + casinoTotal) >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}>
-                  ${summary.total_profit.toFixed(2)}
+                  ${(summary.total_profit + casinoTotal).toFixed(2)}
                 </div>
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Profit</div>
-              {summary.cumulative_profit !== summary.total_profit && (
-                <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  Cumulative: ${summary.cumulative_profit.toFixed(2)}
-                </div>
-              )}
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Combined Profit</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Bets: ${summary.total_profit.toFixed(2)} | Casino: ${casinoTotal.toFixed(2)}
+              </div>
             </div>
           </div>
         </div>

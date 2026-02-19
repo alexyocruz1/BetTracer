@@ -9,6 +9,7 @@ import legsRoutes from './routes/legs';
 import referenceItemsRoutes from './routes/reference-items';
 import analyticsRoutes from './routes/analytics';
 import mlRoutes from './routes/ml';
+import casinoEarningsRoutes from './routes/casino-earnings';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/legs', legsRoutes);
 app.use('/api/reference-items', referenceItemsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ml', mlRoutes);
+app.use('/api/casino-earnings', casinoEarningsRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
