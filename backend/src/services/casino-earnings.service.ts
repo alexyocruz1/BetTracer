@@ -61,7 +61,7 @@ export class CasinoEarningsService {
     }
 
     return data;
-  },
+  }
 
   async getById(id: string, userId: string): Promise<CasinoEarning | null> {
     const { data, error } = await this.supabase
@@ -80,7 +80,7 @@ export class CasinoEarningsService {
     }
 
     return data;
-  },
+  }
 
   async getAll(filters: GetCasinoEarningsFilters): Promise<{ data: CasinoEarning[]; total: number }> {
     let query = this.supabase
@@ -120,7 +120,7 @@ export class CasinoEarningsService {
       data: data || [],
       total: count || 0,
     };
-  },
+  }
 
   async update(id: string, userId: string, input: UpdateCasinoEarningInput): Promise<CasinoEarning> {
     const { data, error } = await this.supabase
@@ -137,10 +137,10 @@ export class CasinoEarningsService {
     }
 
     return data;
-  },
+  }
 
   async delete(id: string, userId: string): Promise<void> {
-    const { error } = await supabaseAdmin
+    const { error } = await this.supabase
       .from('casino_earnings')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
@@ -150,7 +150,7 @@ export class CasinoEarningsService {
     if (error) {
       throw new Error(`Failed to delete casino earning: ${error.message}`);
     }
-  },
+  }
 
   async getTotalEarnings(userId: string, startDate?: string, endDate?: string): Promise<number> {
     let query = this.supabase
